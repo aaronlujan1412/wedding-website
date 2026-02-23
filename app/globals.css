@@ -4,3 +4,11 @@
 @theme inline {
   --font-corinthia: var(--font-corinthia);
 }
+
+@theme {
+  --color-accent: #e4d00a;
+  --color-primary: #00563f;
+  --color-background: #fffaf0;
+  --color-pop: #008080;
+  --color-pop2: #b22222;
+}
