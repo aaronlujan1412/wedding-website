@@ -11,4 +11,11 @@
   --color-background: #fffaf0;
   --color-pop: #008080;
   --color-pop2: #b22222;
+  --color-foreground: #1c1917;
+  --color-muted-foreground: #6b5e4e;
+  --color-primary-foreground: #fffaf0;
+  --color-card: #fdf6e3;
+  --color-border: #d4c5a9;
+  --radius: 0.5rem;
+  --default-font-feature-settings: corinthia;
 }
