@@ -1,5 +1,12 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Corinthia } from "next/font/google";
+import {
+  Geist,
+  Geist_Mono,
+  Corinthia,
+  Cormorant_Garamond,
+  EB_Garamond,
+  Raleway,
+} from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/NavBar/NavBar";
 
@@ -19,6 +26,18 @@ const corinthia = Corinthia({
   subsets: ["latin"],
 });
 
+const cormorantGaramond = Cormorant_Garamond({
+  variable: "--font-garamond",
+  weight: ["400"],
+  subsets: ["latin"],
+});
+
+const raleway = Raleway({
+  variable: "--font-raleway",
+  weight: ["400"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Savea and Aaron's Wedding",
   description: "We're the cooliest",
@@ -31,8 +50,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <meta name="apple-mobile-web-app-title" content="Hallelujan" />
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${corinthia.variable} antialiased`}
+        className={`
+          ${geistSans.variable} 
+          ${geistMono.variable} 
+          ${corinthia.variable} 
+          ${raleway.variable} 
+          ${cormorantGaramond.variable} 
+          antialiased`}
       >
         <Navbar />
         {children}

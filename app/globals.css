@@ -3,6 +3,8 @@
 
 @theme inline {
   --font-corinthia: var(--font-corinthia);
+  --font-raleway: var(--font-raleway);
+  --font-garamond: var(--font-garamond);
 }
 
 @theme {
@@ -17,5 +19,4 @@
   --color-card: #fdf6e3;
   --color-border: #d4c5a9;
   --radius: 0.5rem;
-  --default-font-feature-settings: corinthia;
 }

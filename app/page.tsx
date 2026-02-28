@@ -1,5 +1,4 @@
 import RsvpModal from "@/components/rsvp/RsvpModal";
-import { maxHeaderSize } from "http";
 import Image from "next/image";
 
 export default function Home() {
