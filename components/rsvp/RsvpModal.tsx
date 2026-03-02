@@ -1,106 +1,85 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { supabase } from "@/lib/supabase"
-import
-{
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogTrigger,
-    DialogFooter,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { DialogDescription } from "@radix-ui/react-dialog"
+import { useState } from "react";
+import { supabase } from "@/lib/supabase";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { DialogDescription } from "@radix-ui/react-dialog";
+import RsvpStepOne from "./RsvpStepOne";
+import { Guest, GuestGroup } from "./types";
 
-export default function RsvpModal()
-{
-    const [step, setStep ] = useState(1);
-    const [name, setName ] = useState("");
-    const [loading, setLoading ] = useState(false);
+type Props = {
+  guestGroups: GuestGroup[];
+};
 
-    const handleNext = () => setStep(step + 1);
-    const handleBack = () => setStep(step - 1);
-    const handleSubmit = async () => {
-        setLoading(true);
+export default function RsvpModal({ guestGroups }: Props) {
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
 
-        const { data, error } = await supabase
-            .from('guests')
-            .insert([{ name }]);
+  const handleNext = () => setStep(step + 1);
+  const handleBack = () => setStep(step - 1);
+  const handleSubmit = async () => {
+    setStep(1);
+  };
 
-        setLoading(false);
+  return (
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
+      <DialogTrigger asChild>
+        <button className="mt-8 px-6 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-700 transition">
+          RSVP Now
+        </button>
+      </DialogTrigger>
 
-        if (error) {
-            console.error("Error submitting RSVP:", error);
-            return;
-        }
-        setStep(1);
-        setName("");
-    }
+      <DialogContent className="sm:max-w-[425px] bg-white">
+        <DialogHeader>
+          <DialogTitle className="text-center">RSVP</DialogTitle>
+          <DialogDescription>Step {step} of 3</DialogDescription>
+        </DialogHeader>
 
-    const [isOpen, setIsOpen] = useState(false);
+        {step === 1 && <RsvpStepOne guestGroups={guestGroups} />}
 
-    return (
-        <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogTrigger asChild>
-                <button
-                    className="mt-8 px-6 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-700 transition"
-                    onClick={() => setIsOpen(true)}
-                >
-                    RSVP Now
-                </button>
-            </DialogTrigger>
+        {step === 2 && (
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="guests">Number of Guests</Label>
+              <Input id="guests" type="number" placeholder="0" />
+            </div>
+          </div>
+        )}
 
-            <DialogContent className="sm:max-w-[425px] bg-white">
-                <DialogHeader>
-                    <DialogTitle className="text-center">RSVP</DialogTitle>
-                    <DialogDescription>Step {step} of 3</DialogDescription>
-                </DialogHeader>
+        {step === 3 && (
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="meal">Meal Preference</Label>
+              <Input id="meal" placeholder="e.g., Vegetarian" />
+            </div>
+          </div>
+        )}
 
-                {step === 1 && (
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="name">Name</Label>
-                            <Input
-                                id="name"
-                                placeholder="Your full name"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {step === 2 && (
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="guests">Number of Guests</Label>
-                            <Input id="guests" type="number" placeholder="0" />
-                        </div>
-                    </div>
-                )}
-
-                {step === 3 && (
-                    <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                            <Label htmlFor="meal">Meal Preference</Label>
-                            <Input id="meal" placeholder="e.g., Vegetarian" />
-                        </div>
-                    </div>
-                )}
-
-                <DialogFooter>
-                        {step > 1 && <Button onClick={handleBack} className="mr-2">Back</Button>}
-                        {step < 3 && <Button onClick={handleNext}>Next</Button>}
-                        {step === 3 &&
-                            <Button onClick={() => handleSubmit()} disabled={loading}>Submit</Button>
-                        }
-                </DialogFooter>
-
-            </DialogContent>
-        </Dialog>
-    );  
+        <DialogFooter>
+          {step > 1 && (
+            <Button onClick={handleBack} className="mr-2">
+              Back
+            </Button>
+          )}
+          {step < 3 && <Button onClick={handleNext}>Next</Button>}
+          {step === 3 && (
+            <Button onClick={() => handleSubmit()} disabled={loading}>
+              Submit
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }

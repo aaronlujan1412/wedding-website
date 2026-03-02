@@ -1,7 +1,10 @@
 import RsvpModal from "@/components/rsvp/RsvpModal";
 import Image from "next/image";
+import { getAllGuests, getAllGuestGroups } from "./actions/rsvp";
 
-export default function Home() {
+export default async function Home() {
+  const { data, error } = await getAllGuestGroups();
+
   return (
     <main className="flex flex-col">
       <div className="relative w-full h-screen">
@@ -22,7 +25,7 @@ export default function Home() {
         <p>(Because who else would it be?)</p>
         <p className="mt-4 text-xl text-stone-600">12 · 01 · 2025</p>
 
-        <RsvpModal />
+        <RsvpModal guestGroups={data ?? []} />
       </div>
     </main>
   );
