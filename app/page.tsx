@@ -1,6 +1,6 @@
 import RsvpModal from "@/components/rsvp/RsvpModal";
 import Image from "next/image";
-import { getAllGuests, getAllGuestGroups } from "./actions/rsvp";
+import { getAllGuestGroups } from "./actions/rsvp";
 
 export default async function Home() {
   const { data, error } = await getAllGuestGroups();
