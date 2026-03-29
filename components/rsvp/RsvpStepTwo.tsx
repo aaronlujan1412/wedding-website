@@ -1,26 +1,26 @@
+import { Dispatch, SetStateAction, useState } from "react";
 import { Label } from "../ui/label";
-import { Input } from "../ui/input";
+import IndividualGuestForm from "./InvidualGuestForm";
 import { Guest } from "./types";
 
 type Props = {
   groupMembers: Guest[];
+  onGuestUpdate: (guestId: number, updates: Partial<Guest>) => void;
 };
 
-export default function RsvpStepTwo({ groupMembers }: Props) {
+export default function RsvpStepTwo({ groupMembers, onGuestUpdate }: Props) {
   return (
     <div className="grid gap-4 py-4">
       <div className="grid gap-2">
-        <Label htmlFor="group">
+        <Label htmlFor="group" className="mb-3">
           Please provide all details for associated members:
         </Label>
         {groupMembers.map((member, id) => (
           <div key={member.id} className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id={`member-${member.id}`}
-              value={member.id}
-            />
-            <label htmlFor={`member-${member.id}`}>{member.name}</label>
+            <IndividualGuestForm
+              groupMember={member}
+              onGuestUpdate={onGuestUpdate}
+            ></IndividualGuestForm>
           </div>
         ))}
       </div>

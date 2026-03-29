@@ -33,15 +33,11 @@ export default function RsvpModal({ guestGroups }: Props) {
     address: null,
   });
 
-  function handleAttendingToggle(
-    groupMembers: Guest[],
-    memberId: number,
-    isAttending: boolean,
-  ) {
+  function onGuestUpdate(guestId: number, updates: Partial<Guest>) {
     setRsvpForm((prev) => ({
       ...prev,
       groupMembers: prev.groupMembers.map((m) =>
-        m.id === memberId ? { ...m, attending: isAttending } : m,
+        m.id === guestId ? { ...m, ...updates } : m,
       ),
     }));
   }
@@ -96,7 +92,10 @@ export default function RsvpModal({ guestGroups }: Props) {
         )}
 
         {step === 2 && (
-          <RsvpStepTwo groupMembers={rsvpForm.groupMembers}></RsvpStepTwo>
+          <RsvpStepTwo
+            groupMembers={rsvpForm.groupMembers}
+            onGuestUpdate={onGuestUpdate}
+          ></RsvpStepTwo>
         )}
 
         {step === 3 && (
