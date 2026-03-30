@@ -1,6 +1,6 @@
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { Label } from "../ui/label";
-import { Guest, GuestGroup } from "./types";
+import { GuestGroup } from "./types";
 
 type Props = {
   guestGroups: GuestGroup[];
