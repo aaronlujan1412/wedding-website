@@ -19,4 +19,12 @@
   --color-card: #fdf6e3;
   --color-border: #d4c5a9;
   --radius: 0.5rem;
+  --color-input: #d4c5a9;
+  --color-ring: #00563f;
+  --color-popover: #fdf6e3;
+  --color-popover-foreground: #1c1917;
+  --color-secondary: #f5ede0;
+  --color-secondary-foreground: #1c1917;
+  --color-destructive: #b22222;
+  --color-muted: #f5ede0;
 }
