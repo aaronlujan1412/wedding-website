@@ -1,5 +1,11 @@
-import { Label } from "../ui/label";
-import { Guest, DietaryType, DIETARY_OPTIONS, dietaryLabels } from "./types";
+import { Guest } from "./types";
+
+import { Separator } from "../ui/separator";
+import { Checkbox } from "../ui/checkbox";
+
+import DietarySection from "./FormParts/DietarySection";
+import PlusOneSection from "./FormParts/PlusOneSection";
+import MiscSection from "./FormParts/MiscSection";
 
 type Props = {
   groupMember: Guest;
@@ -12,41 +18,56 @@ export default function IndividualGuestForm({
 }: Props) {
   return (
     <div>
-      <h1 className="font-bold">{groupMember.name}</h1>
-      <div className="flex flex-col">
+      <h1 className="font-bold text-foreground mb-2">{groupMember.name}</h1>
+      <div className="flex flex-col gap-2">
         <div>
-          <input
-            type="checkbox"
+          <Checkbox
+            className="mr-2"
+            id="attending"
             checked={groupMember.attending ?? false}
-            onChange={(e) =>
-              onGuestUpdate(groupMember.id, { attending: e.target.checked })
-            }
-            className="mr-3"
+            onCheckedChange={(checked) => {
+              if (checked === "indeterminate") return;
+              onGuestUpdate(groupMember.id, {
+                attending: checked,
+                ...(!checked && {
+                  dietary_type: null,
+                  dietary_details: [],
+                  plus_one_name: null,
+                  song_request: null,
+                }),
+              });
+            }}
           />
-          <label>Attending?</label>
+          <label className="text-muted-foreground">
+            This person coming or what?
+          </label>
         </div>
-        <label>
-          Does this guest have any dietary restrictions/preferences?
-        </label>
-        <select
-          aria-required
-          value={groupMember.dietary_type ?? ""}
-          onChange={(e) =>
-            onGuestUpdate(groupMember.id, {
-              dietary_type: e.target.value as DietaryType,
-            })
-          }
-        >
-          <option value="" disabled>
-            Select an option...
-          </option>
-          {DIETARY_OPTIONS.map((option) => (
-            <option key={option} value={option}>
-              {dietaryLabels[option]}
-            </option>
-          ))}
-        </select>
+        {groupMember.attending === true && (
+          <div className="flex flex-col gap-3">
+            {groupMember.plus_one_allowed && (
+              <PlusOneSection
+                guestId={groupMember.id}
+                plus_one_allowed={groupMember.plus_one_allowed}
+                plus_one_name={groupMember.plus_one_name}
+                onGuestUpdate={onGuestUpdate}
+              />
+            )}
+            <DietarySection
+              dietary_details={groupMember.dietary_details}
+              dietary_type={groupMember.dietary_type ?? "none"}
+              guestId={groupMember.id}
+              onGuestUpdate={onGuestUpdate}
+            />
+            <MiscSection
+              songRequest={groupMember.song_request}
+              notes={groupMember.notes ?? ""}
+              guestId={groupMember.id}
+              onGuestUpdate={onGuestUpdate}
+            />
+          </div>
+        )}
       </div>
+      <Separator className="m-3" />
     </div>
   );
 }
