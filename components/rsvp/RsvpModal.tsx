@@ -17,20 +17,23 @@ import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
 import { getGuestsFromGroupId } from "@/app/actions/rsvp";
+import ErrorBox from "../ErrorBox/ErrorBox";
 
 type Props = {
   guestGroups: GuestGroup[];
 };
 
 export default function RsvpModal({ guestGroups }: Props) {
-  const [step, setStep] = useState(1);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [rsvpForm, setRsvpForm] = useState<RsvpFormData>({
     groupId: 0,
+    groupName: "",
     groupMembers: [],
     address: null,
+    step: 0,
   });
 
   function onGuestUpdate(guestId: number, updates: Partial<Guest>) {
@@ -43,28 +46,44 @@ export default function RsvpModal({ guestGroups }: Props) {
   }
 
   const handleNext = async () => {
-    if (step === 1) {
-      const { data } = await getGuestsFromGroupId(Number(selectedGroup));
-      if (data !== null) {
-        setRsvpForm((prev) => ({
-          ...prev,
-          groupId: Number(selectedGroup),
-          groupMembers: data,
-        }));
+    setError(null);
+    if (rsvpForm.step === 1) {
+      setLoading(true);
+      try {
+        const { data, error: fetchError } = await getGuestsFromGroupId(
+          Number(selectedGroup),
+        );
+        if (fetchError) {
+          setError("Failed to load group members. Please try again.");
+          return;
+        }
+        if (data !== null) {
+          setRsvpForm((prev) => ({
+            ...prev,
+            groupId: Number(selectedGroup),
+            groupMembers: data,
+            step: prev.step + 1,
+          }));
+        }
+      } catch (e) {
+        setError("Welp. Something went wrong I didn't expect. Please text me.");
+      } finally {
+        setLoading(false);
       }
     }
-    setStep(step + 1);
   };
 
-  const handleBack = () => setStep(step - 1);
+  const handleBack = () => {
+    setRsvpForm((prev) => ({ ...prev, step: prev.step - 1 }));
+  };
 
   const handleSubmit = async () => {
-    setStep(1);
+    setRsvpForm((prev) => ({ ...prev, step: 1 }));
   };
 
   const handleOpen = (open: boolean) => {
     if (open) {
-      setStep(1);
+      setRsvpForm((prev) => ({ ...prev, step: 1 }));
     }
     setIsOpen(open);
   };
@@ -72,18 +91,18 @@ export default function RsvpModal({ guestGroups }: Props) {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpen}>
       <DialogTrigger asChild>
-        <button className="mt-8 px-6 py-3 bg-stone-900 text-white rounded-lg hover:bg-stone-700 transition">
+        <button className="mt-8 px-6 py-3 bg-primary text-white rounded-lg hover:bg-stone-700 transition">
           RSVP Now
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[425px] bg-white">
+      <DialogContent className="sm:max-w-[700px] bg-card">
         <DialogHeader>
           <DialogTitle className="text-center">RSVP</DialogTitle>
-          <DialogDescription>Step {step} of 3</DialogDescription>
+          <DialogDescription>Step {rsvpForm.step} of 3</DialogDescription>
         </DialogHeader>
 
-        {step === 1 && (
+        {rsvpForm.step === 1 && (
           <RsvpStepOne
             setSelectedGroup={setSelectedGroup}
             selectedGroup={selectedGroup}
@@ -91,14 +110,14 @@ export default function RsvpModal({ guestGroups }: Props) {
           />
         )}
 
-        {step === 2 && (
+        {rsvpForm.step === 2 && (
           <RsvpStepTwo
             groupMembers={rsvpForm.groupMembers}
             onGuestUpdate={onGuestUpdate}
           ></RsvpStepTwo>
         )}
 
-        {step === 3 && (
+        {rsvpForm.step === 3 && (
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="meal">Meal Preference</Label>
@@ -107,14 +126,22 @@ export default function RsvpModal({ guestGroups }: Props) {
           </div>
         )}
 
+        <div className="flex justify-center">
+          {error && <ErrorBox message={error} />}
+        </div>
+
         <DialogFooter>
-          {step > 1 && (
+          {rsvpForm.step > 1 && (
             <Button onClick={handleBack} className="mr-2">
               Back
             </Button>
           )}
-          {step < 3 && <Button onClick={handleNext}>Next</Button>}
-          {step === 3 && (
+          {rsvpForm.step < 3 && (
+            <Button disabled={loading} onClick={handleNext}>
+              Next
+            </Button>
+          )}
+          {rsvpForm.step === 3 && (
             <Button onClick={() => handleSubmit()} disabled={loading}>
               Submit
             </Button>
