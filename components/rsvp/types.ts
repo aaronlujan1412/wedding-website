@@ -18,5 +18,17 @@ export interface Address {
 export interface RsvpFormData {
   groupId: number;
   groupMembers: Guest[];
+  groupName: string;
   address: Address | null;
+  step: number;
 }
+
+export const DIETARY_DETAIL_OPTIONS = [
+  "Gluten-free",
+  "Dairy-free",
+  "Nut allergy",
+  "Shellfish allergy",
+  "Vegetarian",
+  "Vegan",
+  "Pescetarian",
+];
