@@ -13,6 +13,9 @@ export async function getAllGuestGroups() {
 }
 
 export async function getGuestsFromGroupId(groupId: number) {
-  const data = await supabase.from("guests").select().eq("group_id", groupId);
-  return data;
+  const { data, error } = await supabase
+    .from("guests")
+    .select()
+    .eq("group_id", groupId);
+  return { data, error };
 }
