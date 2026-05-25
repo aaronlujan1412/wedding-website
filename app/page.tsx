@@ -23,7 +23,7 @@ export default async function Home() {
           <div>Savea</div>
         </h1>
         <p>(Because who else would it be?)</p>
-        <p className="mt-4 text-xl text-stone-600">12 · 01 · 2025</p>
+        <p className="mt-4 text-xl text-stone-600">12 · 01 · 2026</p>
 
         <RsvpModal guestGroups={data ?? []} />
       </div>
