@@ -9,12 +9,11 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
+import RsvpStepThree from "./RsvpStepThree";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
 import { getGuestsFromGroupId } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
@@ -62,7 +61,6 @@ export default function RsvpModal({ guestGroups }: Props) {
             ...prev,
             groupId: Number(selectedGroup),
             groupMembers: data,
-            step: prev.step + 1,
           }));
         }
       } catch (e) {
@@ -71,6 +69,10 @@ export default function RsvpModal({ guestGroups }: Props) {
         setLoading(false);
       }
     }
+    setRsvpForm((prev) => ({
+      ...prev,
+      step: prev.step + 1,
+    }));
   };
 
   const handleBack = () => {
@@ -114,16 +116,15 @@ export default function RsvpModal({ guestGroups }: Props) {
           <RsvpStepTwo
             groupMembers={rsvpForm.groupMembers}
             onGuestUpdate={onGuestUpdate}
-          ></RsvpStepTwo>
+          />
         )}
 
         {rsvpForm.step === 3 && (
-          <div className="grid gap-4 py-4">
-            <div className="grid gap-2">
-              <Label htmlFor="meal">Meal Preference</Label>
-              <Input id="meal" placeholder="e.g., Vegetarian" />
-            </div>
-          </div>
+          <RsvpStepThree
+            guestGroup={selectedGroup}
+            groupMembers={rsvpForm.groupMembers}
+            onGuestUpdate={onGuestUpdate}
+          />
         )}
 
         <div className="flex justify-center">
