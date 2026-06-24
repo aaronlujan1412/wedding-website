@@ -43,3 +43,6 @@ next-env.d.ts
 # claude
 CLAUDE.md
 .claude-data/
+
+# obsidian vault (personal planning notes, not project source)
+/Obsidian Vault/
