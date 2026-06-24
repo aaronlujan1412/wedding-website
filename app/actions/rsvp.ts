@@ -19,3 +19,5 @@ export async function getGuestsFromGroupId(groupId: number) {
     .eq("group_id", groupId);
   return { data, error };
 }
+
+export async function verifyPhone() {}

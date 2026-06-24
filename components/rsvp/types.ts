@@ -19,7 +19,7 @@ export interface RsvpFormData {
   groupId: number;
   groupMembers: Guest[];
   groupName: string;
-  address: Address | null;
+  submitterId: number;
   step: number;
 }
 

@@ -6,6 +6,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { GuestGroup, RsvpFormData } from "./types";
+import { Input } from "../ui/input";
 
 type Props = {
   guestGroups: GuestGroup[];
@@ -34,6 +35,20 @@ export default function RsvpStepOne({
             ))}
           </SelectContent>
         </Select>
+
+        <label htmlFor="group">
+          Please enter the last four digits of your phone number:
+        </label>
+        <Input
+          onChange={(e) =>
+            onGuestUpdate(guestId, {
+              plus_one_name: e.target.value,
+            })
+          }
+          value={plus_one_name ?? ""}
+          type="text"
+          placeholder="What's the cutie's name?"
+        ></Input>
       </div>
     </div>
   );

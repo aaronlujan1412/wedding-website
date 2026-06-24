@@ -31,7 +31,7 @@ export default function RsvpModal({ guestGroups }: Props) {
     groupId: 0,
     groupName: "",
     groupMembers: [],
-    address: null,
+    submitterId: 0,
     step: 0,
   });
 
@@ -43,6 +43,8 @@ export default function RsvpModal({ guestGroups }: Props) {
       ),
     }));
   }
+
+  function verifySubmitter(guestId: number, numberToVerify: string) {}
 
   const handleNext = async () => {
     setError(null);
