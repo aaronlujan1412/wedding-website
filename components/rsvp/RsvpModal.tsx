@@ -17,6 +17,7 @@ import RsvpStepThree from "./RsvpStepThree";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
 import { getGuestsFromGroupId } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
+import { VisuallyHidden } from "radix-ui";
 
 type Props = {
   guestGroups: GuestGroup[];
@@ -26,7 +27,9 @@ export default function RsvpModal({ guestGroups }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [intruder, setIntruder] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState("");
+  const [lastFourInput, setLastFourInput] = useState("");
   const [rsvpForm, setRsvpForm] = useState<RsvpFormData>({
     groupId: 0,
     groupName: "",
@@ -44,7 +47,12 @@ export default function RsvpModal({ guestGroups }: Props) {
     }));
   }
 
-  function verifySubmitter(guestId: number, numberToVerify: string) {}
+  function verifySubmitter(
+    numberToVerify: string,
+    numbersToVerifyAgainst: Guest[],
+  ): void {
+    setIntruder(true);
+  }
 
   const handleNext = async () => {
     setError(null);
@@ -64,6 +72,7 @@ export default function RsvpModal({ guestGroups }: Props) {
             groupId: Number(selectedGroup),
             groupMembers: data,
           }));
+          verifySubmitter(lastFourInput, rsvpForm.groupMembers);
         }
       } catch (e) {
         setError("Welp. Something went wrong I didn't expect. Please text me.");
@@ -71,10 +80,18 @@ export default function RsvpModal({ guestGroups }: Props) {
         setLoading(false);
       }
     }
-    setRsvpForm((prev) => ({
-      ...prev,
-      step: prev.step + 1,
-    }));
+
+    if (intruder) {
+      setRsvpForm((prev) => ({
+        ...prev,
+        step: 0,
+      }));
+    } else {
+      setRsvpForm((prev) => ({
+        ...prev,
+        step: prev.step + 1,
+      }));
+    }
   };
 
   const handleBack = () => {
@@ -100,56 +117,77 @@ export default function RsvpModal({ guestGroups }: Props) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[700px] bg-card">
-        <DialogHeader>
-          <DialogTitle className="text-center">RSVP</DialogTitle>
-          <DialogDescription>Step {rsvpForm.step} of 3</DialogDescription>
-        </DialogHeader>
+      <DialogContent className="sm:max-w-[700px] bg-card overflow-hidden">
+        {intruder ? (
+          <>
+            <div className="animate-intruder absolute inset-0" />
 
-        {rsvpForm.step === 1 && (
-          <RsvpStepOne
-            setSelectedGroup={setSelectedGroup}
-            selectedGroup={selectedGroup}
-            guestGroups={guestGroups}
-          />
+            <VisuallyHidden.Root>
+              <DialogHeader>
+                <DialogTitle>FBI</DialogTitle>
+                <DialogDescription>FBI</DialogDescription>
+              </DialogHeader>
+            </VisuallyHidden.Root>
+
+            <div className="relative z-10 text-center">
+              THE FBI ARE ON THEIR WAY YOU FREAK
+            </div>
+          </>
+        ) : (
+          <>
+            <DialogHeader>
+              <DialogTitle className="text-center">RSVP</DialogTitle>
+              <DialogDescription>Step {rsvpForm.step} of 3</DialogDescription>
+            </DialogHeader>
+
+            {rsvpForm.step === 1 && (
+              <RsvpStepOne
+                setSelectedGroup={setSelectedGroup}
+                selectedGroup={selectedGroup}
+                guestGroups={guestGroups}
+                lastFourInput={lastFourInput}
+                setLastFourInput={setLastFourInput}
+              />
+            )}
+
+            {rsvpForm.step === 2 && (
+              <RsvpStepTwo
+                groupMembers={rsvpForm.groupMembers}
+                onGuestUpdate={onGuestUpdate}
+              />
+            )}
+
+            {rsvpForm.step === 3 && (
+              <RsvpStepThree
+                guestGroup={selectedGroup}
+                groupMembers={rsvpForm.groupMembers}
+                onGuestUpdate={onGuestUpdate}
+              />
+            )}
+
+            <div className="flex justify-center">
+              {error && <ErrorBox message={error} />}
+            </div>
+
+            <DialogFooter>
+              {rsvpForm.step > 1 && (
+                <Button onClick={handleBack} className="mr-2">
+                  Back
+                </Button>
+              )}
+              {rsvpForm.step < 3 && (
+                <Button disabled={loading} onClick={handleNext}>
+                  Next
+                </Button>
+              )}
+              {rsvpForm.step === 3 && (
+                <Button onClick={() => handleSubmit()} disabled={loading}>
+                  Submit
+                </Button>
+              )}
+            </DialogFooter>
+          </>
         )}
-
-        {rsvpForm.step === 2 && (
-          <RsvpStepTwo
-            groupMembers={rsvpForm.groupMembers}
-            onGuestUpdate={onGuestUpdate}
-          />
-        )}
-
-        {rsvpForm.step === 3 && (
-          <RsvpStepThree
-            guestGroup={selectedGroup}
-            groupMembers={rsvpForm.groupMembers}
-            onGuestUpdate={onGuestUpdate}
-          />
-        )}
-
-        <div className="flex justify-center">
-          {error && <ErrorBox message={error} />}
-        </div>
-
-        <DialogFooter>
-          {rsvpForm.step > 1 && (
-            <Button onClick={handleBack} className="mr-2">
-              Back
-            </Button>
-          )}
-          {rsvpForm.step < 3 && (
-            <Button disabled={loading} onClick={handleNext}>
-              Next
-            </Button>
-          )}
-          {rsvpForm.step === 3 && (
-            <Button onClick={() => handleSubmit()} disabled={loading}>
-              Submit
-            </Button>
-          )}
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

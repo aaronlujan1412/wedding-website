@@ -5,19 +5,23 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { GuestGroup, RsvpFormData } from "./types";
+import { GuestGroup } from "./types";
 import { Input } from "../ui/input";
 
 type Props = {
   guestGroups: GuestGroup[];
   selectedGroup: string;
   setSelectedGroup: (value: string) => void;
+  lastFourInput: string;
+  setLastFourInput: (value: string) => void;
 };
 
 export default function RsvpStepOne({
   guestGroups,
   selectedGroup,
   setSelectedGroup,
+  lastFourInput,
+  setLastFourInput,
 }: Props) {
   return (
     <div className="grid gap-4 py-4">
@@ -36,19 +40,20 @@ export default function RsvpStepOne({
           </SelectContent>
         </Select>
 
-        <label htmlFor="group">
-          Please enter the last four digits of your phone number:
-        </label>
-        <Input
-          onChange={(e) =>
-            onGuestUpdate(guestId, {
-              plus_one_name: e.target.value,
-            })
-          }
-          value={plus_one_name ?? ""}
-          type="text"
-          placeholder="What's the cutie's name?"
-        ></Input>
+        {selectedGroup && (
+          <div>
+            <label htmlFor="verification">
+              Please enter the last four digits of your phone number:
+            </label>
+            <Input
+              onChange={(e) => setLastFourInput(e.target.value)}
+              value={lastFourInput}
+              id={"verification"}
+              type="text"
+              placeholder="Don't get caught lying. I'll call the FBI."
+            ></Input>
+          </div>
+        )}
       </div>
     </div>
   );
