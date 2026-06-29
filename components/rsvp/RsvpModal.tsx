@@ -129,7 +129,11 @@ export default function RsvpModal({ guestGroups }: Props) {
               </DialogHeader>
             </VisuallyHidden.Root>
 
-            <div className="relative z-10 text-center">
+            <div
+              className="relative z-10 text-center outline-none"
+              tabIndex={-1}
+              autoFocus
+            >
               THE FBI ARE ON THEIR WAY YOU FREAK
             </div>
           </>
