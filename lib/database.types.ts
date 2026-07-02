@@ -41,16 +41,28 @@ export type Database = {
     Tables: {
       guest_groups: {
         Row: {
+          address_city: string | null
+          address_state: string | null
+          address_street: string | null
+          address_zip: string | null
           custom_message: string | null
           id: number
           name: string
         }
         Insert: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           custom_message?: string | null
           id?: number
           name: string
         }
         Update: {
+          address_city?: string | null
+          address_state?: string | null
+          address_street?: string | null
+          address_zip?: string | null
           custom_message?: string | null
           id?: number
           name?: string
@@ -59,7 +71,6 @@ export type Database = {
       }
       guests: {
         Row: {
-          address: string | null
           attending: boolean | null
           contact_number: string
           dietary_details: string[] | null
@@ -74,7 +85,6 @@ export type Database = {
           song_request: string | null
         }
         Insert: {
-          address?: string | null
           attending?: boolean | null
           contact_number: string
           dietary_details?: string[] | null
@@ -89,7 +99,6 @@ export type Database = {
           song_request?: string | null
         }
         Update: {
-          address?: string | null
           attending?: boolean | null
           contact_number?: string
           dietary_details?: string[] | null
