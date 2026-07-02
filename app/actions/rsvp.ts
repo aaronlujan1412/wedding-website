@@ -1,6 +1,12 @@
 "use server";
 
 import { supabase } from "@/lib/supabase";
+import {
+  type GroupResult,
+  failed,
+  ok,
+  REJECTED,
+} from "@/components/rsvp/types";
 
 export async function getAllGuests() {
   const data = await supabase.from("guests").select();
@@ -12,10 +18,25 @@ export async function getAllGuestGroups() {
   return data;
 }
 
-export async function getGuestsFromGroupId(groupId: number) {
+export async function getGuestsFromGroupId(
+  groupId: number,
+  verificationInput: string,
+): Promise<GroupResult> {
   const { data, error } = await supabase
     .from("guests")
     .select()
     .eq("group_id", groupId);
-  return { data, error };
+
+  if (error || data === null) {
+    return failed(error);
+  }
+
+  const submitter = data.find(
+    (g) => g.contact_number.slice(-4) === verificationInput,
+  );
+
+  if (!submitter) {
+    return REJECTED;
+  }
+  return ok(data, submitter.id);
 }

@@ -47,50 +47,36 @@ export default function RsvpModal({ guestGroups }: Props) {
     }));
   }
 
-  function verifySubmitter(
-    numberToVerify: string,
-    numbersToVerifyAgainst: Guest[],
-  ): void {
-    setIntruder(true);
-  }
-
   const handleNext = async () => {
     setError(null);
     if (rsvpForm.step === 1) {
       setLoading(true);
       try {
-        const { data, error: fetchError } = await getGuestsFromGroupId(
+        const result = await getGuestsFromGroupId(
           Number(selectedGroup),
+          lastFourInput,
         );
-        if (fetchError) {
+        if (result.error) {
           setError("Failed to load group members. Please try again.");
           return;
         }
-        if (data !== null) {
-          setRsvpForm((prev) => ({
-            ...prev,
-            groupId: Number(selectedGroup),
-            groupMembers: data,
-          }));
-          verifySubmitter(lastFourInput, rsvpForm.groupMembers);
+        if (!result.verified) {
+          setIntruder(true);
+          return;
         }
+        const { data, submitterId } = result;
+        setRsvpForm((prev) => ({
+          ...prev,
+          groupId: Number(selectedGroup),
+          groupMembers: data,
+          submitterId: submitterId,
+          step: prev.step + 1,
+        }));
       } catch (e) {
         setError("Welp. Something went wrong I didn't expect. Please text me.");
       } finally {
         setLoading(false);
       }
-    }
-
-    if (intruder) {
-      setRsvpForm((prev) => ({
-        ...prev,
-        step: 0,
-      }));
-    } else {
-      setRsvpForm((prev) => ({
-        ...prev,
-        step: prev.step + 1,
-      }));
     }
   };
 
