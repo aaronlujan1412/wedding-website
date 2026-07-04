@@ -1,5 +1,5 @@
 import { Label } from "../ui/label";
-import IndividualGuestForm from "./InvidualGuestForm";
+import IndividualGuestForm from "./IndividualGuestForm";
 import { Guest } from "./types";
 
 type Props = {
@@ -19,7 +19,7 @@ export default function RsvpStepTwo({ groupMembers, onGuestUpdate }: Props) {
             <IndividualGuestForm
               groupMember={member}
               onGuestUpdate={onGuestUpdate}
-            ></IndividualGuestForm>
+            />
           </div>
         ))}
       </div>

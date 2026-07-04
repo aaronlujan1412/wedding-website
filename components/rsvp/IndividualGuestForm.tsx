@@ -6,6 +6,7 @@ import { Checkbox } from "../ui/checkbox";
 import DietarySection from "./FormParts/DietarySection";
 import PlusOneSection from "./FormParts/PlusOneSection";
 import MiscSection from "./FormParts/MiscSection";
+import ContactSection from "./FormParts/ContactSection";
 
 type Props = {
   groupMember: Guest;
@@ -44,6 +45,12 @@ export default function IndividualGuestForm({
         </div>
         {groupMember.attending === true && (
           <div className="flex flex-col gap-3">
+            <ContactSection
+              guestId={groupMember.id}
+              onGuestUpdate={onGuestUpdate}
+              contactNumber={groupMember.contact_number}
+            />
+
             {groupMember.plus_one_allowed && (
               <PlusOneSection
                 guestId={groupMember.id}
