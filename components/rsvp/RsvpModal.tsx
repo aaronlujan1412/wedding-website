@@ -37,6 +37,9 @@ export default function RsvpModal({ guestGroups }: Props) {
     submitterId: 0,
     step: 0,
   });
+  const selectedGroupObj = guestGroups.find(
+    (g) => g.id === Number(selectedGroup),
+  );
 
   function onGuestUpdate(guestId: number, updates: Partial<Guest>) {
     setRsvpForm((prev) => ({
@@ -147,11 +150,13 @@ export default function RsvpModal({ guestGroups }: Props) {
               />
             )}
 
-            {rsvpForm.step === 3 && (
+            {rsvpForm.step === 3 && selectedGroupObj && (
               <RsvpStepThree
-                guestGroup={selectedGroup}
+                guestGroup={selectedGroupObj}
                 groupMembers={rsvpForm.groupMembers}
                 onGuestUpdate={onGuestUpdate}
+                submitterId={rsvpForm.submitterId}
+                rsvpForm={rsvpForm}
               />
             )}
 
