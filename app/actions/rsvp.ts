@@ -18,7 +18,7 @@ export async function getAllGuestGroups() {
   return data;
 }
 
-export async function getGuestsFromGroupId(
+export async function getGroupFromGroupId(
   groupId: number,
   verificationInput: string,
 ): Promise<GroupResult> {

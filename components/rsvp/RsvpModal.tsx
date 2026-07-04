@@ -8,14 +8,14 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DialogDescription } from "@radix-ui/react-dialog";
 import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
 import RsvpStepThree from "./RsvpStepThree";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
-import { getGuestsFromGroupId } from "@/app/actions/rsvp";
+import { getGroupFromGroupId } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
 import { VisuallyHidden } from "radix-ui";
 
@@ -55,7 +55,7 @@ export default function RsvpModal({ guestGroups }: Props) {
     if (rsvpForm.step === 1) {
       setLoading(true);
       try {
-        const result = await getGuestsFromGroupId(
+        const result = await getGroupFromGroupId(
           Number(selectedGroup),
           lastFourInput,
         );
