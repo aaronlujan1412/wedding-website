@@ -80,7 +80,12 @@ export default function RsvpModal({ guestGroups }: Props) {
       } finally {
         setLoading(false);
       }
+      return;
     }
+    setRsvpForm((prev) => ({
+      ...prev,
+      step: prev.step + 1,
+    }));
   };
 
   const handleBack = () => {
