@@ -106,7 +106,7 @@ export default function RsvpModal({ guestGroups }: Props) {
         </button>
       </DialogTrigger>
 
-      <DialogContent className="sm:max-w-[700px] bg-card overflow-hidden">
+      <DialogContent className="sm:max-w-[700px] max-h-[85vh] bg-card overflow-hidden grid-rows-[auto_1fr_auto_auto]">
         {intruder ? (
           <>
             <div className="animate-intruder absolute inset-0" />

@@ -9,7 +9,7 @@ type Props = {
 
 export default function RsvpStepTwo({ groupMembers, onGuestUpdate }: Props) {
   return (
-    <div className="grid gap-4 py-4">
+    <div className="grid gap-4 py-4 overflow-y-auto min-h-0">
       <div className="grid gap-2">
         <Label htmlFor="group" className="mb-3">
           Please provide all details for associated members:
