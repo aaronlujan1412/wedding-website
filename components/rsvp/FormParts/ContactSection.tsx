@@ -24,6 +24,7 @@ export default function ContactSection({
         Contact Number:
       </Label>
       <Input
+        disabled
         id={`contact-${guestId}`}
         type="tel"
         inputMode="tel"

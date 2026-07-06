@@ -37,7 +37,7 @@ export default function DietarySection({
         Does this guest have any dietary restrictions/preferences?
       </label>
       <Select
-        value={dietary_type ?? ""}
+        value={dietary_type ?? "none"}
         onValueChange={(value) =>
           onGuestUpdate(guestId, {
             dietary_type: value as DietaryType,

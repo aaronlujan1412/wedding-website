@@ -23,6 +23,7 @@ export default function MiscSection({
             Does this guest have any song requests? One per guest.
           </label>
           <Input
+            value={songRequest ?? ""}
             onChange={(e) =>
               onGuestUpdate(guestId, {
                 song_request: e.target.value,
@@ -39,6 +40,7 @@ export default function MiscSection({
       <div className="flex flex-col gap-2">
         <label className="font-bold">Extra Notes:</label>
         <Input
+          value={notes}
           onChange={(e) =>
             onGuestUpdate(guestId, {
               notes: e.target.value,
