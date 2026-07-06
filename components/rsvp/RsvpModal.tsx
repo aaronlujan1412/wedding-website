@@ -15,7 +15,7 @@ import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
 import RsvpStepThree from "./RsvpStepThree";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
-import { getGroupFromGroupId } from "@/app/actions/rsvp";
+import { getGroupFromGroupId, putGuestInformation } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
 import { VisuallyHidden } from "radix-ui";
 
@@ -30,6 +30,9 @@ export default function RsvpModal({ guestGroups }: Props) {
   const [intruder, setIntruder] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [lastFourInput, setLastFourInput] = useState("");
+  const [groupInformation, setGroupInformation] = useState<GuestGroup | null>(
+    null,
+  );
   const [rsvpForm, setRsvpForm] = useState<RsvpFormData>({
     groupId: 0,
     groupName: "",
@@ -50,6 +53,10 @@ export default function RsvpModal({ guestGroups }: Props) {
     }));
   }
 
+  function onAddressUpdate(updates: Partial<GuestGroup>) {
+    setGroupInformation((prev) => (prev ? { ...prev, ...updates } : prev));
+  }
+
   const handleNext = async () => {
     setError(null);
     if (rsvpForm.step === 1) {
@@ -68,10 +75,15 @@ export default function RsvpModal({ guestGroups }: Props) {
           return;
         }
         const { data, submitterId } = result;
+        const members = data.map((g) => ({
+          ...g,
+          dietary_type: g.dietary_type ?? "none",
+        }));
+        setGroupInformation(selectedGroupObj ?? null);
         setRsvpForm((prev) => ({
           ...prev,
           groupId: Number(selectedGroup),
-          groupMembers: data,
+          groupMembers: members,
           submitterId: submitterId,
           step: prev.step + 1,
         }));
@@ -93,7 +105,25 @@ export default function RsvpModal({ guestGroups }: Props) {
   };
 
   const handleSubmit = async () => {
-    setRsvpForm((prev) => ({ ...prev, step: 1 }));
+    if (!groupInformation) return;
+    setError(null);
+    setLoading(true);
+    try {
+      const result = await putGuestInformation(
+        groupInformation,
+        rsvpForm.groupMembers,
+      );
+      if (result.error) {
+        setError("Failed to update group members. Please try again");
+        return;
+      }
+      setRsvpForm((prev) => ({ ...prev, step: 1 }));
+    } catch (e) {
+      setError("Damn. I don't know how that one messed up.");
+    } finally {
+      setLoading(false);
+    }
+    return;
   };
 
   const handleOpen = (open: boolean) => {
@@ -155,13 +185,13 @@ export default function RsvpModal({ guestGroups }: Props) {
               />
             )}
 
-            {rsvpForm.step === 3 && selectedGroupObj && (
+            {rsvpForm.step === 3 && groupInformation && (
               <RsvpStepThree
-                guestGroup={selectedGroupObj}
+                guestGroup={groupInformation}
                 groupMembers={rsvpForm.groupMembers}
-                onGuestUpdate={onGuestUpdate}
                 submitterId={rsvpForm.submitterId}
-                rsvpForm={rsvpForm}
+                handleBack={handleBack}
+                onAddressUpdate={onAddressUpdate}
               />
             )}
 
