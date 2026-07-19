@@ -15,7 +15,7 @@ export async function getAllGuests() {
 }
 
 export async function getAllGuestGroups() {
-  const data = await supabase.from("guest_groups").select();
+  const data = await supabase.from("guest_groups").select().order("name");
   return data;
 }
 
