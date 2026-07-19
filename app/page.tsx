@@ -15,7 +15,7 @@ export default async function Home() {
           className="object-cover"
           alt="Aaron and Savea in a forest"
         ></Image>
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent" />
+        <div className="absolute inset-0 bg-linear-to-b from-black/50 to-transparent" />
       </div>
       <div className="flex min-h-screen flex-col items-center justify-center p-24">
         <h1 className="text-6xl font-corinthia text-stone-800">

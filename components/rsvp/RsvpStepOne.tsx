@@ -31,7 +31,7 @@ export default function RsvpStepOne({
           <SelectTrigger className="border-border bg-card">
             <SelectValue placeholder="Select an option..."></SelectValue>
           </SelectTrigger>
-          <SelectContent className="bg-card">
+          <SelectContent className="bg-card" avoidCollisions={false}>
             {guestGroups.map((group) => (
               <SelectItem key={group.id} value={String(group.id)}>
                 {group.name}
