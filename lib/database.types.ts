@@ -39,6 +39,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      faq: {
+        Row: {
+          aaron_take: string | null
+          id: number
+          question: string
+          sort_order: number
+          translation: string
+        }
+        Insert: {
+          aaron_take?: string | null
+          id?: number
+          question: string
+          sort_order: number
+          translation: string
+        }
+        Update: {
+          aaron_take?: string | null
+          id?: number
+          question?: string
+          sort_order?: number
+          translation?: string
+        }
+        Relationships: []
+      }
       guest_groups: {
         Row: {
           address_city: string | null
