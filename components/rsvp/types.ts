@@ -16,10 +16,9 @@ export interface Address {
   addressState: string;
   addressZip: string;
 }
+
 export interface RsvpFormData {
-  groupId: number;
   groupMembers: Guest[];
-  groupName: string;
   submitterId: number;
   step: number;
 }

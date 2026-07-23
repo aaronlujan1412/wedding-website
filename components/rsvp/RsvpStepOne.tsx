@@ -26,7 +26,7 @@ export default function RsvpStepOne({
   return (
     <div className="grid gap-4 py-4 overflow-y-auto min-h-0">
       <div className="grid gap-2">
-        <label htmlFor="group">Which group are you RSVP'ing for?</label>
+        <label htmlFor="group">Which group are you RSVP&apos;ing for?</label>
         <Select value={selectedGroup} onValueChange={setSelectedGroup}>
           <SelectTrigger className="border-border bg-card">
             <SelectValue placeholder="Select an option..."></SelectValue>

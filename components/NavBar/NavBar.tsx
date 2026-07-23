@@ -1,9 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { MenuIcon } from "lucide-react";
 import { NAV_ITEMS } from "./NavBarItems";
 import Image from "next/image";
 

@@ -4,7 +4,7 @@ import { getAllGuestGroups } from "./actions/rsvp";
 export const dynamic = "force-dynamic";
 
 export default async function Home() {
-  const { data, error } = await getAllGuestGroups();
+  const { data } = await getAllGuestGroups();
 
   return (
     <main className="flex flex-col">

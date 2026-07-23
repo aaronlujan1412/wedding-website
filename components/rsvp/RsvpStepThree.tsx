@@ -21,10 +21,9 @@ export default function RsvpStepThree({
   handleBack,
   onAddressUpdate,
 }: Props) {
+  const [editing, setEditing] = useState(false);
   const submitter = groupMembers.find((s) => s.id === submitterId);
   if (!submitter) return null;
-
-  const [editing, setEditing] = useState(false);
 
   return (
     <div className="overflow-y-auto min-h-0">

@@ -14,7 +14,7 @@ export default function RsvpStepTwo({ groupMembers, onGuestUpdate }: Props) {
         <Label htmlFor="group" className="mb-3">
           Please provide all details for associated members:
         </Label>
-        {groupMembers.map((member, id) => (
+        {groupMembers.map((member) => (
           <div key={member.id} className="flex items-center gap-2">
             <IndividualGuestForm
               groupMember={member}
