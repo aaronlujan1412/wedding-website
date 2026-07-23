@@ -4,10 +4,8 @@ import {
   Geist_Mono,
   Corinthia,
   Cormorant_Garamond,
-  EB_Garamond,
   Raleway,
 } from "next/font/google";
-import "./globals.css";
 import { Navbar } from "@/components/NavBar/NavBar";
 
 const geistSans = Geist({
