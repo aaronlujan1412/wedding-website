@@ -7,9 +7,10 @@ interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  { href: "/information", label: "Information", position: "left" },
+  { href: "/travel", label: "Travel", position: "left" },
   { href: "/schedule", label: "Schedule", position: "left" },
+  { href: "/info", label: "Details", position: "left" },
   { href: "/", label: "Aaron & Savea", position: "center" },
-  { href: "/rsvp", label: "RSVP", position: "right" },
+  { href: "/story", label: "Our Story", position: "right" },
   { href: "/faq", label: "FAQ", position: "right" },
 ];
