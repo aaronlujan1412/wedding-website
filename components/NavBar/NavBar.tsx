@@ -30,9 +30,11 @@ export function Navbar() {
       className={`fixed left-0 right-0 z-50 flex w-full items-center font-raleway text-primary-foreground transition-all duration-300 motion-reduce:transition-none ${compact ? "top-0 bg-primary py-2 shadow-md" : "top-5 bg-transparent py-4"}`}
     >
       {/* Mobile bar */}
-      <div className="flex w-full items-center px-6 md:hidden">
+      <div className="relative flex w-full items-center px-6 md:hidden">
         <SideNav />
-        <Logo className="ml-auto max-w-10" />
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+          <Logo className="max-w-10 max-h-10" />
+        </div>
       </div>
 
       {/* Desktop bar */}
