@@ -1,10 +1,9 @@
 import { getFaqs } from "../actions/faq";
 import FaqAccordion from "@/components/faq/FaqAccordion";
 
-export const dynamic = "force-dynamic";
-
 export default async function FaqPage() {
-  const { data } = await getFaqs();
+
+  const { data, error } = await getFaqs();
 
   return (
     <main className="mx-auto min-h-screen max-w-5xl px-6 pt-40 pb-24">
@@ -18,7 +17,14 @@ export default async function FaqPage() {
             Everything you're too polite to text us about.
           </p>
         </header>
-        <FaqAccordion items={data ?? []} />
+
+        {error ? (
+          <p className="text-muted-foreground">
+            Welp. Something went wrong. Please text me.
+          </p>
+        ) : (
+          <FaqAccordion items={data ?? []} />
+        )}
       </div>
     </main>
   );
