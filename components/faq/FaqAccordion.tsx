@@ -13,8 +13,8 @@ type Props = {
 export default function FaqAccordion({ items }: Props) {
   return (
     <Accordion type="single" collapsible className="w-full font-raleway">
-      {items.map((faq) => (
-        <AccordionItem key={faq.id} value={String(faq.id)}>
+      {items.map((faq, i) => (
+        <AccordionItem key={i} value={String(i)}>
           <AccordionTrigger className="font-garamond text-xl text-primary hover:no-underline">
             {faq.question}
           </AccordionTrigger>
@@ -34,12 +34,12 @@ export default function FaqAccordion({ items }: Props) {
                   Translation
                 </p>
 
-                <p className="mt-1 text-base text-foreground">
-                  {faq.translation}
+                <p className="mt-1 text-base text-foreground whitespace-pre-line">
+                  {faq.savea_translation}
                 </p>
               </>
             ) : (
-              <p className="text-base text-foreground">{faq.translation}</p>
+              <p className="text-base text-foreground whitespace-pre-line">{faq.savea_translation}</p>
             )}
           </AccordionContent>
         </AccordionItem>

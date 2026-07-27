@@ -1,3 +1,5 @@
-import type { Database } from "@/lib/database.types";
-
-export type Faq = Database["public"]["Tables"]["faq"]["Row"];
+export type Faq = {
+    question: string;
+    aaron_take: string | null;
+    savea_translation: string;
+};
