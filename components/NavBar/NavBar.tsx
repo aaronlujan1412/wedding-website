@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV_ITEMS } from "./NavBarItems";
 import { SideNav } from "@/components/SideNav";
+import { RsvpButton } from "@/components/rsvp/RsvpButton";
 
 const leftLinks = NAV_ITEMS.filter((i) => i.position === "left");
 const rightLinks = NAV_ITEMS.filter((i) => i.position === "right");
@@ -46,6 +47,7 @@ export function Navbar() {
               {[...leftLinks, ...rightLinks].map((l) => (
                 <NavLink key={l.href} {...l} />
               ))}
+              <RsvpButton variant="nav" />
             </div>
           </div>
         ) : (

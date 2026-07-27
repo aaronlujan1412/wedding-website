@@ -8,6 +8,7 @@ import {
   Raleway,
 } from "next/font/google";
 import { Navbar } from "@/components/NavBar/NavBar";
+import { RsvpProvider } from "@/components/rsvp/RsvpProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -59,8 +60,10 @@ export default function RootLayout({
           ${cormorantGaramond.variable} 
           antialiased`}
       >
-        <Navbar />
-        {children}
+        <RsvpProvider>
+          <Navbar />
+          {children}
+        </RsvpProvider>
       </body>
     </html>
   );

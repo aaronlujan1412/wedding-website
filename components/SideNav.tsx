@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Menu } from "lucide-react";
@@ -15,6 +16,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { NAV_ITEMS } from "@/components/NavBar/NavBarItems";
+import { RsvpButton } from "@/components/rsvp/RsvpButton";
+import { useRsvp } from "@/components/rsvp/RsvpProvider";
 
 const leftLinks = NAV_ITEMS.filter((i) => i.position === "left");
 const rightLinks = NAV_ITEMS.filter((i) => i.position === "right");
@@ -22,9 +25,16 @@ const mobileLinks = [{ href: "/", label: "Home" }, ...leftLinks, ...rightLinks];
 
 export function SideNav() {
   const pathname = usePathname();
+  const { openRsvp } = useRsvp();
+  const [open, setOpen] = useState(false);
+
+  const handleRsvp = () => {
+    setOpen(false);
+    setTimeout(openRsvp, 250);
+  };
 
   return (
-    <Sheet>
+    <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
         <Button
           variant="ghost"
@@ -66,6 +76,10 @@ export function SideNav() {
             );
           })}
         </nav>
+
+        <div className="mt-2 px-4">
+          <RsvpButton variant="sidenav" onClick={handleRsvp} />
+        </div>
 
         <SheetFooter>
           <p className="text-center font-raleway text-xs uppercase tracking-[0.2em] text-muted-foreground">
