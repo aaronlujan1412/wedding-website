@@ -5,6 +5,7 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { NAV_ITEMS } from "./NavBarItems";
+import { SideNav } from "@/components/SideNav";
 
 const leftLinks = NAV_ITEMS.filter((i) => i.position === "left");
 const rightLinks = NAV_ITEMS.filter((i) => i.position === "right");
@@ -28,30 +29,39 @@ export function Navbar() {
     <nav
       className={`fixed left-0 right-0 z-50 flex w-full items-center font-raleway text-primary-foreground transition-all duration-300 motion-reduce:transition-none ${compact ? "top-0 bg-primary py-2 shadow-md" : "top-5 bg-transparent py-4"}`}
     >
-      {compact ? (
-        <div className="mx-auto flex w-full max-w-6xl items-center px-6">
-          <Logo className="max-w-10 pt-2 pb-2" />
-          <div className="ml-auto flex items-center gap-6">
-            {[...leftLinks, ...rightLinks].map((l) => (
-              <NavLink key={l.href} {...l} />
-            ))}
+      {/* Mobile bar */}
+      <div className="flex w-full items-center px-6 md:hidden">
+        <SideNav />
+        <Logo className="ml-auto max-w-10" />
+      </div>
+
+      {/* Desktop bar */}
+      <div className="hidden w-full items-center md:flex">
+        {compact ? (
+          <div className="mx-auto flex w-full max-w-6xl items-center px-6">
+            <Logo className="max-w-10 pt-2 pb-2" />
+            <div className="ml-auto flex items-center gap-6">
+              {[...leftLinks, ...rightLinks].map((l) => (
+                <NavLink key={l.href} {...l} />
+              ))}
+            </div>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className="flex flex-1 justify-evenly">
-            {leftLinks.map((l) => (
-              <NavLink key={l.href} {...l} />
-            ))}
+        ) : (
+          <div className="flex w-full items-center">
+            <div className="flex flex-1 justify-evenly">
+              {leftLinks.map((l) => (
+                <NavLink key={l.href} {...l} />
+              ))}
+            </div>
+            <Logo className="max-w-24" />
+            <div className="flex flex-1 justify-evenly">
+              {rightLinks.map((l) => (
+                <NavLink key={l.href} {...l} />
+              ))}
+            </div>
           </div>
-          <Logo className="max-w-24" />
-          <div className="flex flex-1 justify-evenly">
-            {rightLinks.map((l) => (
-              <NavLink key={l.href} {...l} />
-            ))}
-          </div>
-        </>
-      )}
+        )}
+      </div>
     </nav>
   );
 }
