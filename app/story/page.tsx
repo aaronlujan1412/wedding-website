@@ -1,15 +1,75 @@
-export default function StoryPage() {
-    return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 pt-40 pb-24">
-        <p>
-            The story of Savea and Aaron began in the colorful, loud chaos of a Halloween rave, an event neither of them either expected to ever attend. With mutual friends, they had dressed up as the Teen Titans—Savea as Raven, and Aaron as Beast Boy. Before the night even truly began, Savea was tasked with transforming Aaron’s face with the goopiest green paint they had ever seen. As they leaned in close, struggling to make the disastrous makeup work, a quiet bubble seemed to form around them. They couldn't stop laughing. It was messy, entirely unexpected, and the perfect, beautiful beginning to their forever.
-Their first night out was a blur of missed signals, and they ended up parting ways early. Yet, in the quiet that followed, neither could shake the magnetic pull they felt toward one another. Determined not to let the connection slip away, they met up the following evening, and everything fell perfectly into place. Aaron tenderly explained that his initial hesitation was born out of a desire to be a perfect gentleman, while Savea’s heart soared to know the profound attraction was entirely mutual. Later, as they danced, the rest of the room seemed to fade away. He reached out and gently took her hand. For both of them, the sparks were undeniable—a sudden, electric rush that told them nothing would ever be the same.
-At the time, Savea was living in Washington and only visiting Utah for the weekend. After that spark, they stretched her trip to the absolute limit, savoring every stolen second together. When Savea finally had to fly home, the physical miles between them vanished into endless, five-page text messages and late-night FaceTimes as they eagerly bared their souls to one another. It wasn't long before Aaron, driven by a heart that couldn't bear the distance, took a massive leap of faith. He boarded an airplane for the very first time in his life just to be by her side.
-That week in Washington was pure magic; it was the week they fell deeply and irrevocably in love. They gathered fresh pizza ingredients at Pike Place Market, built cozy pillow forts, skated hand-in-hand across the ice in Vancouver, Savea serenaded him with a song on her ukulele and Aaron belted out the entire 12 Days of Christmas under the Seattle streetlights. But true devotion is often found in the most unglamorous moments. When Toby brought fleas back from daycare, Savea's apartment unexpectedly needed to be bug-bombed, Aaron didn't hesitate. Without a single complaint, he jumped right into the chaos. Together, they stripped beds, washed linens, and bravely bathed a deeply unenthusiastic cat. Tackling the absurd mess side-by-side, they looked at each other and simply knew: they had found their partner in everything.
-Unable to imagine a life apart, Savea moved to Salt Lake City just a few months later. They moved in together shortly after and have been inseparable ever since. Today, their lives are beautifully intertwined. They work side-by-side, sharing quiet mornings, late-night video games, and the shared triumph of their DIY projects. At the very heart of their world is their eleven-year-old son, Daniel. The boundless love they share for him anchors their family and makes their home complete.
-When it was time to promise forever, Aaron planned a proposal as thoughtful as his love for her. He created a custom map, guiding Savea on a scavenger hunt to a few of the locations that meant the most to their love story. The journey ended right in front of Granny’s apple tree. There, standing in a place deeply rooted in family and history, he asked her to marry him—securing a lifetime of shared laughter, unwavering teamwork, and that same, undeniable electric touch.
-        </p>
-    </main>
-    )
+import Image from "next/image";
+import { chapters } from "@/components/story/chapters";
+import { RouteConnector } from "@/components/story/RouteConnector";
 
+export default function StoryPage() {
+  return (
+    <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
+      {/* Hero */}
+      <header className="mb-16 text-center md:mb-24">
+        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
+          Aaron &amp; Savea
+        </p>
+        <h1 className="mt-3 font-corinthia text-7xl text-pop md:text-8xl">
+          Our Story
+        </h1>
+        <p className="mx-auto mt-4 max-w-xl font-garamond text-xl italic text-muted-foreground md:text-2xl">
+          It started with green face paint and a Halloween rave.
+        </p>
+      </header>
+
+      {/* The route */}
+      <div>
+        {chapters.map((ch) => (
+          <article
+            key={ch.title}
+            className="grid grid-cols-[2rem_1fr] gap-x-4 md:grid-cols-[3rem_1fr] md:gap-x-8"
+          >
+            {/* Route strip */}
+            <div className="flex flex-col items-center" aria-hidden="true">
+              {ch.isLast ? (
+                <span className="z-10 font-garamond text-xl leading-none text-primary">
+                  ✕
+                </span>
+              ) : (
+                <span className="z-10 mt-1 h-3 w-3 rounded-full bg-accent ring-2 ring-primary" />
+              )}
+              {!ch.isLast && <RouteConnector direction={ch.direction} />}
+            </div>
+
+            {/* Chapter content */}
+            <div className="pb-16">
+              <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
+                {ch.label}
+              </p>
+              <h2 className="mt-2 font-garamond text-2xl text-foreground md:text-3xl">
+                {ch.title}
+              </h2>
+              <p className="mt-3 max-w-prose font-garamond text-lg leading-relaxed text-foreground/90">
+                {ch.body}
+              </p>
+
+              {ch.photo && (
+                <figure className="mt-6">
+                  <div className="overflow-hidden rounded-lg border border-border bg-card p-2">
+                    <Image
+                      src={ch.photo.src}
+                      alt={ch.photo.alt}
+                      width={1200}
+                      height={800}
+                      sizes="(max-width: 768px) 100vw, 640px"
+                      className="h-auto w-full rounded-md object-cover"
+                    />
+                  </div>
+                  <figcaption className="mt-2 font-raleway text-xs uppercase tracking-widest text-muted-foreground">
+                    {ch.photo.caption}
+                  </figcaption>
+                </figure>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </main>
+  );
 }
