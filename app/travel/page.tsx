@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { SectionHeader } from "@/components/travel/SectionHeader";
+import { SectionHeader } from "@/components/SectionHeader";
 import { RoomCard } from "@/components/travel/RoomCard";
 import { rooms } from "@/components/travel/rooms";
 import { lodging } from "@/components/travel/lodging";
