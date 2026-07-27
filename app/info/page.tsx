@@ -100,7 +100,7 @@ export default function InfoPage() {
             eyebrow="For Remote Guests"
             title="Celebrating from Afar"
           />
-          <div className="rounded-lg border border-border bg-card p-8 text-center">
+          <div className="rounded-lg p-8 text-center">
             <p className="mx-auto max-w-xl font-garamond text-lg leading-relaxed text-foreground/90">
               Can&apos;t make the trek into the mountains? Your presence is still
               deeply felt. We&apos;d be honored to have you witness our vows and
@@ -128,7 +128,7 @@ export default function InfoPage() {
         {/* Capture the Magic */}
         <section>
           <SectionHeader eyebrow="Through Your Eyes" title="Capture the Magic" />
-          <div className="rounded-lg border border-border bg-card p-8 text-center">
+          <div className="rounded-lg p-8 text-center">
             <p className="mx-auto max-w-xl font-garamond text-lg leading-relaxed text-foreground/90">
               We can&apos;t wait to see the day through your eyes. Our
               photographer has the big moments covered — but we&apos;d love your

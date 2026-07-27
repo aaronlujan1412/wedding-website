@@ -16,17 +16,17 @@
   --color-foreground: #1c1917;
   --color-muted-foreground: #6b5e4e;
   --color-primary-foreground: #fffcf6;
-  --color-card: #fdf6e3;
-  --color-border: #d4c5a9;
+  --color-card: #f9f4ec;
+  --color-border: #d1c6b0;
   --radius: 0.5rem;
-  --color-input: #d4c5a9;
+  --color-input: #d1c6b0;
   --color-ring: #00563f;
-  --color-popover: #fdf6e3;
+  --color-popover: #f9f4ec;
   --color-popover-foreground: #1c1917;
-  --color-secondary: #f5ede0;
+  --color-secondary: #f1ece3;
   --color-secondary-foreground: #1c1917;
   --color-destructive: #b22222;
-  --color-muted: #f5ede0;
+  --color-muted: #f1ece3;
 }
 
 @keyframes intruder-flash {
