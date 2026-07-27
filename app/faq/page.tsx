@@ -15,7 +15,7 @@ export default async function FaqPage() {
           Good To Know
         </h1>
         <p className="mx-auto mt-4 max-w-xl font-garamond text-xl italic text-muted-foreground md:text-2xl">
-          Everything we're hoping to avoid texts about.
+          Everything we&apos;re hoping to avoid texts about.
         </p>
       </header>
 
