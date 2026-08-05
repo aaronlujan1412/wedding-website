@@ -27,6 +27,6 @@ export const schedule: ScheduleItem[] = [
     time: "5:00 – 9:00 PM",
     icon: "🍲",
     title: "Dinner & Dancing",
-    body: "After the “I dos,” join us inside for an intimate, home-cooked reception. We’re pouring our hearts into a menu of our favorite winter comfort foods — including warm chili in sourdough bread bowls — cooked with love by us (but let’s be honest, mostly Aaron!).",
+    body: "After the “I dos,” join us inside for an intimate, home-cooked reception. We’re pouring our hearts into a menu of our favorite winter comfort foods — including warm chili in sourdough bread bowls — cooked with love by us (but let’s be honest, mostly Aaron!). To drink, we’re keeping it cozy and completely alcohol-free — a help-yourself hot cocoa and spiced cider bar!",
   },
 ];

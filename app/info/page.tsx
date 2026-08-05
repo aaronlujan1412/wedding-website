@@ -62,6 +62,20 @@ export default function InfoPage() {
           </div>
         </section>
 
+        {/* Sips & Toasts */}
+        <section>
+          <SectionHeader eyebrow="Sips & Toasts" title="Something Warm in Hand" />
+          <div className="rounded-lg border border-border bg-card p-8 text-center md:p-10">
+            <p className="mx-auto max-w-xl font-garamond text-lg leading-relaxed text-foreground/90">
+              Our celebration is completely{" "}
+              <span className="font-semibold text-primary">alcohol-free</span>. In place of a
+              bar, we&apos;re setting up a loaded hot cocoa and spiced cider
+              station to keep you toasty all night, with a few festive mocktails
+              for toasting the newlyweds. Come thirsty, just not for alcohol.
+            </p>
+          </div>
+        </section>
+
         {/* The Wedding Party */}
         <section>
           <SectionHeader
