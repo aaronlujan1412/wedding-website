@@ -1,5 +1,6 @@
 import Image from "next/image";
 import { RsvpButton } from "@/components/rsvp/RsvpButton";
+import { ScrollCue } from "@/components/ScrollCue";
 
 export default function Home() {
   return (
@@ -12,8 +13,13 @@ export default function Home() {
           alt="Aaron and Savea in a forest"
         ></Image>
         <div className="absolute inset-0 bg-linear-to-b from-black/50 to-transparent" />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[32vh] hero-fade" />
+        <ScrollCue href="#welcome" />
       </div>
-      <div className="flex min-h-screen flex-col items-center justify-center p-24">
+      <div
+        id="welcome"
+        className="flex min-h-screen flex-col items-center justify-center p-24"
+      >
         <h1 className="text-6xl font-corinthia text-stone-800">
           <div>Aaron</div>
           <div className="text-center">&</div>

@@ -29,6 +29,43 @@
   --color-muted: #f1ece3;
 }
 
+/* Eased transparent -> background ramp. A plain 2/3-stop gradient banks alpha
+   linearly, which leaves a visible edge where it starts; these stops follow an
+   ease curve so the fade eases in from nothing. */
+@utility hero-fade {
+  background-image: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--color-background) 0%, transparent) 0%,
+    color-mix(in srgb, var(--color-background) 0.8%, transparent) 4.8%,
+    color-mix(in srgb, var(--color-background) 2.1%, transparent) 9%,
+    color-mix(in srgb, var(--color-background) 4.2%, transparent) 13.9%,
+    color-mix(in srgb, var(--color-background) 7.5%, transparent) 19.8%,
+    color-mix(in srgb, var(--color-background) 12.6%, transparent) 27%,
+    color-mix(in srgb, var(--color-background) 19.4%, transparent) 35%,
+    color-mix(in srgb, var(--color-background) 27.8%, transparent) 43.5%,
+    color-mix(in srgb, var(--color-background) 38.2%, transparent) 53%,
+    color-mix(in srgb, var(--color-background) 54.1%, transparent) 66%,
+    color-mix(in srgb, var(--color-background) 73.8%, transparent) 81%,
+    var(--color-background) 100%
+  );
+}
+
+@keyframes scroll-cue {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(0.5rem);
+    opacity: 0.5;
+  }
+}
+
+@utility animate-scroll-cue {
+  animation: scroll-cue 2s ease-in-out infinite;
+}
+
 @keyframes intruder-flash {
   0%,
   100% {
