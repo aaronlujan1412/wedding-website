@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select";
 import { GuestGroup } from "./types";
 import { Input } from "../ui/input";
+import NotOnTheList from "./NotOnTheList";
 
 type Props = {
   guestGroups: GuestGroup[];
@@ -39,6 +40,8 @@ export default function RsvpStepOne({
             ))}
           </SelectContent>
         </Select>
+
+        <NotOnTheList />
 
         {selectedGroup && (
           <div>
