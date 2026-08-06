@@ -62,7 +62,7 @@ type Props = {
   onGroupResolved: (group: GuestGroup | null) => void;
   onAddressUpdate: (updates: Partial<GuestGroup>) => void;
   onReject: () => void;
-  onComplete: () => void;
+  onComplete: (guests: Guest[]) => void;
 };
 
 export default function FormFlow({
@@ -136,7 +136,7 @@ export default function FormFlow({
         setError("Failed to update group members. Please try again");
         return;
       }
-      onComplete();
+      onComplete(rsvpForm.groupMembers);
     } catch {
       setError("Damn. I don't know how that one messed up.");
     } finally {

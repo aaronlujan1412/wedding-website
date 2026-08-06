@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "radix-ui";
-import { GuestGroup } from "./types";
+import { Guest, GuestGroup } from "./types";
 import { ViewState } from "@/lib/types";
 import { getAllGuestGroups } from "@/app/actions/rsvp";
 import RsvpIntruder from "./RsvpIntruder";
@@ -52,15 +52,18 @@ export default function RsvpModal({ open, onOpenChange }: Props) {
         return <RsvpIntruder />;
       case "complete":
         return groupInformation ? (
-          <RsvpConfirmMessage group={groupInformation} />
+          <RsvpConfirmMessage
+            group={groupInformation}
+            guests={viewState.guests}
+          />
         ) : null;
       default:
-        return assertNever(viewState.view);
+        return assertNever(viewState);
     }
   }
 
   function assertNever(x: never): never {
-    throw new Error(`Unhandled view: ${x}`);
+    throw new Error(`Unhandled view: ${JSON.stringify(x)}`);
   }
 
   function onGroupResolved(group: GuestGroup | null) {
@@ -75,8 +78,8 @@ export default function RsvpModal({ open, onOpenChange }: Props) {
     setViewState({ view: "intruder" });
   }
 
-  function onComplete() {
-    setViewState({ view: "complete" });
+  function onComplete(guests: Guest[]) {
+    setViewState({ view: "complete", guests });
   }
 
   if (open !== prevOpen) {

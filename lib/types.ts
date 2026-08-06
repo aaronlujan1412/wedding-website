@@ -1,3 +1,6 @@
-export interface ViewState {
-  view: "intruder" | "complete" | "form";
-}
+import type { Guest } from "@/components/rsvp/types";
+
+export type ViewState =
+  | { view: "form" }
+  | { view: "intruder" }
+  | { view: "complete"; guests: Guest[] };
