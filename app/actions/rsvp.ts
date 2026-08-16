@@ -14,6 +14,21 @@ export async function getAllGuests() {
   return data;
 }
 
+export async function getAllGuestRsvps() {
+  const { data, error } = await supabase
+    .from("guests")
+    .select("id, name, attending, plus_one_name, group_id")
+    .order("name");
+
+  return { data, error };
+}
+
+export async function verifyAdminPasscode(input: string): Promise<boolean> {
+  const passcode = process.env.RSVP_ADMIN_PASSCODE;
+  if (!passcode) return false;
+  return input === passcode;
+}
+
 export async function getAllGuestGroups() {
   const data = await supabase.from("guest_groups").select().order("name");
   return data;
