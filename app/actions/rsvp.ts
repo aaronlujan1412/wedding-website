@@ -17,7 +17,9 @@ export async function getAllGuests() {
 export async function getAllGuestRsvps() {
   const { data, error } = await supabase
     .from("guests")
-    .select("id, name, attending, plus_one_name, group_id")
+    .select(
+      "id, name, attending, plus_one_name, group_id, dietary_type, dietary_details, song_request, notes, contact_number",
+    )
     .order("name");
 
   return { data, error };
