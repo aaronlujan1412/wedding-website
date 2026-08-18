@@ -8,6 +8,7 @@ import {
   Raleway,
 } from "next/font/google";
 import { Navbar } from "@/components/NavBar/NavBar";
+import { Footer } from "@/components/Footer";
 import { RsvpProvider } from "@/components/rsvp/RsvpProvider";
 
 const geistSans = Geist({
@@ -63,6 +64,7 @@ export default function RootLayout({
         <RsvpProvider>
           <Navbar />
           {children}
+          <Footer />
         </RsvpProvider>
       </body>
     </html>
