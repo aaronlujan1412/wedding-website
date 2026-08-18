@@ -12,13 +12,8 @@ import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
 import RsvpStepThree from "./RsvpStepThree";
 import { Guest, GuestGroup, RsvpFormData } from "./types";
-import {
-  getGroupFromGroupId,
-  putGuestInformation,
-  verifyAdminPasscode,
-} from "@/app/actions/rsvp";
+import { getGroupFromGroupId, putGuestInformation } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
-import { useRouter } from "next/navigation";
 
 type RsvpAction =
   | { type: "GROUP_LOADED"; members: Guest[]; submitterId: number }
@@ -78,7 +73,6 @@ export default function FormFlow({
   onReject,
   onComplete,
 }: Props) {
-  const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState("");
@@ -91,12 +85,6 @@ export default function FormFlow({
   const handleNext = async () => {
     setError(null);
     if (rsvpForm.step === 1) {
-      const isAdmin = await verifyAdminPasscode(lastFourInput);
-      if (isAdmin) {
-        router.push("/rsvp-list");
-        return;
-      }
-
       setLoading(true);
       try {
         const result = await getGroupFromGroupId(

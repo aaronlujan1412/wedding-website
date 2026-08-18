@@ -25,12 +25,6 @@ export async function getAllGuestRsvps() {
   return { data, error };
 }
 
-export async function verifyAdminPasscode(input: string): Promise<boolean> {
-  const passcode = process.env.RSVP_ADMIN_PASSCODE;
-  if (!passcode) return false;
-  return input === passcode;
-}
-
 export async function getAllGuestGroups() {
   const data = await supabase.from("guest_groups").select().order("name");
   return data;

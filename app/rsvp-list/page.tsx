@@ -1,4 +1,5 @@
 import { getAllGuestRsvps, getAllGuestGroups } from "@/app/actions/rsvp";
+import { signOutAsHost } from "@/app/actions/admin";
 import { Accordion } from "@/components/ui/accordion";
 import { daysUntilWedding } from "@/lib/constants";
 import { HeadcountTally } from "@/components/rsvp-list/HeadcountTally";
@@ -67,10 +68,20 @@ export default async function RsvpListPage() {
         <h1 className="mt-2 font-corinthia text-7xl text-pop md:text-8xl">
           The Guest Ledger
         </h1>
-        <p className="mt-3 font-mono text-xs tracking-wider text-muted-foreground">
-          <span className="tabular-nums slashed-zero">{daysOut}</span>
-          {daysOut === 1 ? " day" : " days"} until the wedding
-        </p>
+        <div className="mt-3 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
+          <p className="font-mono text-xs tracking-wider text-muted-foreground">
+            <span className="tabular-nums slashed-zero">{daysOut}</span>
+            {daysOut === 1 ? " day" : " days"} until the wedding
+          </p>
+          <form action={signOutAsHost}>
+            <button
+              type="submit"
+              className="rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
       </header>
 
       {ledger.invited === 0 ? (
