@@ -5,6 +5,7 @@
   --font-corinthia: var(--font-corinthia);
   --font-raleway: var(--font-raleway);
   --font-garamond: var(--font-garamond);
+  --font-mono: var(--font-geist-mono);
 }
 
 @theme {

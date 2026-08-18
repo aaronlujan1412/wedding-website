@@ -1,131 +1,188 @@
 import { getAllGuestRsvps, getAllGuestGroups } from "@/app/actions/rsvp";
+import { Accordion } from "@/components/ui/accordion";
+import { daysUntilWedding } from "@/lib/constants";
+import { HeadcountTally } from "@/components/rsvp-list/HeadcountTally";
+import { GroupPanel } from "@/components/rsvp-list/GroupPanel";
+import { LedgerHeading } from "@/components/rsvp-list/LedgerParts";
+import {
+  summarize,
+  type DietaryTally,
+  type RsvpGuest,
+} from "@/components/rsvp-list/summarize";
 
 export const dynamic = "force-dynamic";
 
-type RsvpGuest = {
-  id: number;
-  name: string;
-  attending: boolean | null;
-  plus_one_name: string | null;
-  group_id: number | null;
-};
+function TallyRow({ items }: { items: DietaryTally[] }) {
+  return (
+    <ul className="space-y-2">
+      {items.map((item) => (
+        <li key={item.label} className="flex items-baseline">
+          <span className="font-garamond text-lg text-foreground/90">
+            {item.label}
+          </span>
+          <span
+            aria-hidden
+            className="mx-3 mb-[0.35em] flex-1 self-end border-b border-dotted border-border"
+          />
+          <span className="font-mono text-lg tabular-nums slashed-zero text-foreground">
+            {item.count}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export default async function RsvpListPage() {
-  const [{ data: guests }, { data: groups }] = await Promise.all([
-    getAllGuestRsvps(),
-    getAllGuestGroups(),
-  ]);
+  const [{ data: guests, error: guestsError }, { data: groups }] =
+    await Promise.all([getAllGuestRsvps(), getAllGuestGroups()]);
 
-  const groupNameById = new Map(groups?.map((g) => [g.id, g.name]));
+  if (guestsError) {
+    return (
+      <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
+        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-pop2">
+          Back of house
+        </p>
+        <h1 className="mt-3 font-corinthia text-6xl text-foreground">
+          The list didn&apos;t load
+        </h1>
+        <p className="mt-4 font-garamond text-lg text-foreground/90">
+          {guestsError.message ||
+            "Supabase turned down the request. Reload to try again."}
+        </p>
+      </main>
+    );
+  }
 
-  const allGuests = (guests ?? []) as RsvpGuest[];
-
-  const yesGuests = allGuests.filter((g) => g.attending === true);
-  const noGuests = allGuests.filter((g) => g.attending === false);
-  const pendingGuests = allGuests.filter((g) => g.attending === null);
-
-  const yesCount = yesGuests.length;
-  const noCount = noGuests.length;
-  const pendingCount = pendingGuests.length;
-  const totalCount = allGuests.length;
+  const ledger = summarize((guests ?? []) as RsvpGuest[], groups ?? []);
+  const awaitingGroups = ledger.groups.filter((group) => group.awaiting > 0);
+  const daysOut = daysUntilWedding();
 
   return (
-    <main className="mx-auto min-h-screen max-w-5xl px-6 pt-40 pb-24">
-      <header className="mb-12 text-center md:mb-16">
-        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
-          For Your Eyes Only
+    <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
+      <header className="mb-14 md:mb-20">
+        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-muted-foreground">
+          Back of house
         </p>
-        <h1 className="mt-3 font-corinthia text-7xl text-pop md:text-8xl">
-          RSVP List
+        <h1 className="mt-2 font-corinthia text-7xl text-pop md:text-8xl">
+          The Guest Ledger
         </h1>
-        <p className="mx-auto mt-4 max-w-xl font-garamond text-xl italic text-muted-foreground md:text-2xl">
-          {totalCount} invited · {yesCount} yes · {noCount} no · {pendingCount}{" "}
-          pending
+        <p className="mt-3 font-mono text-xs tracking-wider text-muted-foreground">
+          <span className="tabular-nums slashed-zero">{daysOut}</span>
+          {daysOut === 1 ? " day" : " days"} until the wedding
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-2">
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-6 text-center font-corinthia text-4xl text-green-700">
-            Yes
+      {ledger.invited === 0 ? (
+        <section className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
+          <h2 className="font-garamond text-2xl text-foreground">
+            Nobody on the list yet
           </h2>
-          {yesGuests.length === 0 ? (
-            <p className="text-center font-garamond italic text-muted-foreground">
-              No yeses yet. Tragic.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {yesGuests.map((guest) => (
-                <li
-                  key={guest.id}
-                  className="rounded-md border border-border bg-background p-3"
-                >
-                  <p className="font-garamond text-lg font-semibold text-foreground">
-                    {guest.name}
-                  </p>
-                  {guest.plus_one_name && (
-                    <p className="font-garamond text-sm text-muted-foreground">
-                      + {guest.plus_one_name}
-                    </p>
-                  )}
-                  <p className="font-raleway text-xs uppercase tracking-[0.15em] text-primary">
-                    {guest.group_id ? groupNameById.get(guest.group_id) : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
+          <p className="mx-auto mt-3 max-w-sm font-garamond text-lg text-muted-foreground">
+            Add guests and their groups in Supabase, then reload — the count
+            fills in from there.
+          </p>
         </section>
+      ) : (
+        <div className="space-y-16 md:space-y-24">
+          <HeadcountTally ledger={ledger} />
 
-        <section className="rounded-lg border border-border bg-card p-6">
-          <h2 className="mb-6 text-center font-corinthia text-4xl text-red-700">
-            No
-          </h2>
-          {noGuests.length === 0 ? (
-            <p className="text-center font-garamond italic text-muted-foreground">
-              Everyone's coming. Nice.
-            </p>
-          ) : (
-            <ul className="space-y-3">
-              {noGuests.map((guest) => (
-                <li
-                  key={guest.id}
-                  className="rounded-md border border-border bg-background p-3"
-                >
-                  <p className="font-garamond text-lg font-semibold text-foreground">
-                    {guest.name}
-                  </p>
-                  <p className="font-raleway text-xs uppercase tracking-[0.15em] text-primary">
-                    {guest.group_id ? groupNameById.get(guest.group_id) : ""}
-                  </p>
-                </li>
-              ))}
-            </ul>
+          {awaitingGroups.length > 0 && (
+            <section aria-labelledby="still-waiting">
+              <LedgerHeading
+                id="still-waiting"
+                title="Still to hear from"
+                count={ledger.awaiting}
+              />
+              <p className="mb-6 font-garamond text-lg text-foreground/90">
+                {awaitingGroups.length === 1
+                  ? "One household left. "
+                  : `${awaitingGroups.length} households. `}
+                Open them in the list below for numbers to text.
+              </p>
+              <ul className="flex flex-wrap gap-2">
+                {awaitingGroups.map((group) => (
+                  <li
+                    key={group.key}
+                    className="inline-flex items-baseline gap-2 rounded-full border border-border bg-card px-3 py-1"
+                  >
+                    <span className="font-garamond text-base text-foreground">
+                      {group.name}
+                    </span>
+                    <span className="font-mono text-xs tabular-nums slashed-zero text-muted-foreground">
+                      {group.awaiting}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
-        </section>
-      </div>
 
-      {pendingGuests.length > 0 && (
-        <section className="mt-12 rounded-lg border border-dashed border-border bg-card p-6">
-          <h2 className="mb-6 text-center font-corinthia text-3xl text-muted-foreground">
-            Still Waiting
-          </h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {pendingGuests.map((guest) => (
-              <li
-                key={guest.id}
-                className="rounded-md border border-border bg-background p-3"
-              >
-                <p className="font-garamond text-base text-foreground">
-                  {guest.name}
-                </p>
-                <p className="font-raleway text-xs uppercase tracking-[0.15em] text-primary">
-                  {guest.group_id ? groupNameById.get(guest.group_id) : ""}
-                </p>
-              </li>
-            ))}
-          </ul>
-        </section>
+          {(ledger.restrictions.length > 0 ||
+            ledger.preferences.length > 0) && (
+            <section aria-labelledby="for-the-kitchen">
+              <LedgerHeading id="for-the-kitchen" title="For the kitchen" />
+              <p className="mb-6 font-garamond text-lg text-foreground/90">
+                Counted across attending guests only.
+              </p>
+              <div className="grid gap-8 sm:grid-cols-2">
+                {ledger.restrictions.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-pop2">
+                      Must accommodate
+                    </h3>
+                    <TallyRow items={ledger.restrictions} />
+                  </div>
+                )}
+                {ledger.preferences.length > 0 && (
+                  <div>
+                    <h3 className="mb-3 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
+                      Preferences
+                    </h3>
+                    <TallyRow items={ledger.preferences} />
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+
+          {ledger.songs.length > 0 && (
+            <section aria-labelledby="for-the-dj">
+              <LedgerHeading
+                id="for-the-dj"
+                title="For the DJ"
+                count={ledger.songs.length}
+              />
+              <ul className="space-y-3">
+                {ledger.songs.map((song) => (
+                  <li key={song.id} className="font-garamond text-lg">
+                    <span className="text-foreground">{song.request}</span>
+                    <span className="text-muted-foreground">
+                      {" — "}
+                      {song.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section aria-labelledby="every-group">
+            <LedgerHeading
+              id="every-group"
+              title="Every group"
+              count={ledger.groups.length}
+            />
+            <p className="mb-5 font-garamond text-lg text-foreground/90">
+              Groups still owing a reply come first.
+            </p>
+            <Accordion type="multiple" className="w-full border-t border-border">
+              {ledger.groups.map((group) => (
+                <GroupPanel key={group.key} group={group} />
+              ))}
+            </Accordion>
+          </section>
+        </div>
       )}
     </main>
   );
