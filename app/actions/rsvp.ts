@@ -9,22 +9,6 @@ import {
 } from "@/components/rsvp/types";
 import { GuestGroup, Guest } from "@/components/rsvp/types";
 
-export async function getAllGuests() {
-  const data = await supabase.from("guests").select();
-  return data;
-}
-
-export async function getAllGuestRsvps() {
-  const { data, error } = await supabase
-    .from("guests")
-    .select(
-      "id, name, attending, plus_one_name, group_id, dietary_type, dietary_details, song_request, notes, contact_number",
-    )
-    .order("name");
-
-  return { data, error };
-}
-
 export async function getAllGuestGroups() {
   const data = await supabase.from("guest_groups").select().order("name");
   return data;

@@ -1,4 +1,5 @@
-import { getAllGuestRsvps, getAllGuestGroups } from "@/app/actions/rsvp";
+import { getAllGuestGroups } from "@/app/actions/rsvp";
+import { getAllGuestRsvps } from "@/lib/rsvp-queries";
 import { signOutAsHost } from "@/app/actions/admin";
 import { Accordion } from "@/components/ui/accordion";
 import { daysUntilWedding } from "@/lib/constants";
