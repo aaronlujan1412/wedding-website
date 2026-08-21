@@ -5,12 +5,12 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { GuestGroup } from "./types";
+import { GroupOption } from "./types";
 import { Input } from "../ui/input";
 import NotOnTheList from "./NotOnTheList";
 
 type Props = {
-  guestGroups: GuestGroup[];
+  guestGroups: GroupOption[];
   selectedGroup: string;
   setSelectedGroup: (value: string) => void;
   lastFourInput: string;

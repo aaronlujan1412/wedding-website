@@ -19,3 +19,19 @@ export async function getAllGuestRsvps() {
 
   return { data, error };
 }
+
+/**
+ * Full guest-group rows, including the address columns.
+ *
+ * Kept separate from the `getAllGuestGroups` server action on purpose: that one
+ * feeds the public RSVP picker and is deliberately narrowed to `id, name`. The
+ * ledger is host-only and server-rendered, so it can have the addresses.
+ */
+export async function getGuestGroupsForLedger() {
+  const { data, error } = await supabase
+    .from("guest_groups")
+    .select()
+    .order("name");
+
+  return { data, error };
+}

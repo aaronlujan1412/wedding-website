@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import RsvpStepOne from "./RsvpStepOne";
 import RsvpStepTwo from "./RsvpStepTwo";
 import RsvpStepThree from "./RsvpStepThree";
-import { Guest, GuestGroup, RsvpFormData } from "./types";
+import { Guest, GroupOption, GuestGroup, RsvpFormData } from "./types";
 import { getGroupFromGroupId, putGuestInformation } from "@/app/actions/rsvp";
 import ErrorBox from "../ErrorBox/ErrorBox";
 
@@ -57,7 +57,7 @@ function rsvpReducer(state: RsvpFormData, action: RsvpAction): RsvpFormData {
 }
 
 type Props = {
-  guestGroups: GuestGroup[];
+  guestGroups: GroupOption[];
   groupInformation: GuestGroup | null;
   onGroupResolved: (group: GuestGroup | null) => void;
   onAddressUpdate: (updates: Partial<GuestGroup>) => void;
@@ -77,9 +77,6 @@ export default function FormFlow({
   const [loading, setLoading] = useState(false);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [lastFourInput, setLastFourInput] = useState("");
-  const selectedGroupObj = guestGroups.find(
-    (g) => g.id === Number(selectedGroup),
-  );
   const [rsvpForm, dispatch] = useReducer(rsvpReducer, initialRsvpForm);
 
   const handleNext = async () => {
@@ -103,7 +100,7 @@ export default function FormFlow({
           ...g,
           dietary_type: g.dietary_type ?? "none",
         }));
-        onGroupResolved(selectedGroupObj ?? null);
+        onGroupResolved(result.group);
         dispatch({
           type: "GROUP_LOADED",
           members,

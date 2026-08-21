@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { VisuallyHidden } from "radix-ui";
-import { Guest, GuestGroup } from "./types";
+import { Guest, GroupOption, GuestGroup } from "./types";
 import { ViewState } from "@/lib/types";
 import { getAllGuestGroups } from "@/app/actions/rsvp";
 import RsvpIntruder from "./RsvpIntruder";
@@ -16,7 +16,7 @@ type Props = {
 };
 
 export default function RsvpModal({ open, onOpenChange }: Props) {
-  const [groups, setGroups] = useState<GuestGroup[] | null>(null);
+  const [groups, setGroups] = useState<GroupOption[] | null>(null);
   const [groupInformation, setGroupInformation] = useState<GuestGroup | null>(
     null,
   );

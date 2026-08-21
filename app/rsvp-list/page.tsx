@@ -1,5 +1,7 @@
-import { getAllGuestGroups } from "@/app/actions/rsvp";
-import { getAllGuestRsvps } from "@/lib/rsvp-queries";
+import {
+  getAllGuestRsvps,
+  getGuestGroupsForLedger,
+} from "@/lib/rsvp-queries";
 import { signOutAsHost } from "@/app/actions/admin";
 import { Accordion } from "@/components/ui/accordion";
 import { daysUntilWedding } from "@/lib/constants";
@@ -37,7 +39,7 @@ function TallyRow({ items }: { items: DietaryTally[] }) {
 
 export default async function RsvpListPage() {
   const [{ data: guests, error: guestsError }, { data: groups }] =
-    await Promise.all([getAllGuestRsvps(), getAllGuestGroups()]);
+    await Promise.all([getAllGuestRsvps(), getGuestGroupsForLedger()]);
 
   if (guestsError) {
     return (

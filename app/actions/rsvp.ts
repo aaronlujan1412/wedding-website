@@ -10,7 +10,13 @@ import {
 import { GuestGroup, Guest } from "@/components/rsvp/types";
 
 export async function getAllGuestGroups() {
-  const data = await supabase.from("guest_groups").select().order("name");
+  // Only the columns the picker renders. This action is called from a client
+  // component by unauthenticated visitors, so a bare select() shipped every
+  // household's street address to anyone who opened the RSVP dialog.
+  const data = await supabase
+    .from("guest_groups")
+    .select("id, name")
+    .order("name");
   return data;
 }
 
@@ -34,7 +40,20 @@ export async function getGroupFromGroupId(
   if (!submitter) {
     return REJECTED;
   }
-  return ok(data, submitter.id);
+
+  // Fetched only after the last-four check passes, so the address never leaves
+  // the server for a caller who hasn't proven they belong to this group.
+  const { data: group, error: groupError } = await supabase
+    .from("guest_groups")
+    .select()
+    .eq("id", groupId)
+    .single();
+
+  if (groupError || !group) {
+    return failed(groupError);
+  }
+
+  return ok(data, group, submitter.id);
 }
 
 export async function putGuestInformation(group: GuestGroup, members: Guest[]) {
