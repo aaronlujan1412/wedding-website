@@ -101,6 +101,7 @@ export type Database = {
           height: number
           hidden: boolean
           id: string
+          original_at_home: boolean
           original_path: string | null
           storage_path: string
           width: number
@@ -112,6 +113,7 @@ export type Database = {
           height: number
           hidden?: boolean
           id?: string
+          original_at_home?: boolean
           original_path?: string | null
           storage_path: string
           width: number
@@ -123,6 +125,7 @@ export type Database = {
           height?: number
           hidden?: boolean
           id?: string
+          original_at_home?: boolean
           original_path?: string | null
           storage_path?: string
           width?: number
