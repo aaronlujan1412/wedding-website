@@ -1,4 +1,5 @@
-const FALLBACK = "/rsvp-list";
+/** The hub. Signing in with no explicit target lands there, not on a leaf. */
+const FALLBACK = "/hosts";
 const PROBE_ORIGIN = "http://internal.invalid";
 
 /**
