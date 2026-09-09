@@ -31,7 +31,7 @@ export default function FaqAccordion({ items }: Props) {
                 </p>
 
                 <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-primary">
-                  Savea's Translation
+                  Savea&apos;s Translation
                 </p>
 
                 <p className="mt-1 text-base text-foreground whitespace-pre-line">
