@@ -10,6 +10,7 @@ import {
   readGuestToken,
 } from "@/lib/guest-session";
 import { saveOriginal, saveWebPhoto } from "@/lib/photo-storage";
+import { createUploadTicket } from "@/lib/upload-ticket";
 import {
   checkVerificationLimit,
   recordVerificationFailure,
@@ -89,11 +90,61 @@ export async function uploadGuestPhoto(formData: FormData) {
 }
 
 /**
- * Archives the untouched file behind a photo already saved by this household.
+ * A ticket letting this browser push one original straight to the home server.
  *
- * Sent after the web-sized copy so the gallery updates without waiting on
- * several megabytes, and best-effort throughout: the guest has already been
- * told their photo is in, and it is.
+ * Ownership is checked here rather than at the receiver, which knows nothing
+ * about guest sessions: without it a verified guest could mint tickets for
+ * another household's photos.
+ */
+export async function createOriginalUpload(photoId: string) {
+  const groupId = await currentGroupId();
+  if (groupId === null) return { data: null, error: null };
+
+  const { data: photo } = await supabase
+    .from("guest_photos")
+    .select("id, group_id, original_path, original_at_home")
+    .eq("id", photoId)
+    .single();
+
+  if (
+    !photo ||
+    photo.group_id !== groupId ||
+    photo.original_path ||
+    photo.original_at_home
+  ) {
+    return { data: null, error: null };
+  }
+
+  return { data: { ticket: await createUploadTicket(photoId) }, error: null };
+}
+
+/**
+ * Records that the home server took the original.
+ *
+ * Asserted by the browser rather than reported by the receiver, which cannot
+ * reach Supabase. A guest could therefore claim an upload that never happened;
+ * the cost is a wrong entry in our own bookkeeping, not access to anything, so
+ * it is not worth a webhook to close.
+ */
+export async function confirmOriginalAtHome(photoId: string) {
+  const groupId = await currentGroupId();
+  if (groupId === null) return { data: null, error: null };
+
+  await supabase
+    .from("guest_photos")
+    .update({ original_at_home: true })
+    .eq("id", photoId)
+    .eq("group_id", groupId);
+
+  return { data: true, error: null };
+}
+
+/**
+ * Fallback when the home server did not answer: park the original in Supabase
+ * so `scripts/pull-originals.mjs` can collect it later.
+ *
+ * Best-effort throughout — the guest has already been told their photo is in,
+ * and it is. Losing the full-size copy costs an archive entry, not an upload.
  */
 export async function attachOriginal(photoId: string, formData: FormData) {
   const groupId = await currentGroupId();
@@ -105,8 +156,6 @@ export async function attachOriginal(photoId: string, formData: FormData) {
     .eq("id", photoId)
     .single();
 
-  // Ownership matters even though this is best-effort: without it a verified
-  // guest could overwrite the archive slot on another household's photo.
   if (!photo || photo.group_id !== groupId || photo.original_path) {
     return { data: null, error: null };
   }

@@ -2,9 +2,15 @@
 /**
  * Pulls full-resolution guest photo originals out of Supabase onto disk.
  *
- * The site only ever serves the 2048px copies. Originals go into a private
- * bucket purely so they can end up somewhere with real storage — your home
- * server — rather than living on a hosted tier forever.
+ * This is the fallback path, not the main one. Originals normally go straight
+ * from the guest's browser to the home server (see
+ * homelab/wedding-photo-receiver) and never touch Supabase at all. They land in
+ * this bucket only when that box did not answer — paused before a gaming
+ * session, mid-reboot, or simply asleep — because a wedding photo uploads once
+ * and losing it was not an acceptable trade for a tidy design.
+ *
+ * So an empty run is the healthy result. A large one means the home server has
+ * been unreachable for a while.
  *
  * Run it from this repo, where .env.local already holds the keys, and let the
  * output directory be a mount or an rsync target. Deliberately not designed to

@@ -6,6 +6,8 @@ import { Camera, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   attachHostOriginal,
+  confirmHostOriginalAtHome,
+  createHostOriginalUpload,
   deletePhoto,
   setPhotoHidden,
   uploadHostPhoto,
@@ -61,7 +63,12 @@ export function ReviewGrid({ photos }: { photos: ReviewPhoto[] }) {
  */
 function HostUpload() {
   const { queue, busy, archiving, inputRef, handleFiles, done } =
-    usePhotoUpload(uploadHostPhoto, attachHostOriginal);
+    usePhotoUpload({
+      upload: uploadHostPhoto,
+      createOriginalUpload: createHostOriginalUpload,
+      confirmOriginalAtHome: confirmHostOriginalAtHome,
+      attachOriginal: attachHostOriginal,
+    });
 
   return (
     <div className="mb-10 rounded-lg border border-border bg-card p-6 text-center">

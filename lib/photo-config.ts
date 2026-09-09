@@ -23,16 +23,27 @@ export const MAX_EDGE_PX = 2048;
 export const JPEG_QUALITY = 0.82;
 
 /**
- * Where untouched originals go. Private, unlike the web bucket: nothing links
- * to these, they exist to be pulled down to the home server. See
- * `scripts/pull-originals.mjs`.
+ * The home server's upload receiver, e.g.
+ * "https://weddingphotos.tail9cdc9c.ts.net". Empty disables the direct path
+ * entirely and every original falls back to Supabase.
+ *
+ * Public by necessity — the browser posts to it — which is why the receiver
+ * authenticates each upload with a signed ticket rather than trusting the URL.
+ */
+export const ORIGINALS_ENDPOINT =
+  process.env.NEXT_PUBLIC_ORIGINALS_ENDPOINT ?? "";
+
+/**
+ * Fallback home for an original when the home server does not answer. Private,
+ * unlike the web bucket. Nothing links to these; they wait here to be drained
+ * by `scripts/pull-originals.mjs` and should normally be empty.
  */
 export const ORIGINALS_BUCKET = "guest-photo-originals";
 
 /**
  * Whether the browser also sends the untouched file after the web-sized copy
- * lands. Turn off if the Supabase bucket is filling faster than originals are
- * being archived — the gallery is unaffected either way.
+ * lands. Turn off to stop collecting originals altogether — the gallery is
+ * unaffected either way, since it only ever serves the resized copies.
  */
 export const KEEP_ORIGINALS = true;
 

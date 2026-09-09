@@ -18,6 +18,8 @@ import { usePhotoUpload } from "./usePhotoUpload";
 import { UploadQueue } from "./UploadQueue";
 import {
   attachOriginal,
+  confirmOriginalAtHome,
+  createOriginalUpload,
   uploadGuestPhoto,
   verifyGuestForPhotos,
   signOutOfPhotos,
@@ -146,7 +148,12 @@ function Uploader({
   onSignOut: () => void;
 }) {
   const { queue, busy, archiving, inputRef, handleFiles, done } =
-    usePhotoUpload(uploadGuestPhoto, attachOriginal);
+    usePhotoUpload({
+      upload: uploadGuestPhoto,
+      createOriginalUpload,
+      confirmOriginalAtHome,
+      attachOriginal,
+    });
 
   return (
     <div className="mx-auto max-w-md text-center">

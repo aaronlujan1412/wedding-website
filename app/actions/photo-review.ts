@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
 import { PHOTO_BUCKET } from "@/lib/photo-config";
 import { saveOriginal, saveWebPhoto } from "@/lib/photo-storage";
+import { createUploadTicket } from "@/lib/upload-ticket";
 
 async function isHost() {
   const store = await cookies();
@@ -84,5 +85,39 @@ export async function attachHostOriginal(photoId: string, formData: FormData) {
   }
 
   await saveOriginal(photo.id, photo.storage_path, formData);
+  return { data: true, error: null };
+}
+
+/** Host counterparts to the guest originals flow; same contract throughout. */
+export async function createHostOriginalUpload(photoId: string) {
+  if (!(await isHost())) return { data: null, error: null };
+
+  const { data: photo } = await supabase
+    .from("guest_photos")
+    .select("id, group_id, original_path, original_at_home")
+    .eq("id", photoId)
+    .single();
+
+  if (
+    !photo ||
+    photo.group_id !== null ||
+    photo.original_path ||
+    photo.original_at_home
+  ) {
+    return { data: null, error: null };
+  }
+
+  return { data: { ticket: await createUploadTicket(photoId) }, error: null };
+}
+
+export async function confirmHostOriginalAtHome(photoId: string) {
+  if (!(await isHost())) return { data: null, error: null };
+
+  await supabase
+    .from("guest_photos")
+    .update({ original_at_home: true })
+    .eq("id", photoId)
+    .is("group_id", null);
+
   return { data: true, error: null };
 }

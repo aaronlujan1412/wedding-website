@@ -7,6 +7,7 @@ import {
   ORIGINAL_WORTH_KEEPING_RATIO,
 } from "@/lib/photo-config";
 import { preparePhoto } from "./downscale";
+import { sendOriginalHome } from "./sendOriginal";
 
 export type QueueItem = {
   key: string;
@@ -15,20 +16,29 @@ export type QueueItem = {
   message?: string;
 };
 
-type Upload = (
-  body: FormData,
-) => Promise<{ data: { id: string } | null; error: string | null }>;
-
-type AttachOriginal = (photoId: string, body: FormData) => Promise<unknown>;
+export type PhotoActions = {
+  /** Saves the web-sized copy and returns the new row's id. */
+  upload: (
+    body: FormData,
+  ) => Promise<{ data: { id: string } | null; error: string | null }>;
+  /** Mints a ticket authorising one direct push to the home server. */
+  createOriginalUpload: (
+    photoId: string,
+  ) => Promise<{ data: { ticket: string } | null }>;
+  /** Records that the home server accepted it. */
+  confirmOriginalAtHome: (photoId: string) => Promise<unknown>;
+  /** Fallback: park the original in Supabase when home does not answer. */
+  attachOriginal: (photoId: string, body: FormData) => Promise<unknown>;
+};
 
 /**
- * Shared by the guest panel and the host panel; only the two actions differ.
+ * Shared by the guest panel and the host panel; only the actions differ.
  *
  * Two passes on purpose. The first sends the resized copies and reports
  * success, because that is what makes the photo appear on the site. The
  * originals follow afterwards, once nobody is waiting on them.
  */
-export function usePhotoUpload(upload: Upload, attachOriginal: AttachOriginal) {
+export function usePhotoUpload(actions: PhotoActions) {
   const [queue, setQueue] = useState<QueueItem[]>([]);
   const [busy, setBusy] = useState(false);
   const [archiving, setArchiving] = useState(false);
@@ -70,7 +80,7 @@ export function usePhotoUpload(upload: Upload, attachOriginal: AttachOriginal) {
         body.set("width", String(prepared.width));
         body.set("height", String(prepared.height));
 
-        const result = await upload(body);
+        const result = await actions.upload(body);
         if (result.error || !result.data) {
           update(key, {
             status: "error",
@@ -102,10 +112,29 @@ export function usePhotoUpload(upload: Upload, attachOriginal: AttachOriginal) {
 
     setArchiving(true);
     for (const { id, file } of originals) {
+      let delivered = false;
+
+      // Straight to the home server, so the full-resolution file never touches
+      // Supabase and its storage tier stops being the limit on keeping these.
+      try {
+        const ticket = await actions.createOriginalUpload(id);
+        if (ticket.data) {
+          delivered = await sendOriginalHome(file, ticket.data.ticket);
+          if (delivered) await actions.confirmOriginalAtHome(id);
+        }
+      } catch {
+        // Fall through to the bucket.
+      }
+
+      if (delivered) continue;
+
+      // The home server is down, and a wedding photo uploads exactly once —
+      // so park it in Supabase rather than lose it. pull-originals.mjs drains
+      // that bucket later, and it should normally be empty.
       const body = new FormData();
       body.set("file", file);
       try {
-        await attachOriginal(id, body);
+        await actions.attachOriginal(id, body);
       } catch {
         // Best-effort by design. The photo is already saved and shown; losing
         // the full-size copy costs an archive entry, not the guest's upload.
