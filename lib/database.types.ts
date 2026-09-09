@@ -93,6 +93,47 @@ export type Database = {
         }
         Relationships: []
       }
+      guest_photos: {
+        Row: {
+          caption: string | null
+          created_at: string
+          group_id: number
+          height: number
+          hidden: boolean
+          id: string
+          storage_path: string
+          width: number
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string
+          group_id: number
+          height: number
+          hidden?: boolean
+          id?: string
+          storage_path: string
+          width: number
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string
+          group_id?: number
+          height?: number
+          hidden?: boolean
+          id?: string
+          storage_path?: string
+          width?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "guest_photos_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "guest_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       guests: {
         Row: {
           attending: boolean | null
