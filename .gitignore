@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but the templates that say which variables to fill in are the point.
+!.env.example
+
+# Tailscale node state for the homelab stack: a live identity, not config.
+homelab/*/state/
 
 # vercel
 .vercel
