@@ -26,5 +26,10 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/rsvp-list", "/rsvp-list/:path*"],
+  matcher: [
+    "/rsvp-list",
+    "/rsvp-list/:path*",
+    "/photo-review",
+    "/photo-review/:path*",
+  ],
 };
