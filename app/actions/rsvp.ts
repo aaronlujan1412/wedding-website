@@ -6,7 +6,12 @@ import {
   failed,
   ok,
   REJECTED,
+  throttled,
 } from "@/components/rsvp/types";
+import {
+  checkVerificationLimit,
+  recordVerificationFailure,
+} from "@/lib/rate-limit";
 import { GuestGroup, Guest } from "@/components/rsvp/types";
 
 export async function getAllGuestGroups() {
@@ -24,6 +29,11 @@ export async function getGroupFromGroupId(
   groupId: number,
   verificationInput: string,
 ): Promise<GroupResult> {
+  const limit = await checkVerificationLimit();
+  if (!limit.ok) {
+    return throttled(limit.retryAfterMinutes);
+  }
+
   const { data, error } = await supabase
     .from("guests")
     .select()
@@ -38,6 +48,7 @@ export async function getGroupFromGroupId(
   );
 
   if (!submitter) {
+    await recordVerificationFailure(limit.caller);
     return REJECTED;
   }
 

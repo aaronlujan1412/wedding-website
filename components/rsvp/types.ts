@@ -44,6 +44,12 @@ export type GroupResult =
       group: null;
       error: PostgrestError | null;
       submitterId: null;
+      /**
+       * Set only when the caller tripped the last-four throttle. Distinguishes
+       * "slow down" from "wrong digits" so a rate-limited guest gets told to
+       * wait rather than being shown the intruder screen.
+       */
+      throttledFor?: number;
     };
 
 export const REJECTED: GroupResult = {
@@ -53,6 +59,15 @@ export const REJECTED: GroupResult = {
   error: null,
   submitterId: null,
 };
+
+export const throttled = (retryAfterMinutes: number): GroupResult => ({
+  verified: false,
+  data: null,
+  group: null,
+  error: null,
+  submitterId: null,
+  throttledFor: retryAfterMinutes,
+});
 
 export const failed = (error: PostgrestError | null): GroupResult => ({
   verified: false,

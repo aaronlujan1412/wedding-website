@@ -93,7 +93,15 @@ export default function FormFlow({
           return;
         }
         if (!result.verified) {
-          onReject();
+          // Being throttled is not the same as getting the digits wrong, and
+          // it should not send an honest guest to the intruder screen.
+          if (result.throttledFor) {
+            setError(
+              `Too many tries. Give it ${result.throttledFor} minutes and have another go.`,
+            );
+          } else {
+            onReject();
+          }
           return;
         }
         const members = result.data.map((g) => ({
