@@ -1,8 +1,7 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import { Camera, Check, Loader2, X } from "lucide-react";
+import { useId, useState } from "react";
+import { Camera, Loader2 } from "lucide-react";
 import {
   Select,
   SelectTrigger,
@@ -15,19 +14,14 @@ import { Button } from "@/components/ui/button";
 import ErrorBox from "@/components/ErrorBox/ErrorBox";
 import type { GroupOption } from "@/components/rsvp/types";
 import type { PhotoSession } from "./types";
-import { preparePhoto } from "./downscale";
+import { usePhotoUpload } from "./usePhotoUpload";
+import { UploadQueue } from "./UploadQueue";
 import {
+  attachOriginal,
   uploadGuestPhoto,
   verifyGuestForPhotos,
   signOutOfPhotos,
 } from "@/app/actions/photos";
-
-type QueueItem = {
-  key: string;
-  name: string;
-  status: "working" | "done" | "error";
-  message?: string;
-};
 
 type Props = {
   session: PhotoSession | null;
@@ -151,64 +145,8 @@ function Uploader({
   group: PhotoSession;
   onSignOut: () => void;
 }) {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
-  const [busy, setBusy] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const router = useRouter();
-
-  function update(key: string, patch: Partial<QueueItem>) {
-    setQueue((q) => q.map((i) => (i.key === key ? { ...i, ...patch } : i)));
-  }
-
-  async function handleFiles(files: FileList | null) {
-    if (!files?.length) return;
-
-    const picked = Array.from(files).map((file) => ({
-      file,
-      key: crypto.randomUUID(),
-    }));
-
-    setQueue((q) => [
-      ...picked.map(({ file, key }) => ({
-        key,
-        name: file.name,
-        status: "working" as const,
-      })),
-      ...q,
-    ]);
-    setBusy(true);
-
-    // Sequential on purpose: venue wifi is the constraint here, and a dozen
-    // parallel uploads on a weak connection is how you get a dozen timeouts.
-    for (const { file, key } of picked) {
-      try {
-        const prepared = await preparePhoto(file);
-
-        const body = new FormData();
-        body.set("file", prepared.file);
-        body.set("width", String(prepared.width));
-        body.set("height", String(prepared.height));
-
-        const result = await uploadGuestPhoto(body);
-        if (result.error) {
-          update(key, { status: "error", message: result.error });
-        } else {
-          update(key, { status: "done" });
-        }
-      } catch {
-        update(key, {
-          status: "error",
-          message: "We couldn't read that one — try a JPEG or PNG.",
-        });
-      }
-    }
-
-    setBusy(false);
-    if (inputRef.current) inputRef.current.value = "";
-    router.refresh();
-  }
-
-  const done = queue.filter((i) => i.status === "done").length;
+  const { queue, busy, archiving, inputRef, handleFiles, done } =
+    usePhotoUpload(uploadGuestPhoto, attachOriginal);
 
   return (
     <div className="mx-auto max-w-md text-center">
@@ -248,32 +186,18 @@ function Uploader({
         )}
       </Button>
 
-      {queue.length > 0 && (
-        <ul className="mt-5 grid gap-1.5 text-left">
-          {queue.map((item) => (
-            <li
-              key={item.key}
-              className="flex items-start gap-2 font-raleway text-sm"
-            >
-              <StatusIcon status={item.status} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-foreground/80">
-                  {item.name}
-                </span>
-                {item.message && (
-                  <span className="block text-xs text-destructive">
-                    {item.message}
-                  </span>
-                )}
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <UploadQueue items={queue} />
 
       {done > 0 && !busy && (
         <p className="mt-4 font-garamond text-lg text-primary">
           {done === 1 ? "Got it. Thank you!" : `Got all ${done}. Thank you!`}
+        </p>
+      )}
+
+      {archiving && (
+        <p className="mt-2 font-raleway text-xs text-muted-foreground">
+          Tucking away full-size copies. Feel free to close this — your photos
+          are already saved.
         </p>
       )}
 
@@ -288,19 +212,5 @@ function Uploader({
         Not {group.name}?
       </button>
     </div>
-  );
-}
-
-function StatusIcon({ status }: { status: QueueItem["status"] }) {
-  const shared = "mt-0.5 h-4 w-4 shrink-0";
-  if (status === "done")
-    return <Check className={`${shared} text-primary`} strokeWidth={2} />;
-  if (status === "error")
-    return <X className={`${shared} text-destructive`} strokeWidth={2} />;
-  return (
-    <Loader2
-      className={`${shared} animate-spin text-muted-foreground motion-reduce:animate-none`}
-      strokeWidth={2}
-    />
   );
 }

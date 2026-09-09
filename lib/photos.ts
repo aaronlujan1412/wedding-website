@@ -22,7 +22,7 @@ const MAX_PHOTOS = 300;
 export async function getGallery(limit = MAX_PHOTOS): Promise<Gallery> {
   const { data, error } = await supabase
     .from("guest_photos")
-    .select("id, storage_path, width, height, caption")
+    .select("id, group_id, storage_path, width, height, caption")
     .eq("hidden", false)
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -40,7 +40,11 @@ export async function getGallery(limit = MAX_PHOTOS): Promise<Gallery> {
         .data.publicUrl,
       width: row.width,
       height: row.height,
-      alt: row.caption ?? "A photo shared by a wedding guest",
+      alt:
+        row.caption ??
+        (row.group_id === null
+          ? "A photo from Aaron and Savea"
+          : "A photo shared by a wedding guest"),
     })),
   };
 }
@@ -78,7 +82,7 @@ export async function getPhotosForReview() {
     height: row.height,
     hidden: row.hidden,
     createdAt: row.created_at,
-    groupName: row.guest_groups?.name ?? "Unknown",
+    groupName: row.guest_groups?.name ?? "Aaron & Savea",
   }));
 
   return { data: photos, error };

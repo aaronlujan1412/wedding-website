@@ -2,8 +2,16 @@
 
 import { useState, useTransition } from "react";
 import Image from "next/image";
-import { Eye, EyeOff, Trash2 } from "lucide-react";
-import { deletePhoto, setPhotoHidden } from "@/app/actions/photo-review";
+import { Camera, Eye, EyeOff, Loader2, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  attachHostOriginal,
+  deletePhoto,
+  setPhotoHidden,
+  uploadHostPhoto,
+} from "@/app/actions/photo-review";
+import { usePhotoUpload } from "./usePhotoUpload";
+import { UploadQueue } from "./UploadQueue";
 
 export type ReviewPhoto = {
   id: string;
@@ -20,15 +28,91 @@ export function ReviewGrid({ photos }: { photos: ReviewPhoto[] }) {
 
   return (
     <>
+      <HostUpload />
+
       {error && (
         <p className="mb-4 font-raleway text-sm text-destructive">{error}</p>
       )}
-      <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {photos.map((photo) => (
-          <ReviewTile key={photo.id} photo={photo} onError={setError} />
-        ))}
-      </ul>
+
+      {photos.length === 0 ? (
+        <section className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
+          <h2 className="font-garamond text-2xl text-foreground">
+            Nothing posted yet
+          </h2>
+          <p className="mx-auto mt-3 max-w-sm font-garamond text-lg text-muted-foreground">
+            Guest uploads land here first. Hiding one pulls it off /photos but
+            keeps the file, so a mis-click is undoable.
+          </p>
+        </section>
+      ) : (
+        <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          {photos.map((photo) => (
+            <ReviewTile key={photo.id} photo={photo} onError={setError} />
+          ))}
+        </ul>
+      )}
     </>
+  );
+}
+
+/**
+ * Hosts posting their own. These skip review entirely — they go up visible,
+ * because reviewing your own upload the moment after making it is theatre.
+ */
+function HostUpload() {
+  const { queue, busy, archiving, inputRef, handleFiles, done } =
+    usePhotoUpload(uploadHostPhoto, attachHostOriginal);
+
+  return (
+    <div className="mb-10 rounded-lg border border-border bg-card p-6 text-center">
+      <p className="font-garamond text-xl text-foreground">Add your own</p>
+      <p className="mt-2 font-raleway text-sm text-muted-foreground">
+        Posted as Aaron &amp; Savea, and visible on the site straight away.
+      </p>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="sr-only"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+
+      <Button
+        className="mt-4"
+        disabled={busy}
+        onClick={() => inputRef.current?.click()}
+      >
+        {busy ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+            Uploading…
+          </>
+        ) : (
+          <>
+            <Camera className="h-4 w-4" strokeWidth={1.5} />
+            Choose photos
+          </>
+        )}
+      </Button>
+
+      <div className="mx-auto max-w-md">
+        <UploadQueue items={queue} />
+      </div>
+
+      {done > 0 && !busy && (
+        <p className="mt-3 font-garamond text-lg text-primary">
+          {done === 1 ? "Up it goes." : `All ${done} are up.`}
+        </p>
+      )}
+
+      {archiving && (
+        <p className="mt-2 font-raleway text-xs text-muted-foreground">
+          Tucking away full-size copies.
+        </p>
+      )}
+    </div>
   );
 }
 

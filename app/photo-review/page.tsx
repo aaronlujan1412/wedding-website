@@ -48,19 +48,7 @@ export default async function PhotoReviewPage() {
         </p>
       )}
 
-      {photos.length === 0 ? (
-        <section className="rounded-lg border border-dashed border-border px-6 py-16 text-center">
-          <h2 className="font-garamond text-2xl text-foreground">
-            Nothing posted yet
-          </h2>
-          <p className="mx-auto mt-3 max-w-sm font-garamond text-lg text-muted-foreground">
-            Guest uploads land here first. Hiding one pulls it off /photos but
-            keeps the file, so a mis-click is undoable.
-          </p>
-        </section>
-      ) : (
-        <ReviewGrid photos={photos} />
-      )}
+      <ReviewGrid photos={photos} />
     </main>
   );
 }
