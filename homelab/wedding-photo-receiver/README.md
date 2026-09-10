@@ -33,9 +33,28 @@ listening on the LAN or on any of cachy's interfaces.
 
 ## Deploying
 
+This directory lives in the **wedding-website** repo, which is not the repo
+cachy deploys from. Getting it onto the server is three moves, and none of them
+have happened yet.
+
+**1. Put it in the homelab repo** (on your laptop):
+
 ```bash
-cp -r wedding-photo-receiver ~/homelab/stacks/
-cd ~/homelab/stacks/wedding-photo-receiver
+cp -r ~/Projects/wedding-website/homelab/wedding-photo-receiver \
+      ~/homelab/stacks/
+cd ~/homelab
+git add stacks/wedding-photo-receiver
+git commit -m "feat: add the wedding photo original receiver"
+git push
+```
+
+**2. Deploy it on cachy:**
+
+```bash
+ssh aaron@cachy            # or 192.168.2.229
+cd ~/homelab && git pull
+
+cd stacks/wedding-photo-receiver
 cp .env.example .env && $EDITOR .env
 mkdir -p /mnt/media/wedding-originals
 docker compose up -d --build
@@ -45,7 +64,7 @@ The auth key must be a **pre-auth key and must not be tagged** — a tagged node
 leaves `autogroup:member`, which is what grants `funnel` in the policy file, so
 a tagged key joins fine and is then refused Funnel. Same trap as secondbrain.
 
-Then set these on the Vercel project:
+**3. Point the site at it.** 
 
 | variable | value |
 | --- | --- |
@@ -81,6 +100,11 @@ took.
 
 ## Notes
 
+- **This directory is a copy.** It is authored in the wedding-website repo and
+  deployed from the homelab repo, so an edit in one is invisible to the other.
+  The homelab repo is the source of truth for what actually runs; treat the
+  copy in wedding-website as the thing that has to be re-synced when this
+  changes.
 - `server.mjs` has no dependencies, only `node:` builtins. Nothing to install
   and nothing to keep patched beyond the base image.
 - The ticket check must stay byte-identical to `lib/upload-ticket.ts` in the
