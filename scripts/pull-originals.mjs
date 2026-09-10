@@ -3,8 +3,8 @@
  * Pulls full-resolution guest photo originals out of Supabase onto disk.
  *
  * This is the fallback path, not the main one. Originals normally go straight
- * from the guest's browser to the home server (see
- * homelab/wedding-photo-receiver) and never touch Supabase at all. They land in
+ * from the guest's browser to the home server (the homelab repo's
+ * stacks/wedding-photo-receiver) and never touch Supabase at all. They land in
  * this bucket only when that box did not answer — paused before a gaming
  * session, mid-reboot, or simply asleep — because a wedding photo uploads once
  * and losing it was not an acceptable trade for a tidy design.

@@ -32,9 +32,11 @@ export async function createUploadTicket(photoId: string) {
 /**
  * The photo id a ticket authorises, or null.
  *
- * The receiver has its own copy of this check — it is a separate service on a
- * separate box and cannot import from here. If this format ever changes, both
- * sides change together or uploads start failing silently.
+ * The receiver has its own copy of this check, in the homelab repo at
+ * `stacks/wedding-photo-receiver/server.mjs`. Different repos on different
+ * machines, so the two cannot share a file: if this format ever changes, both
+ * sides change together or uploads start failing with nothing useful in either
+ * log.
  */
 export async function readUploadTicket(
   ticket: string | undefined,
