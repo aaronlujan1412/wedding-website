@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Images, NotebookPen } from "lucide-react";
+import { ArrowRight, Images, NotebookPen, Plane } from "lucide-react";
 import { signOutAsHost } from "@/app/actions/admin";
 import { daysUntilWedding } from "@/lib/constants";
 
@@ -7,9 +7,15 @@ type Props = {
   photos: number;
   hiddenPhotos: number;
   awaitingReply: number;
+  honeymoon: { ideas: number; placed: number; actionable: number };
 };
 
-export function HostHub({ photos, hiddenPhotos, awaitingReply }: Props) {
+export function HostHub({
+  photos,
+  hiddenPhotos,
+  awaitingReply,
+  honeymoon,
+}: Props) {
   const daysOut = daysUntilWedding();
 
   return (
@@ -59,6 +65,19 @@ export function HostHub({ photos, hiddenPhotos, awaitingReply }: Props) {
               : `${photos} posted${hiddenPhotos > 0 ? `, ${hiddenPhotos} hidden` : ""}`
           }
           blurb="Everything guests have shared. Hide or delete, and add your own."
+        />
+        <HubCard
+          href="/honeymoon"
+          icon={<Plane className="h-5 w-5" strokeWidth={1.5} />}
+          title="Honeymoon"
+          status={
+            honeymoon.actionable > 0
+              ? `${honeymoon.actionable} ready to book now`
+              : honeymoon.placed === 0
+                ? `${honeymoon.ideas} in the maybe pile`
+                : `${honeymoon.placed} placed, ${honeymoon.ideas} still loose`
+          }
+          blurb="Japan. Drag the days around, seal what's booked, print the pocket card."
         />
       </ul>
     </main>
