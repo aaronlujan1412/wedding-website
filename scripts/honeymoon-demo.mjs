@@ -234,6 +234,53 @@ const items = [
     must_do: true,
   },
   // The pile
+  // Draft lanes: the same day proposed two different ways.
+  {
+    title: "Nezu Museum garden",
+    title_ja: "根津美術館",
+    kind: "sight",
+    lane: "savea",
+    on_date: "2026-12-07",
+    position: 1,
+    start_time: "11:00",
+    duration_min: 120,
+    city: "Tokyo",
+    added_by: "savea",
+  },
+  {
+    title: "Vintage shopping in Shimokita",
+    kind: "shop",
+    lane: "savea",
+    on_date: "2026-12-07",
+    position: 2,
+    duration_min: 180,
+    city: "Tokyo",
+    added_by: "savea",
+  },
+  {
+    title: "Tsukiji knife shopping, round two",
+    kind: "shop",
+    lane: "aaron",
+    on_date: "2026-12-07",
+    position: 1,
+    start_time: "10:00",
+    duration_min: 120,
+    city: "Tokyo",
+    added_by: "aaron",
+  },
+  {
+    title: "Yakitori under the tracks",
+    title_ja: "有楽町",
+    kind: "food",
+    lane: "aaron",
+    on_date: "2026-12-07",
+    position: 2,
+    start_time: "18:30",
+    duration_min: 120,
+    cost_yen: 9000,
+    city: "Tokyo",
+    added_by: "aaron",
+  },
   {
     title: "Indigo dyeing workshop",
     title_ja: "藍染体験",
@@ -242,6 +289,7 @@ const items = [
     duration_min: 180,
     cost_yen: 8000,
     added_by: "savea",
+    lane: "savea",
     url: "https://example.com",
   },
   {
@@ -252,6 +300,7 @@ const items = [
     duration_min: 120,
     cost_yen: 6000,
     added_by: "aaron",
+    lane: "aaron",
   },
   {
     title: "Knife shopping on Kappabashi",
@@ -261,6 +310,7 @@ const items = [
     duration_min: 90,
     city: "Tokyo",
     added_by: "aaron",
+    lane: "aaron",
     must_do: true,
   },
   {
@@ -269,6 +319,7 @@ const items = [
     position: 4,
     duration_min: 480,
     added_by: "savea",
+    lane: "savea",
   },
   {
     title: "Onsen, no phones",
@@ -276,6 +327,7 @@ const items = [
     position: 5,
     duration_min: 180,
     added_by: "aaron",
+    lane: "aaron",
   },
 ];
 // PostgREST unions the columns of a batch insert and sends an explicit NULL
@@ -288,6 +340,7 @@ const DEFAULTS = {
   booking_status: "idea",
   kind: "sight",
   added_by: "aaron",
+  lane: "decided",
 };
 const { error } = await db
   .from("trip_items")
