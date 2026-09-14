@@ -28,10 +28,14 @@ import {
   LANE_ORDER,
   PLANNERS,
   WEEKDAYS,
+  costToInput,
   formatDayLong,
+  parseCostInput,
 } from "./trip";
+import { CostField } from "./CostField";
 import type {
   BookingStatus,
+  Currency,
   ItemKind,
   Lane,
   Planner,
@@ -59,7 +63,8 @@ type FormState = {
   booking_opens_on: string;
   booking_ref: string;
   closed_days: number[];
-  cost_yen: string;
+  cost_input: string;
+  cost_currency: Currency;
   city: string;
   address: string;
   map_url: string;
@@ -88,10 +93,11 @@ function toForm(draft: ItemDraft): FormState {
     booking_opens_on: item?.booking_opens_on ?? "",
     booking_ref: item?.booking_ref ?? "",
     closed_days: item?.closed_days ?? [],
-    cost_yen:
-      item?.cost_yen !== null && item?.cost_yen !== undefined
-        ? String(item.cost_yen)
-        : "",
+    cost_input: costToInput(
+      item?.cost_amount ?? null,
+      item?.cost_currency ?? "JPY",
+    ),
+    cost_currency: item?.cost_currency ?? "JPY",
     city: item?.city ?? "",
     address: item?.address ?? "",
     map_url: item?.map_url ?? "",
@@ -103,15 +109,14 @@ function toForm(draft: ItemDraft): FormState {
   };
 }
 
-function toInput(form: FormState): ItemInput {
+function toInput({ cost_input, ...form }: FormState): ItemInput {
   const duration = Number.parseInt(form.duration_min, 10);
-  const cost = Number.parseInt(form.cost_yen, 10);
   return {
     ...form,
     on_date: form.on_date || null,
     start_time: form.start_time || null,
     duration_min: Number.isFinite(duration) ? duration : null,
-    cost_yen: Number.isFinite(cost) ? cost : null,
+    cost_amount: parseCostInput(cost_input, form.cost_currency),
   };
 }
 
@@ -377,14 +382,12 @@ function ItemForm({
                 placeholder="Kyoto"
               />
             </Field>
-            <Field label="Cost in yen">
-              <TextInput
-                type="number"
-                min={0}
-                step={100}
-                value={form.cost_yen}
-                onChange={(e) => set("cost_yen", e.target.value)}
-                placeholder="0"
+            <Field label="Cost" group>
+              <CostField
+                value={form.cost_input}
+                currency={form.cost_currency}
+                onValueChange={(v) => set("cost_input", v)}
+                onCurrencyChange={(c) => set("cost_currency", c)}
               />
             </Field>
           </div>

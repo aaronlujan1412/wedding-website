@@ -35,22 +35,36 @@ export function Field({
   hint,
   children,
   className,
+  group = false,
 }: {
   label: string;
   hint?: string;
   children: React.ReactNode;
   className?: string;
+  /**
+   * For controls made of several inputs. A `<label>` forwards a click on its
+   * text to its first labelable child, which for the cost field is the ¥
+   * button — so clicking the word "Cost" would silently switch currency.
+   */
+  group?: boolean;
 }) {
+  const Wrapper = group ? "div" : "label";
   return (
-    <label className={cn("block", className)}>
-      <span className="font-raleway text-xs text-muted-foreground">{label}</span>
+    <Wrapper
+      className={cn("block", className)}
+      role={group ? "group" : undefined}
+      aria-label={group ? label : undefined}
+    >
+      <span className="font-raleway text-xs text-muted-foreground">
+        {label}
+      </span>
       <div className="mt-1">{children}</div>
       {hint && (
         <span className="mt-1 block font-garamond text-xs leading-snug text-muted-foreground">
           {hint}
         </span>
       )}
-    </label>
+    </Wrapper>
   );
 }
 

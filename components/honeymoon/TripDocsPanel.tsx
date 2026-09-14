@@ -13,8 +13,16 @@ import {
 import { Button } from "@/components/ui/button";
 import { deleteDoc, saveDoc } from "@/app/actions/honeymoon";
 import { Field, Fieldset, SelectField, TextArea, TextInput } from "./FormParts";
-import { DOC_CATEGORIES, formatYen, yenToUsd } from "./trip";
-import type { DocCategory, TripDoc, TripLeg } from "./types";
+import { CostField } from "./CostField";
+import { useRate } from "./RateContext";
+import {
+  DOC_CATEGORIES,
+  costToInput,
+  formatCost,
+  formatCostConverted,
+  parseCostInput,
+} from "./trip";
+import type { Currency, DocCategory, TripDoc, TripLeg } from "./types";
 
 /**
  * Everything that isn't an itinerary item.
@@ -34,7 +42,7 @@ export function TripDocsPanel({
   const [open, setOpen] = useState(false);
 
   const categories = (Object.keys(DOC_CATEGORIES) as DocCategory[]).filter(
-    (c) => docs.some((d) => d.category === c) || c === "flight",
+    (c) => docs.some((d) => d.category === c),
   );
 
   return (
@@ -127,8 +135,8 @@ export function TripDocsPanel({
 
         {docs.length === 0 && (
           <p className="rounded-lg border border-dashed border-border px-6 py-10 text-center font-garamond text-lg text-muted-foreground">
-            Flight numbers, the rail pass, the pocket wifi, the bags you&apos;re
-            shipping ahead. Everything you&apos;ll want at 6am in an airport.
+            The rail pass, the pocket wifi, the bags you&apos;re shipping ahead.
+            Flights have their own tab.
           </p>
         )}
       </div>
@@ -146,6 +154,7 @@ export function TripDocsPanel({
 }
 
 function DocCard({ doc, onEdit }: { doc: TripDoc; onEdit: () => void }) {
+  const rate = useRate();
   return (
     <li className="flex flex-col rounded-lg border border-border bg-card p-4">
       <div className="flex items-start justify-between gap-2">
@@ -176,9 +185,9 @@ function DocCard({ doc, onEdit }: { doc: TripDoc; onEdit: () => void }) {
         )}
         {doc.starts_at && <span>{formatStamp(doc.starts_at)}</span>}
         {doc.ends_at && <span>→ {formatStamp(doc.ends_at)}</span>}
-        {doc.cost_yen !== null && (
+        {doc.cost_amount !== null && (
           <span>
-            {formatYen(doc.cost_yen)} / {yenToUsd(doc.cost_yen)}
+            {formatCost(doc)} {formatCostConverted(doc, rate)}
           </span>
         )}
       </p>
@@ -209,14 +218,15 @@ function formatStamp(value: string) {
 }
 
 const EMPTY = {
-  category: "flight" as DocCategory,
+  category: "rail" as DocCategory,
   title: "",
   detail: "",
   confirmation: "",
   url: "",
   starts_at: "",
   ends_at: "",
-  cost_yen: "",
+  cost_input: "",
+  cost_currency: "JPY" as Currency,
 };
 
 function toDocForm(doc: TripDoc | null) {
@@ -230,7 +240,8 @@ function toDocForm(doc: TripDoc | null) {
     // <input type="datetime-local"> wants "YYYY-MM-DDTHH:mm".
     starts_at: doc.starts_at?.slice(0, 16) ?? "",
     ends_at: doc.ends_at?.slice(0, 16) ?? "",
-    cost_yen: doc.cost_yen !== null ? String(doc.cost_yen) : "",
+    cost_input: costToInput(doc.cost_amount, doc.cost_currency),
+    cost_currency: doc.cost_currency,
   };
 }
 
@@ -267,10 +278,10 @@ function DocForm({
   function submit(e: React.FormEvent) {
     e.preventDefault();
     startTransition(async () => {
-      const cost = Number.parseInt(form.cost_yen, 10);
+      const { cost_input, ...rest } = form;
       const result = await saveDoc(doc?.id ?? null, {
-        ...form,
-        cost_yen: Number.isFinite(cost) ? cost : null,
+        ...rest,
+        cost_amount: parseCostInput(cost_input, form.cost_currency),
       });
       if (result.error) setError(result.error);
       else onClose();
@@ -305,19 +316,20 @@ function DocForm({
               <SelectField
                 value={form.category}
                 onChange={(v) => setForm((p) => ({ ...p, category: v }))}
-                options={(Object.keys(DOC_CATEGORIES) as DocCategory[]).map(
-                  (c) => ({ value: c, label: DOC_CATEGORIES[c] }),
-                )}
+                // Flights moved to their own tab. The enum value stays so an
+                // old "flight" paper still renders, but nothing new is filed there.
+                options={(Object.keys(DOC_CATEGORIES) as DocCategory[])
+                  .filter((c) => c !== "flight" || form.category === "flight")
+                  .map((c) => ({ value: c, label: DOC_CATEGORIES[c] }))}
               />
             </Field>
-            <Field label="Cost in yen">
-              <TextInput
-                type="number"
-                min={0}
-                step={100}
-                value={form.cost_yen}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, cost_yen: e.target.value }))
+            <Field label="Cost" group>
+              <CostField
+                value={form.cost_input}
+                currency={form.cost_currency}
+                onValueChange={(v) => setForm((p) => ({ ...p, cost_input: v }))}
+                onCurrencyChange={(c) =>
+                  setForm((p) => ({ ...p, cost_currency: c }))
                 }
               />
             </Field>

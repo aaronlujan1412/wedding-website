@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Seal } from "./Seal";
+import { useRate } from "./RateContext";
 import {
   BOOKING_STATUSES,
   KINDS,
@@ -22,7 +23,8 @@ import {
   PLANNERS,
   formatClock,
   formatDuration,
-  formatYen,
+  formatCost,
+  formatCostConverted,
   itemLength,
   itemWarnings,
 } from "./trip";
@@ -54,6 +56,7 @@ export function ItemCardFace({
   handle?: React.ReactNode;
 }) {
   const kind = KINDS[item.kind];
+  const rate = useRate();
   const warnings = itemWarnings(item);
   const planner = PLANNERS[item.added_by];
 
@@ -86,7 +89,11 @@ export function ItemCardFace({
               )}
               <span>{formatDuration(itemLength(item))}</span>
               {item.pinned && (
-                <Pin className="h-3 w-3" strokeWidth={1.5} aria-label="Pinned" />
+                <Pin
+                  className="h-3 w-3"
+                  strokeWidth={1.5}
+                  aria-label="Pinned"
+                />
               )}
             </p>
 
@@ -124,7 +131,11 @@ export function ItemCardFace({
           >
             {planner.initial}
           </span>
-          {item.cost_yen !== null && <span>{formatYen(item.cost_yen)}</span>}
+          {item.cost_amount !== null && (
+            <span title={formatCostConverted(item, rate)}>
+              {formatCost(item)}
+            </span>
+          )}
           {item.booking_status === "to_book" && (
             <span className="uppercase tracking-[0.15em] text-kind-food">
               {BOOKING_STATUSES.to_book.label}
@@ -145,7 +156,9 @@ export function ItemCardFace({
                 key={w.text}
                 className={cn(
                   "flex items-start gap-1 font-raleway text-[0.65rem] leading-snug",
-                  w.tone === "warn" ? "text-kind-food" : "text-muted-foreground",
+                  w.tone === "warn"
+                    ? "text-kind-food"
+                    : "text-muted-foreground",
                 )}
               >
                 <TriangleAlert
