@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft, ExternalLink, MapPin } from "lucide-react";
+import { ExternalLink, MapPin } from "lucide-react";
 import { TimelineConnector } from "@/components/schedule/TimelineConnector";
 import { Seal } from "@/components/honeymoon/Seal";
 import { getTripBoard } from "@/lib/honeymoon-queries";
@@ -13,10 +12,17 @@ import {
   itemLength,
   decidedOn,
   parseDay,
+  formatCost,
+  legsIn,
   sumYen,
-  yenToUsd,
+  yenAsUsd,
 } from "@/components/honeymoon/trip";
-import type { TripDay, TripItem, TripLeg } from "@/components/honeymoon/types";
+import type {
+  Rate,
+  TripDay,
+  TripItem,
+  TripLeg,
+} from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
 export const dynamic = "force-dynamic";
@@ -34,34 +40,31 @@ export const metadata: Metadata = {
  * closed museum holding a piece of paper that disagrees with itself.
  */
 export default async function ItineraryPage() {
-  const { legs, days, items, docs } = await getTripBoard();
+  const board = await getTripBoard();
+  const { days, items, docs, rate } = board;
+  // The agreed route only. Draft legs are proposals, and this page is the plan.
+  const legs = legsIn(board.legs, "decided");
   const decided = items.filter((i) => i.lane === "decided");
-  const spend = sumYen(decided) + sumYen(docs);
+  const spend = sumYen(decided, rate) + sumYen(docs, rate);
 
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
-      <header className="mb-16 text-center md:mb-24">
+    <main className="mx-auto mt-12 max-w-3xl">
+      <header className="mb-16 text-center md:mb-20">
         <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
           {legs.length === 0
-            ? "Nothing planned yet"
+            ? "Nothing agreed yet"
             : legs.map((l) => l.name).join(" · ")}
         </p>
-        <h1 className="mt-3 font-corinthia text-7xl text-pop md:text-8xl">
-          Our Honeymoon
-        </h1>
         {legs.length > 0 && (
-          <p className="mx-auto mt-4 max-w-xl font-garamond text-xl italic text-muted-foreground md:text-2xl">
+          <h2 className="mt-3 font-garamond text-3xl text-foreground md:text-4xl">
             {formatRange(legs)}
-            {spend > 0 && ` · ${formatYen(spend)} / ${yenToUsd(spend)}`}
+          </h2>
+        )}
+        {spend > 0 && (
+          <p className="mt-2 font-mono text-sm text-muted-foreground tabular-nums slashed-zero">
+            {formatYen(spend)} / {yenAsUsd(spend, rate)}
           </p>
         )}
-        <Link
-          href="/honeymoon"
-          className="mt-6 inline-flex items-center gap-1.5 rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Back to the board
-        </Link>
       </header>
 
       {legs.length === 0 && (
@@ -72,7 +75,13 @@ export default async function ItineraryPage() {
 
       <div className="space-y-20 md:space-y-24">
         {legs.map((leg) => (
-          <LegSection key={leg.id} leg={leg} items={decided} notes={days} />
+          <LegSection
+            key={leg.id}
+            leg={leg}
+            items={decided}
+            notes={days}
+            rate={rate}
+          />
         ))}
       </div>
     </main>
@@ -84,7 +93,10 @@ function formatRange(legs: TripLeg[]) {
     (a, l) => (l.starts_on < a ? l.starts_on : a),
     legs[0].starts_on,
   );
-  const end = legs.reduce((a, l) => (l.ends_on > a ? l.ends_on : a), legs[0].ends_on);
+  const end = legs.reduce(
+    (a, l) => (l.ends_on > a ? l.ends_on : a),
+    legs[0].ends_on,
+  );
   const opts = { month: "long", day: "numeric" } as const;
   return `${parseDay(start).toLocaleDateString("en-US", opts)} – ${parseDay(
     end,
@@ -92,10 +104,12 @@ function formatRange(legs: TripLeg[]) {
 }
 
 function LegSection({
+  rate,
   leg,
   items,
   notes,
 }: {
+  rate: Rate;
   leg: TripLeg;
   items: TripItem[];
   notes: TripDay[];
@@ -141,6 +155,7 @@ function LegSection({
             date={date}
             note={notes.find((n) => n.on_date === date)}
             items={decidedOn(items, date)}
+            rate={rate}
           />
         ))}
       </div>
@@ -149,6 +164,7 @@ function LegSection({
 }
 
 function DaySection({
+  rate,
   date,
   note,
   items,
@@ -156,9 +172,10 @@ function DaySection({
   date: string;
   note?: TripDay;
   items: TripItem[];
+  rate: Rate;
 }) {
   const day = parseDay(date);
-  const spend = sumYen(items);
+  const spend = sumYen(items, rate);
 
   return (
     <div>
@@ -235,7 +252,7 @@ function DaySection({
               )}
 
               <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
-                {item.cost_yen !== null && <span>{formatYen(item.cost_yen)}</span>}
+                {item.cost_amount !== null && <span>{formatCost(item)}</span>}
                 {item.booking_ref && <span>#{item.booking_ref}</span>}
                 {item.address && (
                   <span className="flex items-center gap-1">

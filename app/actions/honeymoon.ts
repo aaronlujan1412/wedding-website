@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
 import type {
   BookingStatus,
+  Currency,
   DocCategory,
   ItemKind,
   Lane,
@@ -29,6 +30,19 @@ function refresh() {
   revalidatePath("/hosts");
 }
 
+/**
+ * A cost from a form. Zero is a real price — Fushimi Inari is free — so this
+ * checks for a number rather than truthiness, which would save "free" as
+ * "unknown".
+ */
+function cleanCost(amount: number | null | undefined, currency: Currency | undefined) {
+  const valid = typeof amount === "number" && Number.isInteger(amount) && amount >= 0;
+  return {
+    cost_amount: valid ? amount : null,
+    cost_currency: currency === "USD" ? ("USD" as const) : ("JPY" as const),
+  };
+}
+
 /** Empty strings from a form field mean "not set", not "set to empty". */
 function blankToNull(value: string | null | undefined) {
   const trimmed = value?.trim();
@@ -49,7 +63,9 @@ export type ItemInput = {
   booking_opens_on?: string | null;
   booking_ref?: string | null;
   closed_days?: number[];
-  cost_yen?: number | null;
+  /** Smallest unit of `cost_currency`: whole yen, or US cents. */
+  cost_amount?: number | null;
+  cost_currency?: Currency;
   city?: string | null;
   address?: string | null;
   map_url?: string | null;
@@ -75,7 +91,7 @@ function normalise(input: ItemInput) {
     booking_opens_on: blankToNull(input.booking_opens_on),
     booking_ref: blankToNull(input.booking_ref),
     closed_days: input.closed_days ?? [],
-    cost_yen: input.cost_yen && input.cost_yen >= 0 ? input.cost_yen : null,
+    ...cleanCost(input.cost_amount, input.cost_currency),
     city: blankToNull(input.city),
     address: blankToNull(input.address),
     map_url: blankToNull(input.map_url),
@@ -229,6 +245,7 @@ export async function sortDayByTime(onDate: string, lane: Lane = "decided") {
 /* ----------------------------------------------------------------- legs -- */
 
 export type LegInput = {
+  lane: Lane;
   name: string;
   name_ja?: string | null;
   starts_on: string;
@@ -244,6 +261,7 @@ export type LegInput = {
 
 function normaliseLeg(input: LegInput) {
   return {
+    lane: input.lane,
     name: input.name.trim(),
     name_ja: blankToNull(input.name_ja),
     starts_on: input.starts_on,
@@ -275,10 +293,31 @@ export async function saveLeg(id: string | null, input: LegInput) {
         .select()
         .single();
 
-  if (error) return { data: null, error: error.message };
+  if (error) return { data: null, error: legError(error, row.lane) };
+
+  // Shrinking or moving a leg can uncover dates that still have cards on them.
+  await supabase.rpc("sweep_orphaned_trip_items");
 
   refresh();
   return { data: data as TripLeg, error: null };
+}
+
+const LANE_NAMES: Record<Lane, string> = {
+  decided: "Decided",
+  savea: "Savea's route",
+  aaron: "Aaron's route",
+};
+
+/**
+ * The database refuses overlapping legs within a lane (an exclusion
+ * constraint, code 23P01). Say that in words rather than handing back
+ * "conflicting key value violates exclusion constraint".
+ */
+function legError(error: { code?: string; message: string }, lane: Lane) {
+  if (error.code === "23P01") {
+    return `${LANE_NAMES[lane]} already has a leg on some of those dates. A lane can only be in one place a night — shorten the other leg first.`;
+  }
+  return error.message;
 }
 
 async function nextLegPosition() {
@@ -292,31 +331,50 @@ async function nextLegPosition() {
 }
 
 /**
- * Legs own the date range, not the cards, so dropping one leaves its items
- * stranded on days the board no longer draws. Sweep them back to the pool.
+ * The board's columns are every date any lane's legs cover, so removing a leg
+ * only strands the cards on dates no other lane covers either. The sweep sends
+ * exactly those back to their piles — cards on a date still drawn stay put.
  */
 export async function deleteLeg(id: string) {
   if (!(await isHost())) return DENIED;
 
-  const { data: leg } = await supabase
-    .from("trip_legs")
-    .select("starts_on, ends_on")
-    .eq("id", id)
-    .single();
-
-  if (leg) {
-    await supabase
-      .from("trip_items")
-      .update({ on_date: null })
-      .gte("on_date", leg.starts_on)
-      .lte("on_date", leg.ends_on);
-  }
-
   const { error } = await supabase.from("trip_legs").delete().eq("id", id);
   if (error) return { data: null, error: error.message };
 
+  await supabase.rpc("sweep_orphaned_trip_items");
+
   refresh();
   return { data: true, error: null };
+}
+
+/**
+ * Agree to one draft leg. Copies it into Decided and trims whatever Decided had
+ * on those dates — splitting a leg in two if the new one lands in its middle.
+ * Done in a Postgres function because it's several writes that must land
+ * together, and supabase-js has no transactions.
+ */
+export async function adoptLeg(id: string) {
+  if (!(await isHost())) return DENIED;
+
+  const { data, error } = await supabase.rpc("adopt_trip_leg", { p_leg: id });
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data, error: null };
+}
+
+/** "Let's just do your route." Replaces every Decided leg with one lane's. */
+export async function adoptRoute(lane: Lane) {
+  if (!(await isHost())) return DENIED;
+  if (lane === "decided") {
+    return { data: null, error: "Decided is already the decided route." };
+  }
+
+  const { data, error } = await supabase.rpc("adopt_trip_route", { p_lane: lane });
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data, error: null };
 }
 
 /* ----------------------------------------------------------------- days -- */
@@ -350,7 +408,8 @@ export type DocInput = {
   url?: string | null;
   starts_at?: string | null;
   ends_at?: string | null;
-  cost_yen?: number | null;
+  cost_amount?: number | null;
+  cost_currency?: Currency;
 };
 
 export async function saveDoc(id: string | null, input: DocInput) {
@@ -364,7 +423,7 @@ export async function saveDoc(id: string | null, input: DocInput) {
     url: blankToNull(input.url),
     starts_at: blankToNull(input.starts_at),
     ends_at: blankToNull(input.ends_at),
-    cost_yen: input.cost_yen && input.cost_yen >= 0 ? input.cost_yen : null,
+    ...cleanCost(input.cost_amount, input.cost_currency),
   };
 
   if (!row.title) return { data: null, error: "Give it a name first." };

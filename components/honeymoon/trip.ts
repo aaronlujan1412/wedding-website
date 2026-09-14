@@ -1,9 +1,11 @@
 import type {
   BookingStatus,
+  Currency,
   DocCategory,
   ItemKind,
   Lane,
   Planner,
+  Rate,
   TripItem,
   TripLeg,
 } from "./types";
@@ -65,10 +67,10 @@ export function laneForPlanner(planner: Planner): Lane {
 }
 
 /**
- * Hand-set, because a live FX call for a number two people glance at is not
- * worth an API dependency. Nudge it when the rate moves.
+ * Only used when the rate feed has never answered. The UI labels it as an
+ * estimate, so a stale guess never passes for a live quote.
  */
-export const YEN_PER_USD = 155;
+export const FALLBACK_YEN_PER_USD = 155;
 
 /** An item with no duration still takes an hour out of the day. */
 export const DEFAULT_DURATION = 60;
@@ -192,6 +194,103 @@ export function legForDay(legs: TripLeg[], iso: string): TripLeg | undefined {
   );
 }
 
+/** One lane's legs, in date order. */
+export function legsIn(legs: TripLeg[], lane: Lane): TripLeg[] {
+  return legs
+    .filter((l) => l.lane === lane)
+    .sort((a, b) => (a.starts_on < b.starts_on ? -1 : 1));
+}
+
+/**
+ * A draft leg that Decided already has, same place and same dates. Used to
+ * mark a proposal as agreed rather than to link rows — adopting copies a leg,
+ * so there is no foreign key to follow.
+ */
+export function isAdopted(leg: TripLeg, legs: TripLeg[]): boolean {
+  return (
+    leg.lane !== "decided" &&
+    legs.some(
+      (d) =>
+        d.lane === "decided" &&
+        d.name === leg.name &&
+        d.starts_on === leg.starts_on &&
+        d.ends_on === leg.ends_on,
+    )
+  );
+}
+
+export type LegSegment =
+  | { kind: "leg"; leg: TripLeg; column: number; span: number }
+  | { kind: "gap"; from: string; to: string; column: number; span: number };
+
+/**
+ * A lane's route laid across the visible columns: its legs, clipped to what's
+ * on screen, and the gaps between them. Gaps are real — they're days that lane
+ * hasn't proposed anywhere for yet, and clicking one starts a leg there.
+ * `column` is an index into `days`.
+ */
+export function legSegments(
+  legs: TripLeg[],
+  lane: Lane,
+  days: string[],
+): LegSegment[] {
+  const own = legsIn(legs, lane);
+  const out: LegSegment[] = [];
+  let i = 0;
+
+  while (i < days.length) {
+    const leg = legForDay(own, days[i]);
+    let j = i;
+    while (j + 1 < days.length && legForDay(own, days[j + 1]) === leg) j++;
+
+    out.push(
+      leg
+        ? { kind: "leg", leg, column: i, span: j - i + 1 }
+        : { kind: "gap", from: days[i], to: days[j], column: i, span: j - i + 1 },
+    );
+    i = j + 1;
+  }
+
+  return out;
+}
+
+export type AdoptEffect = {
+  /** Decided legs that disappear entirely, lodging details and all. */
+  replaced: TripLeg[];
+  /** Decided legs that lose some nights off one end, or get split around it. */
+  shortened: TripLeg[];
+};
+
+/**
+ * What adopting `leg` would do to Decided — mirrors `adopt_trip_leg` in the
+ * database, so the board can say "this replaces Hakone and shortens Tokyo"
+ * before anything is overwritten, and skip asking when nothing is.
+ */
+export function adoptEffect(leg: TripLeg, legs: TripLeg[]): AdoptEffect {
+  const decided = legsIn(legs, "decided");
+  return {
+    replaced: decided.filter(
+      (d) => d.starts_on >= leg.starts_on && d.ends_on <= leg.ends_on,
+    ),
+    shortened: decided.filter(
+      (d) =>
+        d.starts_on <= leg.ends_on &&
+        d.ends_on >= leg.starts_on &&
+        !(d.starts_on >= leg.starts_on && d.ends_on <= leg.ends_on),
+    ),
+  };
+}
+
+export function formatLegDates(leg: { starts_on: string; ends_on: string }): string {
+  const start = parseDay(leg.starts_on);
+  const end = parseDay(leg.ends_on);
+  const month = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
+  if (leg.starts_on === leg.ends_on) return `${month(start)} ${start.getDate()}`;
+  return start.getMonth() === end.getMonth()
+    ? `${month(start)} ${start.getDate()}–${end.getDate()}`
+    : `${month(start)} ${start.getDate()} – ${month(end)} ${end.getDate()}`;
+}
+
 /** Every day the trip covers, across all legs, in order. */
 export function tripDays(legs: TripLeg[]): string[] {
   const seen = new Set<string>();
@@ -283,27 +382,114 @@ export function paceMinutes(items: TripItem[]): number {
 
 /* ---------------------------------------------------------------- money -- */
 
+/**
+ * Costs are stored exactly as entered — `cost_amount` in the smallest unit of
+ * `cost_currency` (whole yen, or US cents) — and only converted when they're
+ * being added up. Converting on the way in would quietly rewrite a $60 quote
+ * into whatever $60 was worth the day it was typed.
+ */
+type Costed = { cost_amount: number | null; cost_currency: Currency };
+
+export const CURRENCIES: Record<Currency, { symbol: string; label: string }> = {
+  JPY: { symbol: "¥", label: "Yen" },
+  USD: { symbol: "$", label: "Dollars" },
+};
+
 export function formatYen(yen: number): string {
-  return `¥${yen.toLocaleString("en-US")}`;
+  return `¥${Math.round(yen).toLocaleString("en-US")}`;
 }
 
-export function yenToUsd(yen: number): string {
-  const usd = yen / YEN_PER_USD;
+/** Cents as dollars. Whole-dollar amounts drop the ".00". */
+export function formatUsd(cents: number): string {
+  const whole = cents % 100 === 0;
+  return `$${(cents / 100).toLocaleString("en-US", {
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: whole ? 0 : 2,
+  })}`;
+}
+
+/** A cost in the currency it was entered in. */
+export function formatCost(cost: Costed): string {
+  if (cost.cost_amount === null) return "";
+  return cost.cost_currency === "JPY"
+    ? formatYen(cost.cost_amount)
+    : formatUsd(cost.cost_amount);
+}
+
+/** The same cost in the other currency, for a tooltip or a hint. */
+export function formatCostConverted(cost: Costed, rate: Rate): string {
+  if (cost.cost_amount === null) return "";
+  return cost.cost_currency === "JPY"
+    ? `≈ ${yenAsUsd(cost.cost_amount, rate)}`
+    : `≈ ${formatYen(costInYen(cost, rate))}`;
+}
+
+export function costInYen(cost: Costed, rate: Rate): number {
+  if (cost.cost_amount === null) return 0;
+  return cost.cost_currency === "JPY"
+    ? cost.cost_amount
+    : Math.round((cost.cost_amount / 100) * rate.yenPerUsd);
+}
+
+/** Totals are kept in yen — it's what you spend there — and shown in both. */
+export function sumYen(costs: Costed[], rate: Rate): number {
+  return costs.reduce((sum, c) => sum + costInYen(c, rate), 0);
+}
+
+export function yenAsUsd(yen: number, rate: Rate): string {
+  const usd = yen / rate.yenPerUsd;
   return `$${usd.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-}
-
-export function sumYen(items: { cost_yen: number | null }[]): number {
-  return items.reduce((sum, i) => sum + (i.cost_yen ?? 0), 0);
 }
 
 /**
  * What you need on you that day. Japan still runs on cash in exactly the small
  * places worth eating at, and a card that is already paid for is not cash.
+ * Anything priced in dollars was booked online and paid by card, so it isn't
+ * cash either.
  */
-export function cashYen(items: TripItem[]): number {
-  return items
-    .filter((i) => i.booking_status !== "in_hand" && i.kind !== "lodging")
-    .reduce((sum, i) => sum + (i.cost_yen ?? 0), 0);
+export function cashYen(items: TripItem[], rate: Rate): number {
+  return sumYen(
+    items.filter(
+      (i) =>
+        i.booking_status !== "in_hand" &&
+        i.kind !== "lodging" &&
+        i.cost_currency === "JPY",
+    ),
+    rate,
+  );
+}
+
+/**
+ * Parses what someone typed into a cost field. Tolerates "¥9,300", "$60.50",
+ * "60." and stray spaces; anything unreadable is null rather than zero, so a
+ * typo never saves as "free".
+ */
+export function parseCostInput(raw: string, currency: Currency): number | null {
+  const cleaned = raw.replace(/[¥$,\s]/g, "");
+  if (cleaned === "") return null;
+  const value = Number(cleaned);
+  if (!Number.isFinite(value) || value < 0) return null;
+  return currency === "JPY" ? Math.round(value) : Math.round(value * 100);
+}
+
+/** The stored amount back as something to put in an input. */
+export function costToInput(amount: number | null, currency: Currency): string {
+  if (amount === null) return "";
+  if (currency === "JPY") return String(amount);
+  return amount % 100 === 0 ? String(amount / 100) : (amount / 100).toFixed(2);
+}
+
+export function describeRate(rate: Rate): string {
+  const value = `¥${rate.yenPerUsd.toLocaleString("en-US", {
+    maximumFractionDigits: 2,
+  })} = $1`;
+  if (!rate.live) return `${value} · estimate, feed unavailable`;
+  if (!rate.asOf) return value;
+  const date = parseDay(rate.asOf).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+  return `${value} · ECB rate, ${date}`;
 }
 
 /* ------------------------------------------------------------- warnings -- */

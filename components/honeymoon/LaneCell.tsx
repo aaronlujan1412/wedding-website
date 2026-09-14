@@ -1,7 +1,10 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SortableItemCard, type CardActions } from "./ItemCard";
@@ -21,7 +24,9 @@ export function LaneCell({
   isToday,
   actions,
   onAdd,
+  style,
 }: {
+  style?: React.CSSProperties;
   lane: Lane;
   date: string;
   items: TripItem[];
@@ -39,14 +44,17 @@ export function LaneCell({
     <div
       ref={setNodeRef}
       id={`cell-${id}`}
-      style={{ backgroundColor: meta.tint }}
+      style={{ ...style, backgroundColor: meta.tint }}
       className={cn(
         "group/cell flex min-h-[8rem] flex-col border-r border-b border-border px-2.5 py-2 transition-shadow",
         isOver && "ring-2 ring-inset ring-primary",
         isToday && "shadow-[inset_3px_0_0_var(--color-primary)]",
       )}
     >
-      <SortableContext items={items.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={items.map((i) => i.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <ol className="flex-1">
           {rows.map((row) =>
             row.kind === "gap" ? (

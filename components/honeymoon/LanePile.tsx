@@ -1,10 +1,14 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
-import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SortableItemCard, type CardActions } from "./ItemCard";
+import { useRate } from "./RateContext";
 import { LANES, POOL, cellId, formatYen, sumYen } from "./trip";
 import type { Lane, TripItem } from "./types";
 
@@ -20,7 +24,14 @@ export function LanePile({
   query,
   actions,
   onAdd,
+  onAdoptRoute,
+  legCount,
+  style,
 }: {
+  style?: React.CSSProperties;
+  /** How many legs this lane's route has; "use this route" needs at least one. */
+  legCount: number;
+  onAdoptRoute: (lane: Lane) => void;
   lane: Lane;
   items: TripItem[];
   query: string;
@@ -29,6 +40,8 @@ export function LanePile({
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: cellId(lane, null) });
   const meta = LANES[lane];
+  const rate = useRate();
+  const loose = sumYen(items, rate);
 
   const needle = query.trim().toLowerCase();
   const visible = needle
@@ -42,7 +55,7 @@ export function LanePile({
   return (
     <div
       ref={setNodeRef}
-      style={{ backgroundColor: meta.tint }}
+      style={{ ...style, backgroundColor: meta.tint }}
       className={cn(
         "sticky left-0 z-20 flex flex-col border-r-2 border-b border-border px-3 py-2.5",
         isOver && "ring-2 ring-inset ring-primary",
@@ -63,9 +76,20 @@ export function LanePile({
         {meta.blurb}
       </p>
 
+      {lane !== "decided" && legCount > 0 && (
+        <button
+          type="button"
+          onClick={() => onAdoptRoute(lane)}
+          className="mt-2 flex items-center gap-1 self-start rounded-sm font-raleway text-[0.6rem] uppercase tracking-[0.2em] underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          style={{ color: meta.accent }}
+        >
+          Use this whole route
+        </button>
+      )}
+
       <p className="mt-2 border-t border-border/70 pt-2 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground tabular-nums slashed-zero">
         {meta.pile}
-        {sumYen(items) > 0 && ` · ${formatYen(sumYen(items))}`}
+        {loose > 0 && ` · ${formatYen(loose)}`}
       </p>
 
       <div className="mt-2 flex-1 space-y-2">

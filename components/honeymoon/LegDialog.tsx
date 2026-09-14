@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2 } from "lucide-react";
+import { ArrowUp, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,76 +12,96 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { deleteLeg, saveLeg } from "@/app/actions/honeymoon";
-import { Field, Fieldset, TextArea, TextInput } from "./FormParts";
-import type { TripLeg } from "./types";
+import { Field, Fieldset, SelectField, TextArea, TextInput } from "./FormParts";
+import { LANES, LANE_ORDER } from "./trip";
+import type { Lane, TripLeg } from "./types";
 
-const EMPTY = {
-  name: "",
-  name_ja: "",
-  starts_on: "",
-  ends_on: "",
-  lodging_name: "",
-  lodging_address: "",
-  lodging_url: "",
-  lodging_confirmation: "",
-  lodging_check_in: "",
-  lodging_check_out: "",
-  note: "",
+/** A leg being edited, or a new one — optionally pre-filled from a gap. */
+export type LegDraft = {
+  leg: TripLeg | null;
+  lane: Lane;
+  from?: string;
+  to?: string;
 };
 
-function toForm(leg: TripLeg | null) {
-  if (!leg) return EMPTY;
+type FormState = {
+  lane: Lane;
+  name: string;
+  name_ja: string;
+  starts_on: string;
+  ends_on: string;
+  lodging_name: string;
+  lodging_address: string;
+  lodging_url: string;
+  lodging_confirmation: string;
+  lodging_check_in: string;
+  lodging_check_out: string;
+  note: string;
+};
+
+function toForm({ leg, lane, from, to }: LegDraft): FormState {
   return {
-    name: leg.name,
-    name_ja: leg.name_ja ?? "",
-    starts_on: leg.starts_on,
-    ends_on: leg.ends_on,
-    lodging_name: leg.lodging_name ?? "",
-    lodging_address: leg.lodging_address ?? "",
-    lodging_url: leg.lodging_url ?? "",
-    lodging_confirmation: leg.lodging_confirmation ?? "",
-    lodging_check_in: leg.lodging_check_in ?? "",
-    lodging_check_out: leg.lodging_check_out ?? "",
-    note: leg.note ?? "",
+    lane: leg?.lane ?? lane,
+    name: leg?.name ?? "",
+    name_ja: leg?.name_ja ?? "",
+    starts_on: leg?.starts_on ?? from ?? "",
+    ends_on: leg?.ends_on ?? to ?? "",
+    lodging_name: leg?.lodging_name ?? "",
+    lodging_address: leg?.lodging_address ?? "",
+    lodging_url: leg?.lodging_url ?? "",
+    lodging_confirmation: leg?.lodging_confirmation ?? "",
+    lodging_check_in: leg?.lodging_check_in ?? "",
+    lodging_check_out: leg?.lodging_check_out ?? "",
+    note: leg?.note ?? "",
   };
 }
 
 /**
- * A leg owns a stretch of dates and the bed you sleep in across them. Lodging
- * belongs here rather than on a card, because you don't drag where you sleep —
- * it's a property of the days, not an item in them.
+ * A leg owns a stretch of dates and the bed you sleep in across them, within
+ * one lane. Lodging belongs here rather than on a card, because you don't drag
+ * where you sleep — it's a property of the days, not an item in them.
  */
 export function LegDialog({
-  open,
-  leg,
+  draft,
   onClose,
+  onAdopt,
 }: {
-  open: boolean;
-  leg: TripLeg | null;
+  draft: LegDraft | null;
   onClose: () => void;
+  onAdopt: (leg: TripLeg) => void;
 }) {
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onClose()}>
+    <Dialog open={draft !== null} onOpenChange={(next) => !next && onClose()}>
       <DialogContent className="max-h-[85vh] overflow-y-auto bg-card sm:max-w-lg">
         {/* Keyed on the leg, so editing a different one remounts the form. */}
-        {open && <LegForm key={leg?.id ?? "new"} leg={leg} onClose={onClose} />}
+        {draft && (
+          <LegForm
+            key={draft.leg?.id ?? `new-${draft.lane}-${draft.from ?? ""}`}
+            draft={draft}
+            onClose={onClose}
+            onAdopt={onAdopt}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
 function LegForm({
-  leg,
+  draft,
   onClose,
+  onAdopt,
 }: {
-  leg: TripLeg | null;
+  draft: LegDraft;
   onClose: () => void;
+  onAdopt: (leg: TripLeg) => void;
 }) {
-  const [form, setForm] = useState(() => toForm(leg));
+  const { leg } = draft;
+  const [form, setForm] = useState(() => toForm(draft));
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const set = (key: keyof typeof EMPTY, value: string) =>
+  const set = <K extends keyof FormState>(key: K, value: FormState[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   function submit(e: React.FormEvent) {
@@ -102,6 +122,8 @@ function LegForm({
     });
   }
 
+  const meta = LANES[form.lane];
+
   return (
     <>
       <DialogHeader>
@@ -109,19 +131,36 @@ function LegForm({
           {leg ? `Edit ${leg.name}` : "Add a leg"}
         </DialogTitle>
         <DialogDescription className="font-garamond text-base">
-          A city and the run of days you&apos;re in it. The board draws its
-          columns from these dates.
+          A place and the run of nights you&apos;re there, in{" "}
+          <span style={{ color: meta.accent }}>{meta.label}</span>. Legs in one
+          lane can&apos;t overlap; legs in different lanes are how you disagree.
         </DialogDescription>
       </DialogHeader>
 
       <form onSubmit={submit} className="space-y-6">
         <Fieldset legend="Where and when">
+          <Field
+            label="Lane"
+            hint="Only Decided reaches the itinerary and the pocket print."
+          >
+            <SelectField
+              value={form.lane}
+              onChange={(v) => set("lane", v)}
+              options={LANE_ORDER.map((l) => ({
+                value: l,
+                label: LANES[l].label,
+              }))}
+            />
+          </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="City">
+            <Field
+              label="Place"
+              hint="A city, or a neighbourhood you're basing out of."
+            >
               <TextInput
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="Kyoto"
+                placeholder="Akihabara"
                 autoFocus
                 required
               />
@@ -130,7 +169,7 @@ function LegForm({
               <TextInput
                 value={form.name_ja}
                 onChange={(e) => set("name_ja", e.target.value)}
-                placeholder="京都"
+                placeholder="秋葉原"
                 className="font-jp"
               />
             </Field>
@@ -217,21 +256,36 @@ function LegForm({
         )}
 
         <DialogFooter className="gap-2 sm:justify-between">
-          {leg ? (
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={remove}
-              disabled={pending}
-              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-              title="Cards on these days go back to the maybe pile."
-            >
-              <Trash2 className="h-4 w-4" strokeWidth={1.5} />
-              Delete leg
-            </Button>
-          ) : (
-            <span />
-          )}
+          <div className="flex gap-2">
+            {leg && (
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={remove}
+                disabled={pending}
+                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                title="Cards on dates no other lane covers go back to their piles."
+              >
+                <Trash2 className="h-4 w-4" strokeWidth={1.5} />
+                Delete
+              </Button>
+            )}
+            {leg && leg.lane !== "decided" && (
+              <Button
+                type="button"
+                variant="ghost"
+                disabled={pending}
+                onClick={() => {
+                  onClose();
+                  onAdopt(leg);
+                }}
+                className="text-primary"
+              >
+                <ArrowUp className="h-4 w-4" strokeWidth={1.5} />
+                Use in Decided
+              </Button>
+            )}
+          </div>
           <div className="flex gap-2">
             <Button
               type="button"
