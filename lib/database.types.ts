@@ -227,6 +227,201 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_days: {
+        Row: {
+          created_at: string
+          note: string | null
+          on_date: string
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          note?: string | null
+          on_date: string
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          note?: string | null
+          on_date?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      trip_docs: {
+        Row: {
+          category: Database["public"]["Enums"]["trip_doc_category"]
+          confirmation: string | null
+          cost_yen: number | null
+          created_at: string
+          detail: string | null
+          ends_at: string | null
+          id: string
+          position: number
+          starts_at: string | null
+          title: string
+          url: string | null
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["trip_doc_category"]
+          confirmation?: string | null
+          cost_yen?: number | null
+          created_at?: string
+          detail?: string | null
+          ends_at?: string | null
+          id?: string
+          position?: number
+          starts_at?: string | null
+          title: string
+          url?: string | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["trip_doc_category"]
+          confirmation?: string | null
+          cost_yen?: number | null
+          created_at?: string
+          detail?: string | null
+          ends_at?: string | null
+          id?: string
+          position?: number
+          starts_at?: string | null
+          title?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      trip_items: {
+        Row: {
+          added_by: Database["public"]["Enums"]["trip_planner"]
+          address: string | null
+          booking_opens_on: string | null
+          booking_ref: string | null
+          booking_status: Database["public"]["Enums"]["trip_booking_status"]
+          booking_url: string | null
+          city: string | null
+          closed_days: number[]
+          cost_yen: number | null
+          created_at: string
+          duration_min: number | null
+          id: string
+          kind: Database["public"]["Enums"]["trip_item_kind"]
+          map_url: string | null
+          must_do: boolean
+          notes: string | null
+          on_date: string | null
+          pinned: boolean
+          position: number
+          start_time: string | null
+          title: string
+          title_ja: string | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          address?: string | null
+          booking_opens_on?: string | null
+          booking_ref?: string | null
+          booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          booking_url?: string | null
+          city?: string | null
+          closed_days?: number[]
+          cost_yen?: number | null
+          created_at?: string
+          duration_min?: number | null
+          id?: string
+          kind?: Database["public"]["Enums"]["trip_item_kind"]
+          map_url?: string | null
+          must_do?: boolean
+          notes?: string | null
+          on_date?: string | null
+          pinned?: boolean
+          position?: number
+          start_time?: string | null
+          title: string
+          title_ja?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          address?: string | null
+          booking_opens_on?: string | null
+          booking_ref?: string | null
+          booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          booking_url?: string | null
+          city?: string | null
+          closed_days?: number[]
+          cost_yen?: number | null
+          created_at?: string
+          duration_min?: number | null
+          id?: string
+          kind?: Database["public"]["Enums"]["trip_item_kind"]
+          map_url?: string | null
+          must_do?: boolean
+          notes?: string | null
+          on_date?: string | null
+          pinned?: boolean
+          position?: number
+          start_time?: string | null
+          title?: string
+          title_ja?: string | null
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: []
+      }
+      trip_legs: {
+        Row: {
+          created_at: string
+          ends_on: string
+          id: string
+          lodging_address: string | null
+          lodging_check_in: string | null
+          lodging_check_out: string | null
+          lodging_confirmation: string | null
+          lodging_name: string | null
+          lodging_url: string | null
+          name: string
+          name_ja: string | null
+          note: string | null
+          position: number
+          starts_on: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          id?: string
+          lodging_address?: string | null
+          lodging_check_in?: string | null
+          lodging_check_out?: string | null
+          lodging_confirmation?: string | null
+          lodging_name?: string | null
+          lodging_url?: string | null
+          name: string
+          name_ja?: string | null
+          note?: string | null
+          position?: number
+          starts_on: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          id?: string
+          lodging_address?: string | null
+          lodging_check_in?: string | null
+          lodging_check_out?: string | null
+          lodging_confirmation?: string | null
+          lodging_name?: string | null
+          lodging_url?: string | null
+          name?: string
+          name_ja?: string | null
+          note?: string | null
+          position?: number
+          starts_on?: string
+        }
+        Relationships: []
+      }
       verification_attempts: {
         Row: {
           created_at: string
@@ -252,6 +447,24 @@ export type Database = {
     Enums: {
       dietary: "restriction" | "preference" | "none"
       table_shape: "round" | "rectangular" | "square"
+      trip_booking_status: "idea" | "to_book" | "booked" | "in_hand"
+      trip_doc_category:
+        | "flight"
+        | "rail"
+        | "lodging"
+        | "connectivity"
+        | "luggage"
+        | "money"
+        | "other"
+      trip_item_kind:
+        | "sight"
+        | "food"
+        | "workshop"
+        | "transit"
+        | "lodging"
+        | "shop"
+        | "rest"
+      trip_planner: "aaron" | "savea"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -384,6 +597,26 @@ export const Constants = {
     Enums: {
       dietary: ["restriction", "preference", "none"],
       table_shape: ["round", "rectangular", "square"],
+      trip_booking_status: ["idea", "to_book", "booked", "in_hand"],
+      trip_doc_category: [
+        "flight",
+        "rail",
+        "lodging",
+        "connectivity",
+        "luggage",
+        "money",
+        "other",
+      ],
+      trip_item_kind: [
+        "sight",
+        "food",
+        "workshop",
+        "transit",
+        "lodging",
+        "shop",
+        "rest",
+      ],
+      trip_planner: ["aaron", "savea"],
     },
   },
 } as const
