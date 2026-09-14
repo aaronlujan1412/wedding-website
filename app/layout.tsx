@@ -35,7 +35,9 @@ const cormorantGaramond = Cormorant_Garamond({
 
 const raleway = Raleway({
   variable: "--font-raleway",
-  weight: ["400"],
+  // 500/600 are for the honeymoon board, where card titles need to hold their
+  // own at small sizes; the rest of the site still uses 400.
+  weight: ["400", "500", "600"],
   subsets: ["latin"],
 });
 

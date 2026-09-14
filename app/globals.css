@@ -6,6 +6,7 @@
   --font-raleway: var(--font-raleway);
   --font-garamond: var(--font-garamond);
   --font-mono: var(--font-geist-mono);
+  --font-jp: var(--font-jp-stack);
 }
 
 @theme {
@@ -28,6 +29,30 @@
   --color-secondary-foreground: #1c1917;
   --color-destructive: #b22222;
   --color-muted: #f1ece3;
+
+  /* Honeymoon planner --------------------------------------------------- */
+
+  /* One hue per card type, all pulled toward the wedding palette so the board
+     still reads as the same site rather than a pasted-in project tracker. */
+  --color-kind-sight: #00563f;
+  --color-kind-food: #b22323;
+  --color-kind-workshop: #8a6d0b;
+  --color-kind-transit: #3d4b5c;
+  --color-kind-lodging: #6b5e4e;
+  --color-kind-shop: #6b4570;
+  --color-kind-rest: #8a8175;
+
+  /* Goshuin ink. Sits a touch brighter than --color-pop2 so the seal reads as
+     stamped on top of the card rather than printed as part of it. */
+  --color-seal: #c0342b;
+
+  /* Day columns are pages of the book: one step warmer than a card. */
+  --color-paper: #f6f0e4;
+
+  /* Japanese place names get a real mincho where the device has one. No
+     webfont: a JP family is megabytes, and this page has two readers. */
+  --font-jp-stack: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
+    "Songti SC", "Source Han Serif", serif;
 }
 
 /* Eased transparent -> background ramp. A plain 2/3-stop gradient banks alpha
@@ -79,4 +104,46 @@
 
 @utility animate-intruder {
   animation: intruder-flash 1s infinite;
+}
+
+/* The seal lands like a stamp: too big and off-angle, pressed down, settling a
+   couple of degrees short of straight. The resting rotation is also set on the
+   element itself, so `motion-reduce:animate-none` leaves it stamped, not level. */
+@keyframes seal-press {
+  0% {
+    transform: rotate(-26deg) scale(1.9);
+    opacity: 0;
+  }
+  55% {
+    transform: rotate(-3deg) scale(0.9);
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(-8deg) scale(1);
+    opacity: 1;
+  }
+}
+
+@utility animate-seal {
+  animation: seal-press 380ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+}
+
+/* Column scrollbars on the board, thinned so they don't shout on paper stock. */
+@utility rail-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+@media print {
+  /* The pocket view exists to be carried on paper. Without this the fixed
+     navbar prints across the top of every sheet and the footer across the
+     bottom. Scoped to that page so nothing else's print output changes. */
+  body:has(#pocket) > nav,
+  body:has(#pocket) > footer {
+    display: none !important;
+  }
+
+  body:has(#pocket) {
+    background: #fff;
+  }
 }
