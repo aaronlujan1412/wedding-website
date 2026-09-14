@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
 
 /**
- * Gate for the guest ledger.
+ * Gate for the back-of-house pages.
  *
  * Next 16 deprecated `middleware.ts`/`middleware()` in favour of
  * `proxy.ts`/`proxy()`, but the matcher export is still named `config` — NOT
@@ -31,5 +31,7 @@ export const config = {
     "/rsvp-list/:path*",
     "/photo-review",
     "/photo-review/:path*",
+    "/honeymoon",
+    "/honeymoon/:path*",
   ],
 };
