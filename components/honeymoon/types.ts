@@ -4,12 +4,24 @@ export type TripLeg = Database["public"]["Tables"]["trip_legs"]["Row"];
 export type TripDay = Database["public"]["Tables"]["trip_days"]["Row"];
 export type TripItem = Database["public"]["Tables"]["trip_items"]["Row"];
 export type TripDoc = Database["public"]["Tables"]["trip_docs"]["Row"];
+export type TripFlight = Database["public"]["Tables"]["trip_flights"]["Row"];
+export type ChecklistItem =
+  Database["public"]["Tables"]["trip_checklist_items"]["Row"];
+export type Cabin = Database["public"]["Enums"]["trip_cabin"];
 
 export type ItemKind = Database["public"]["Enums"]["trip_item_kind"];
 export type BookingStatus = Database["public"]["Enums"]["trip_booking_status"];
 export type Planner = Database["public"]["Enums"]["trip_planner"];
 export type Lane = Database["public"]["Enums"]["trip_lane"];
 export type DocCategory = Database["public"]["Enums"]["trip_doc_category"];
+export type Currency = Database["public"]["Enums"]["trip_currency"];
+
+/**
+ * Yen per US dollar, and where that number came from. `live` is false when the
+ * feed has never answered and the board is running on the fallback estimate —
+ * the UI says so rather than presenting a guess as a quote.
+ */
+export type Rate = { yenPerUsd: number; asOf: string | null; live: boolean };
 
 /** Everything the board needs, read once on the server. */
 export type TripBoard = {
@@ -17,4 +29,6 @@ export type TripBoard = {
   days: TripDay[];
   items: TripItem[];
   docs: TripDoc[];
+  flights: TripFlight[];
+  rate: Rate;
 };

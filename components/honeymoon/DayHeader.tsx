@@ -1,6 +1,13 @@
 "use client";
 
-import { ArrowDownWideNarrow, NotebookPen, TriangleAlert } from "lucide-react";
+import Link from "next/link";
+import {
+  ArrowDownWideNarrow,
+  NotebookPen,
+  Plane,
+  TriangleAlert,
+} from "lucide-react";
+import { flightsOnDay, formatClockIn } from "./flights";
 import { cn } from "@/lib/utils";
 import {
   PACE_CEILING,
@@ -10,11 +17,13 @@ import {
   formatDuration,
   formatYen,
   legForDay,
+  legsIn,
   paceMinutes,
   parseDay,
   sumYen,
-  yenToUsd,
+  yenAsUsd,
 } from "./trip";
+import { useRate } from "./RateContext";
 import type { TripDay, TripItem, TripLeg } from "./types";
 
 /**
@@ -32,7 +41,12 @@ export function DayHeader({
   isToday,
   onEditNote,
   onSortByTime,
+  flights = [],
+  style,
 }: {
+  style?: React.CSSProperties;
+  /** Flights leaving or landing on this date, from `flightsOnDay`. */
+  flights?: ReturnType<typeof flightsOnDay>;
   date: string;
   note?: TripDay;
   legs: TripLeg[];
@@ -41,16 +55,20 @@ export function DayHeader({
   onEditNote: (date: string) => void;
   onSortByTime: (date: string) => void;
 }) {
-  const leg = legForDay(legs, date);
+  const rate = useRate();
+  // The header names where the agreed route has you. Drafts show in their own
+  // lane's leg band, not here.
+  const leg = legForDay(legsIn(legs, "decided"), date);
   const warnings = dayWarnings(date, decided);
   const pace = paceMinutes(decided);
-  const spend = sumYen(decided);
-  const cash = cashYen(decided);
+  const spend = sumYen(decided, rate);
+  const cash = cashYen(decided, rate);
 
   const day = parseDay(date);
 
   return (
     <div
+      style={style}
       className={cn(
         "sticky top-0 z-30 border-r border-b border-border bg-background px-3 py-2.5",
         isToday && "bg-secondary",
@@ -77,7 +95,7 @@ export function DayHeader({
       </div>
 
       <p className="mt-0.5 truncate font-garamond text-lg leading-tight text-foreground">
-        {note?.title || leg?.name || "Unplaced day"}
+        {note?.title || leg?.name || "No agreed leg yet"}
         {leg?.name_ja && (
           <span className="ml-1.5 font-jp text-xs text-muted-foreground">
             {leg.name_ja}
@@ -85,15 +103,41 @@ export function DayHeader({
         )}
       </p>
 
+      {flights.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {flights.map(({ flight, leaves, lands }) => (
+            <li key={flight.id}>
+              <Link
+                href="/honeymoon/flights"
+                className="flex items-center gap-1 rounded-sm font-mono text-[0.6rem] text-primary tabular-nums slashed-zero hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <Plane
+                  className="h-2.5 w-2.5 flex-none"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                {leaves && lands
+                  ? `${flight.from_airport} ${formatClockIn(flight.departs_at, flight.departs_tz)} → ${flight.to_airport} ${formatClockIn(flight.arrives_at, flight.arrives_tz)}`
+                  : leaves
+                    ? `${flight.from_airport} ${formatClockIn(flight.departs_at, flight.departs_tz)} → ${flight.to_airport}`
+                    : `Lands ${flight.to_airport} ${formatClockIn(flight.arrives_at, flight.arrives_tz)}`}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
       <PaceBar minutes={pace} />
 
       <p className="mt-1.5 flex flex-wrap items-center gap-x-2 font-mono text-[0.6rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
-        <span>{decided.length === 0 ? "nothing decided" : formatDuration(pace)}</span>
+        <span>
+          {decided.length === 0 ? "nothing decided" : formatDuration(pace)}
+        </span>
         {spend > 0 && (
           <>
             <span aria-hidden="true">·</span>
             <span>
-              {formatYen(spend)} / {yenToUsd(spend)}
+              {formatYen(spend)} / {yenAsUsd(spend, rate)}
             </span>
           </>
         )}
@@ -117,7 +161,10 @@ export function DayHeader({
                 w.tone === "warn" ? "text-kind-food" : "text-muted-foreground",
               )}
             >
-              <TriangleAlert className="mt-px h-2.5 w-2.5 flex-none" strokeWidth={2} />
+              <TriangleAlert
+                className="mt-px h-2.5 w-2.5 flex-none"
+                strokeWidth={2}
+              />
               {w.text}
             </li>
           ))}

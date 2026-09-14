@@ -1,7 +1,15 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { getTripBoard } from "@/lib/honeymoon-queries";
+import { getFlightsPage, getTripBoard } from "@/lib/honeymoon-queries";
+import {
+  JOURNEY_LABELS,
+  dayShift,
+  flightMinutes,
+  formatClockIn,
+  formatDateIn,
+  formatSpan,
+  groupJourneys,
+  zoneName,
+} from "@/components/honeymoon/flights";
 import {
   DOC_CATEGORIES,
   KINDS,
@@ -11,11 +19,21 @@ import {
   formatYen,
   itemLength,
   decidedOn,
+  formatCost,
   legForDay,
+  legsIn,
   parseDay,
   tripDays,
 } from "@/components/honeymoon/trip";
-import type { TripDay, TripDoc, TripItem, TripLeg } from "@/components/honeymoon/types";
+import type {
+  ChecklistItem,
+  Rate,
+  TripDay,
+  TripDoc,
+  TripFlight,
+  TripItem,
+  TripLeg,
+} from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
 export const dynamic = "force-dynamic";
@@ -34,46 +52,45 @@ export const metadata: Metadata = {
  * Print styles hide the site chrome; everything else is deliberately plain.
  */
 export default async function PocketPage() {
-  const { legs, days, items, docs } = await getTripBoard();
+  const [board, flightsPage] = await Promise.all([
+    getTripBoard(),
+    getFlightsPage(),
+  ]);
+  const { days, items, docs, rate } = board;
+  // Only the agreed route prints — a proposal on paper is how you end up
+  // arguing with yourself at a train station.
+  const legs = legsIn(board.legs, "decided");
   const dates = tripDays(legs);
 
   return (
     <main
       id="pocket"
-      className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24 print:max-w-none print:px-0 print:pt-0 print:pb-0"
+      className="mx-auto mt-12 max-w-3xl print:mt-0 print:max-w-none"
     >
-      <header className="mb-12 print:hidden">
-        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
-          For printing
+      <header className="mb-10 text-center print:hidden">
+        <p className="font-garamond text-xl italic text-muted-foreground">
+          The papers, your flights, then one sheet per day. Print it before you
+          go — the wifi in a Tokyo basement is not a plan.
         </p>
-        <h1 className="mt-3 font-corinthia text-7xl text-pop md:text-8xl">
-          Pocket card
-        </h1>
-        <p className="mt-3 max-w-xl font-garamond text-xl italic text-muted-foreground">
-          One sheet per day. Print it before you go — the wifi in a Tokyo
-          basement is not a plan.
-        </p>
-        <Link
-          href="/honeymoon"
-          className="mt-6 inline-flex items-center gap-1.5 rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
-          Back to the board
-        </Link>
       </header>
 
-      {dates.length === 0 ? (
+      {dates.length === 0 && flightsPage.flights.length === 0 ? (
         <p className="rounded-lg border border-dashed border-border px-8 py-16 text-center font-garamond text-lg text-muted-foreground">
           Nothing to print yet.
         </p>
       ) : (
         <>
           <PapersSheet legs={legs} docs={docs} />
+          <FlightsSheet
+            flights={flightsPage.flights}
+            checklist={flightsPage.checklist}
+          />
           {dates.map((date) => (
             <DaySheet
               key={date}
               date={date}
               leg={legForDay(legs, date)}
+              rate={rate}
               note={days.find((d) => d.on_date === date)}
               items={decidedOn(items, date)}
               docs={docs.filter((d) => d.starts_at?.slice(0, 10) === date)}
@@ -87,6 +104,101 @@ export default async function PocketPage() {
 
 const SHEET =
   "mb-8 break-after-page rounded-lg border border-border bg-card px-8 py-7 print:mb-0 print:rounded-none print:border-0 print:bg-transparent print:px-0 print:py-6";
+
+/**
+ * Every flight on one sheet: the page you want in hand at a check-in desk with
+ * a dead phone. Times in each airport's own zone, the day change spelled out,
+ * and the essentials as boxes to tick with a pen.
+ */
+function FlightsSheet({
+  flights,
+  checklist,
+}: {
+  flights: TripFlight[];
+  checklist: ChecklistItem[];
+}) {
+  if (flights.length === 0) return null;
+
+  return (
+    <section className={SHEET}>
+      <h2 className="font-garamond text-3xl text-foreground">Flights</h2>
+
+      {groupJourneys(flights).map((journey) => {
+        const items = checklist.filter((i) => journey.lists.includes(i.list));
+        return (
+          <div key={journey.id} className="mt-6 break-inside-avoid">
+            <h3 className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-primary">
+              {JOURNEY_LABELS[journey.kind]}
+            </h3>
+            <ul className="mt-2 space-y-3">
+              {journey.flights.map((f, i) => {
+                const shift = dayShift(f);
+                const layover = i > 0 ? journey.layovers[i - 1] : null;
+                return (
+                  <li key={f.id}>
+                    {layover && (
+                      <p className="mb-2 font-garamond text-sm text-muted-foreground italic">
+                        {formatSpan(layover.minutes)} in{" "}
+                        {journey.flights[i - 1].to_city ??
+                          journey.flights[i - 1].to_airport}
+                        {layover.changesAirport && ", changing airports"}
+                      </p>
+                    )}
+                    <p className="font-mono text-lg text-foreground tabular-nums slashed-zero">
+                      {f.from_airport} → {f.to_airport}
+                      <span className="ml-3 font-raleway text-sm">
+                        {f.airline} {f.flight_number}
+                      </span>
+                    </p>
+                    <p className="font-mono text-xs text-foreground tabular-nums slashed-zero">
+                      {formatDateIn(f.departs_at, f.departs_tz)}{" "}
+                      {formatClockIn(f.departs_at, f.departs_tz)}{" "}
+                      {zoneName(f.departs_at, f.departs_tz)} →{" "}
+                      {formatDateIn(f.arrives_at, f.arrives_tz)}{" "}
+                      {formatClockIn(f.arrives_at, f.arrives_tz)}{" "}
+                      {zoneName(f.arrives_at, f.arrives_tz)}
+                      {shift !== 0 &&
+                        ` (${shift > 0 ? "+" : "−"}${Math.abs(shift)} day)`}{" "}
+                      · {formatSpan(flightMinutes(f))}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
+                      {[
+                        f.confirmation && `Conf ${f.confirmation}`,
+                        f.seat_aaron && `Aaron ${f.seat_aaron}`,
+                        f.seat_savea && `Savea ${f.seat_savea}`,
+                        f.departure_terminal &&
+                          `Leaves ${f.departure_terminal}`,
+                        f.baggage,
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </li>
+                );
+              })}
+            </ul>
+            {items.length > 0 && (
+              <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-1">
+                {items.map((item) => (
+                  <li
+                    key={item.id}
+                    className="flex items-center gap-2 font-garamond text-sm text-foreground"
+                  >
+                    <span
+                      aria-hidden="true"
+                      className="inline-block h-3 w-3 flex-none border border-foreground/60"
+                    />
+                    {item.label}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </section>
+  );
+}
 
 function PapersSheet({ legs, docs }: { legs: TripLeg[]; docs: TripDoc[] }) {
   const beds = legs.filter((l) => l.lodging_name);
@@ -168,7 +280,9 @@ function DaySheet({
   note,
   items,
   docs,
+  rate,
 }: {
+  rate: Rate;
   date: string;
   leg?: TripLeg;
   note?: TripDay;
@@ -176,7 +290,7 @@ function DaySheet({
   docs: TripDoc[];
 }) {
   const day = parseDay(date);
-  const cash = cashYen(items);
+  const cash = cashYen(items, rate);
 
   return (
     <section className={SHEET}>
@@ -190,7 +304,9 @@ function DaySheet({
         </h2>
         <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-primary">
           {note?.title || leg?.name}
-          {leg?.name_ja && <span className="ml-1.5 font-jp">{leg.name_ja}</span>}
+          {leg?.name_ja && (
+            <span className="ml-1.5 font-jp">{leg.name_ja}</span>
+          )}
         </p>
       </div>
 
@@ -245,7 +361,7 @@ function DaySheet({
                 <p className="font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
                   {KINDS[item.kind].label.toLowerCase()} ·{" "}
                   {formatDuration(itemLength(item))}
-                  {item.cost_yen !== null && ` · ${formatYen(item.cost_yen)}`}
+                  {item.cost_amount !== null && ` · ${formatCost(item)}`}
                   {item.booking_ref && ` · ${item.booking_ref}`}
                 </p>
                 {item.address && (

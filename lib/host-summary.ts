@@ -40,7 +40,7 @@ export async function getHostSummary() {
 async function getHoneymoonCounts() {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [decided, suggested, actionable] = await Promise.all([
+  const [decided, suggested, actionable, next] = await Promise.all([
     supabase
       .from("trip_items")
       .select("*", { count: "exact", head: true })
@@ -57,11 +57,19 @@ async function getHoneymoonCounts() {
       .in("booking_status", ["idea", "to_book"])
       .not("booking_opens_on", "is", null)
       .lte("booking_opens_on", today),
+    supabase
+      .from("trip_flights")
+      .select("from_airport, to_airport, departs_at")
+      .gt("departs_at", new Date().toISOString())
+      .order("departs_at")
+      .limit(1)
+      .maybeSingle(),
   ]);
 
   return {
     decided: decided.count ?? 0,
     suggested: suggested.count ?? 0,
     actionable: actionable.count ?? 0,
+    nextFlight: next.data ?? null,
   };
 }

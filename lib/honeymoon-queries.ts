@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { getRate } from "@/lib/fx";
 import type { TripBoard } from "@/components/honeymoon/types";
 
 /**
@@ -11,11 +12,13 @@ import type { TripBoard } from "@/components/honeymoon/types";
  * the action manifest entirely.
  */
 export async function getTripBoard(): Promise<TripBoard> {
-  const [legs, days, items, docs] = await Promise.all([
-    supabase.from("trip_legs").select().order("position").order("starts_on"),
+  const [legs, days, items, docs, flights, rate] = await Promise.all([
+    supabase.from("trip_legs").select().order("starts_on"),
     supabase.from("trip_days").select().order("on_date"),
     supabase.from("trip_items").select().order("position"),
     supabase.from("trip_docs").select().order("category").order("position"),
+    supabase.from("trip_flights").select().order("departs_at"),
+    getRate(),
   ]);
 
   return {
@@ -23,5 +26,30 @@ export async function getTripBoard(): Promise<TripBoard> {
     days: days.data ?? [],
     items: items.data ?? [],
     docs: docs.data ?? [],
+    flights: flights.data ?? [],
+    rate,
+  };
+}
+
+/**
+ * The Flights tab: every flight and every flight checklist item. Checklist keys
+ * are "flight:<id>", so one prefix query fetches all of them and the page
+ * sorts them into journeys.
+ */
+export async function getFlightsPage() {
+  const [flights, checklist, rate] = await Promise.all([
+    supabase.from("trip_flights").select().order("departs_at"),
+    supabase
+      .from("trip_checklist_items")
+      .select()
+      .like("list", "flight:%")
+      .order("position"),
+    getRate(),
+  ]);
+
+  return {
+    flights: flights.data ?? [],
+    checklist: checklist.data ?? [],
+    rate,
   };
 }

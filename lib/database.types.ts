@@ -7,11 +7,6 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.5"
-  }
   graphql_public: {
     Tables: {
       [_ in never]: never
@@ -60,6 +55,27 @@ export type Database = {
           question?: string
           sort_order?: number
           translation?: string
+        }
+        Relationships: []
+      }
+      fx_rates: {
+        Row: {
+          as_of: string
+          fetched_at: string
+          pair: string
+          rate: number
+        }
+        Insert: {
+          as_of: string
+          fetched_at?: string
+          pair: string
+          rate: number
+        }
+        Update: {
+          as_of?: string
+          fetched_at?: string
+          pair?: string
+          rate?: number
         }
         Relationships: []
       }
@@ -227,6 +243,39 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_checklist_items: {
+        Row: {
+          created_at: string
+          done: boolean
+          id: string
+          label: string
+          list: string
+          owner: Database["public"]["Enums"]["trip_planner"] | null
+          position: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          label: string
+          list: string
+          owner?: Database["public"]["Enums"]["trip_planner"] | null
+          position?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          done?: boolean
+          id?: string
+          label?: string
+          list?: string
+          owner?: Database["public"]["Enums"]["trip_planner"] | null
+          position?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       trip_days: {
         Row: {
           created_at: string
@@ -252,7 +301,8 @@ export type Database = {
         Row: {
           category: Database["public"]["Enums"]["trip_doc_category"]
           confirmation: string | null
-          cost_yen: number | null
+          cost_amount: number | null
+          cost_currency: Database["public"]["Enums"]["trip_currency"]
           created_at: string
           detail: string | null
           ends_at: string | null
@@ -265,7 +315,8 @@ export type Database = {
         Insert: {
           category?: Database["public"]["Enums"]["trip_doc_category"]
           confirmation?: string | null
-          cost_yen?: number | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           detail?: string | null
           ends_at?: string | null
@@ -278,7 +329,8 @@ export type Database = {
         Update: {
           category?: Database["public"]["Enums"]["trip_doc_category"]
           confirmation?: string | null
-          cost_yen?: number | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           detail?: string | null
           ends_at?: string | null
@@ -287,6 +339,99 @@ export type Database = {
           starts_at?: string | null
           title?: string
           url?: string | null
+        }
+        Relationships: []
+      }
+      trip_flights: {
+        Row: {
+          aircraft: string | null
+          airline: string
+          arrival_terminal: string | null
+          arrives_at: string
+          arrives_tz: string
+          baggage: string | null
+          cabin: Database["public"]["Enums"]["trip_cabin"] | null
+          checkin_url: string | null
+          confirmation: string | null
+          cost_amount: number | null
+          cost_currency: Database["public"]["Enums"]["trip_currency"]
+          created_at: string
+          departs_at: string
+          departs_tz: string
+          departure_gate: string | null
+          departure_terminal: string | null
+          flight_number: string
+          from_airport: string
+          from_city: string | null
+          id: string
+          meal: string | null
+          notes: string | null
+          seat_aaron: string | null
+          seat_savea: string | null
+          status_url: string | null
+          to_airport: string
+          to_city: string | null
+          updated_at: string
+        }
+        Insert: {
+          aircraft?: string | null
+          airline: string
+          arrival_terminal?: string | null
+          arrives_at: string
+          arrives_tz: string
+          baggage?: string | null
+          cabin?: Database["public"]["Enums"]["trip_cabin"] | null
+          checkin_url?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          created_at?: string
+          departs_at: string
+          departs_tz: string
+          departure_gate?: string | null
+          departure_terminal?: string | null
+          flight_number: string
+          from_airport: string
+          from_city?: string | null
+          id?: string
+          meal?: string | null
+          notes?: string | null
+          seat_aaron?: string | null
+          seat_savea?: string | null
+          status_url?: string | null
+          to_airport: string
+          to_city?: string | null
+          updated_at?: string
+        }
+        Update: {
+          aircraft?: string | null
+          airline?: string
+          arrival_terminal?: string | null
+          arrives_at?: string
+          arrives_tz?: string
+          baggage?: string | null
+          cabin?: Database["public"]["Enums"]["trip_cabin"] | null
+          checkin_url?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          created_at?: string
+          departs_at?: string
+          departs_tz?: string
+          departure_gate?: string | null
+          departure_terminal?: string | null
+          flight_number?: string
+          from_airport?: string
+          from_city?: string | null
+          id?: string
+          meal?: string | null
+          notes?: string | null
+          seat_aaron?: string | null
+          seat_savea?: string | null
+          status_url?: string | null
+          to_airport?: string
+          to_city?: string | null
+          updated_at?: string
         }
         Relationships: []
       }
@@ -300,7 +445,8 @@ export type Database = {
           booking_url: string | null
           city: string | null
           closed_days: number[]
-          cost_yen: number | null
+          cost_amount: number | null
+          cost_currency: Database["public"]["Enums"]["trip_currency"]
           created_at: string
           duration_min: number | null
           id: string
@@ -327,7 +473,8 @@ export type Database = {
           booking_url?: string | null
           city?: string | null
           closed_days?: number[]
-          cost_yen?: number | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           duration_min?: number | null
           id?: string
@@ -354,7 +501,8 @@ export type Database = {
           booking_url?: string | null
           city?: string | null
           closed_days?: number[]
-          cost_yen?: number | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           duration_min?: number | null
           id?: string
@@ -379,6 +527,7 @@ export type Database = {
           created_at: string
           ends_on: string
           id: string
+          lane: Database["public"]["Enums"]["trip_lane"]
           lodging_address: string | null
           lodging_check_in: string | null
           lodging_check_out: string | null
@@ -395,6 +544,7 @@ export type Database = {
           created_at?: string
           ends_on: string
           id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
           lodging_address?: string | null
           lodging_check_in?: string | null
           lodging_check_out?: string | null
@@ -411,6 +561,7 @@ export type Database = {
           created_at?: string
           ends_on?: string
           id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
           lodging_address?: string | null
           lodging_check_in?: string | null
           lodging_check_out?: string | null
@@ -445,12 +596,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      adopt_trip_leg: { Args: { p_leg: string }; Returns: string }
+      adopt_trip_route: {
+        Args: { p_lane: Database["public"]["Enums"]["trip_lane"] }
+        Returns: number
+      }
+      sweep_orphaned_trip_items: { Args: never; Returns: number }
     }
     Enums: {
       dietary: "restriction" | "preference" | "none"
       table_shape: "round" | "rectangular" | "square"
       trip_booking_status: "idea" | "to_book" | "booked" | "in_hand"
+      trip_cabin: "economy" | "premium" | "business" | "first"
+      trip_currency: "JPY" | "USD"
       trip_doc_category:
         | "flight"
         | "rail"
@@ -484,12 +642,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -513,11 +671,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -538,11 +696,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends (DefaultSchemaTableNameOrOptions extends {
+  TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -563,11 +721,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never) = never,
+    : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -580,11 +738,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never) = never,
+    : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -602,6 +760,8 @@ export const Constants = {
       dietary: ["restriction", "preference", "none"],
       table_shape: ["round", "rectangular", "square"],
       trip_booking_status: ["idea", "to_book", "booked", "in_hand"],
+      trip_cabin: ["economy", "premium", "business", "first"],
+      trip_currency: ["JPY", "USD"],
       trip_doc_category: [
         "flight",
         "rail",
@@ -625,3 +785,4 @@ export const Constants = {
     },
   },
 } as const
+

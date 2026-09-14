@@ -2,12 +2,22 @@ import Link from "next/link";
 import { ArrowRight, Images, NotebookPen, Plane } from "lucide-react";
 import { signOutAsHost } from "@/app/actions/admin";
 import { daysUntilWedding } from "@/lib/constants";
+import { countdown as flightCountdown } from "@/components/honeymoon/flights";
 
 type Props = {
   photos: number;
   hiddenPhotos: number;
   awaitingReply: number;
-  honeymoon: { decided: number; suggested: number; actionable: number };
+  honeymoon: {
+    decided: number;
+    suggested: number;
+    actionable: number;
+    nextFlight: {
+      from_airport: string;
+      to_airport: string;
+      departs_at: string;
+    } | null;
+  };
 };
 
 export function HostHub({
@@ -73,9 +83,11 @@ export function HostHub({
           status={
             honeymoon.actionable > 0
               ? `${honeymoon.actionable} ready to book now`
-              : honeymoon.decided === 0
-                ? `${honeymoon.suggested} suggested, nothing agreed`
-                : `${honeymoon.decided} decided, ${honeymoon.suggested} suggested`
+              : honeymoon.nextFlight
+                ? `✈ ${honeymoon.nextFlight.from_airport} → ${honeymoon.nextFlight.to_airport} ${flightCountdown(honeymoon.nextFlight.departs_at)}`
+                : honeymoon.decided === 0
+                  ? `${honeymoon.suggested} suggested, nothing agreed`
+                  : `${honeymoon.decided} decided, ${honeymoon.suggested} suggested`
           }
           blurb="Japan. Suggest in your own lane, agree by dragging it up, print what's decided."
         />
