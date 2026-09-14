@@ -33,7 +33,14 @@ const db = createClient(
 );
 
 /** Legs first on the way in; it does not matter, but it reads in trip order. */
-const TABLES = ["trip_legs", "trip_days", "trip_items", "trip_docs"];
+const TABLES = [
+  "trip_legs",
+  "trip_days",
+  "trip_items",
+  "trip_docs",
+  "trip_flights",
+  "trip_checklist_items",
+];
 /** PostgREST refuses an unfiltered delete; "key is not null" matches every
  *  row and, unlike a sentinel value, does not care what type the key is. */
 const KEYS = {
@@ -41,6 +48,8 @@ const KEYS = {
   trip_legs: "id",
   trip_items: "id",
   trip_docs: "id",
+  trip_flights: "id",
+  trip_checklist_items: "id",
 };
 const BACKUP_DIR = "supabase/.backups";
 
@@ -169,7 +178,7 @@ if (!has("--seed")) {
 await guard("seed");
 await wipe();
 
-const legs = [
+const decidedLegs = [
   {
     name: "Tokyo",
     name_ja: "東京",
@@ -213,16 +222,87 @@ const legs = [
     position: 5,
   },
 ];
-for (const t of ["trip_items", "trip_docs", "trip_days", "trip_legs"]) {
-  await db
-    .from(t)
-    .delete()
-    .neq(
-      t === "trip_days" ? "on_date" : "id",
-      t === "trip_days" ? "1900-01-01" : "00000000-0000-0000-0000-000000000000",
-    );
+
+// The two draft routes disagree on purpose, so the leg bands have something to
+// show: Savea wants an extra night in Tokyo and a proper onsen stop; Aaron
+// wants three nights based in Akihabara and skips Hakone.
+const saveaLegs = [
+  {
+    name: "Tokyo",
+    name_ja: "東京",
+    starts_on: "2026-12-05",
+    ends_on: "2026-12-11",
+    lodging_name: "Hotel Ryumeikan",
+  },
+  {
+    name: "Hakone",
+    name_ja: "箱根",
+    starts_on: "2026-12-12",
+    ends_on: "2026-12-14",
+    lodging_name: "Gora Kadan",
+  },
+  {
+    name: "Kyoto",
+    name_ja: "京都",
+    starts_on: "2026-12-15",
+    ends_on: "2026-12-22",
+    lodging_name: "Ryokan Yachiyo",
+  },
+];
+const aaronLegs = [
+  {
+    name: "Tokyo",
+    name_ja: "東京",
+    starts_on: "2026-12-05",
+    ends_on: "2026-12-08",
+    lodging_name: "Hotel Ryumeikan",
+  },
+  {
+    name: "Akihabara",
+    name_ja: "秋葉原",
+    starts_on: "2026-12-09",
+    ends_on: "2026-12-11",
+    lodging_name: "Remm Akihabara",
+  },
+  {
+    name: "Kyoto",
+    name_ja: "京都",
+    starts_on: "2026-12-12",
+    ends_on: "2026-12-18",
+  },
+  {
+    name: "Osaka",
+    name_ja: "大阪",
+    starts_on: "2026-12-19",
+    ends_on: "2026-12-22",
+  },
+];
+
+const LEG_DEFAULTS = {
+  name_ja: null,
+  lodging_name: null,
+  lodging_check_in: null,
+  lodging_confirmation: null,
+};
+const legs = [
+  ...decidedLegs.map((l) => ({ ...LEG_DEFAULTS, ...l, lane: "decided" })),
+  ...saveaLegs.map((l, i) => ({
+    ...LEG_DEFAULTS,
+    ...l,
+    lane: "savea",
+    position: i + 1,
+  })),
+  ...aaronLegs.map((l, i) => ({
+    ...LEG_DEFAULTS,
+    ...l,
+    lane: "aaron",
+    position: i + 1,
+  })),
+];
+{
+  const { error } = await db.from("trip_legs").insert(legs);
+  if (error) throw error;
 }
-await db.from("trip_legs").insert(legs);
 
 const items = [
   // Dec 5 — arrival, pinned and ticketed
@@ -261,7 +341,7 @@ const items = [
     start_time: "10:00",
     duration_min: 150,
     booking_status: "booked",
-    cost_yen: 3800,
+    cost_amount: 3800,
     city: "Tokyo",
     added_by: "savea",
     must_do: true,
@@ -272,7 +352,7 @@ const items = [
     kind: "food",
     on_date: "2026-12-06",
     position: 2,
-    cost_yen: 3000,
+    cost_amount: 3000,
     city: "Tokyo",
     added_by: "aaron",
   },
@@ -285,7 +365,7 @@ const items = [
     duration_min: 150,
     booking_status: "to_book",
     booking_opens_on: "2026-09-01",
-    cost_yen: 45000,
+    cost_amount: 45000,
     city: "Tokyo",
     added_by: "savea",
   },
@@ -301,7 +381,7 @@ const items = [
     booking_status: "to_book",
     booking_opens_on: "2026-11-10",
     closed_days: [2],
-    cost_yen: 1000,
+    cost_amount: 1000,
     city: "Tokyo",
     added_by: "savea",
     must_do: true,
@@ -332,7 +412,7 @@ const items = [
     position: 1,
     start_time: "06:30",
     duration_min: 150,
-    cost_yen: 0,
+    cost_amount: 0,
     city: "Kyoto",
     added_by: "aaron",
     notes: "Go before the tour buses. It's the whole point.",
@@ -405,17 +485,19 @@ const items = [
     position: 2,
     start_time: "18:30",
     duration_min: 120,
-    cost_yen: 9000,
+    cost_amount: 9000,
     city: "Tokyo",
     added_by: "aaron",
   },
   {
     title: "Indigo dyeing workshop",
+    // Booked through a US site, so the price is dollars (in cents).
     title_ja: "藍染体験",
     kind: "workshop",
     position: 1,
     duration_min: 180,
-    cost_yen: 8000,
+    cost_amount: 5500,
+    cost_currency: "USD",
     added_by: "savea",
     lane: "savea",
     url: "https://example.com",
@@ -426,7 +508,7 @@ const items = [
     kind: "workshop",
     position: 2,
     duration_min: 120,
-    cost_yen: 6000,
+    cost_amount: 6000,
     added_by: "aaron",
     lane: "aaron",
   },
@@ -469,6 +551,8 @@ const DEFAULTS = {
   kind: "sight",
   added_by: "aaron",
   lane: "decided",
+  cost_amount: null,
+  cost_currency: "JPY",
 };
 const { error } = await db
   .from("trip_items")
@@ -484,22 +568,13 @@ await db.from("trip_days").insert([
   { on_date: "2026-12-09", title: "The ambitious one" },
 ]);
 
-await db.from("trip_docs").insert([
-  {
-    category: "flight",
-    title: "SLC → HND · Delta 167",
-    detail: "Seats 22A/22B. Bags checked through.",
-    confirmation: "GKQ4TZ",
-    starts_at: "2026-12-04T11:05:00-07:00",
-    cost_yen: 340000,
-    position: 1,
-  },
+const docs = [
   {
     category: "rail",
     title: "JR Pass · 14 day, green car",
     detail: "Activate at Haneda on arrival. Exchange order is in the folder.",
     confirmation: "JRP-993201",
-    cost_yen: 80000,
+    cost_amount: 80000,
     position: 1,
   },
   {
@@ -507,7 +582,7 @@ await db.from("trip_docs").insert([
     title: "Takuhaibin · Tokyo → Kyoto",
     detail:
       "Ship the big case ahead the morning of the 12th so the shinkansen is a daypack only.",
-    cost_yen: 2500,
+    cost_amount: 2500,
     position: 1,
   },
   {
@@ -516,5 +591,132 @@ await db.from("trip_docs").insert([
     detail: "Install before leaving — it needs wifi to activate.",
     position: 1,
   },
-]);
+];
+{
+  const { error } = await db
+    .from("trip_docs")
+    .insert(
+      docs.map((d) => ({ cost_amount: null, cost_currency: "JPY", ...d })),
+    );
+  if (error) throw error;
+}
+// Flights: there via Los Angeles, home via Seattle. Times are written with the
+// airport's own UTC offset, the way a confirmation email means them.
+const FLIGHT_DEFAULTS = {
+  from_city: null,
+  to_city: null,
+  cabin: null,
+  aircraft: null,
+  confirmation: null,
+  seat_aaron: null,
+  seat_savea: null,
+  departure_terminal: null,
+  departure_gate: null,
+  arrival_terminal: null,
+  baggage: null,
+  meal: null,
+  checkin_url: null,
+  status_url: null,
+  notes: null,
+  cost_amount: null,
+  cost_currency: "USD",
+};
+const flights = [
+  {
+    airline: "Delta",
+    flight_number: "DL1422",
+    from_airport: "SLC",
+    departs_at: "2026-12-04T08:00:00-07:00",
+    departs_tz: "America/Denver",
+    to_airport: "LAX",
+    arrives_at: "2026-12-04T09:10:00-08:00",
+    arrives_tz: "America/Los_Angeles",
+    cabin: "economy",
+    confirmation: "GKQ4TZ",
+    seat_aaron: "14A",
+    seat_savea: "14B",
+    departure_terminal: "Terminal 1",
+    baggage: "2 checked each, 23kg",
+  },
+  {
+    airline: "Delta",
+    flight_number: "DL7",
+    from_airport: "LAX",
+    departs_at: "2026-12-04T11:05:00-08:00",
+    departs_tz: "America/Los_Angeles",
+    to_airport: "HND",
+    arrives_at: "2026-12-05T16:40:00+09:00",
+    arrives_tz: "Asia/Tokyo",
+    cabin: "premium",
+    aircraft: "A350-900",
+    confirmation: "GKQ4TZ",
+    seat_aaron: "22A",
+    seat_savea: "22B",
+    departure_terminal: "Tom Bradley",
+    arrival_terminal: "Terminal 3",
+    baggage: "2 checked each, 23kg",
+    meal: "Lunch and a snack before landing",
+    // The whole round trip, quoted in dollars — stored in cents.
+    cost_amount: 219400,
+  },
+  {
+    airline: "Delta",
+    flight_number: "DL166",
+    from_airport: "HND",
+    departs_at: "2026-12-26T17:00:00+09:00",
+    departs_tz: "Asia/Tokyo",
+    to_airport: "SEA",
+    arrives_at: "2026-12-26T09:50:00-08:00",
+    arrives_tz: "America/Los_Angeles",
+    cabin: "premium",
+    confirmation: "GKQ4TZ",
+    seat_aaron: "21A",
+    seat_savea: "21B",
+    departure_terminal: "Terminal 3",
+  },
+  {
+    airline: "Delta",
+    flight_number: "DL2291",
+    from_airport: "SEA",
+    departs_at: "2026-12-26T13:00:00-08:00",
+    departs_tz: "America/Los_Angeles",
+    to_airport: "SLC",
+    arrives_at: "2026-12-26T16:05:00-07:00",
+    arrives_tz: "America/Denver",
+    cabin: "economy",
+    confirmation: "GKQ4TZ",
+  },
+].map((f) => ({ ...FLIGHT_DEFAULTS, ...f }));
+
+const { data: savedFlights, error: flightError } = await db
+  .from("trip_flights")
+  .insert(flights)
+  .select("id, flight_number");
+if (flightError) throw flightError;
+
+const firstOut = savedFlights.find((f) => f.flight_number === "DL1422");
+const firstHome = savedFlights.find((f) => f.flight_number === "DL166");
+const { error: listError } = await db.from("trip_checklist_items").insert(
+  [
+    ["flight:" + firstOut.id, "Passports (both)", "savea", true],
+    [
+      "flight:" + firstOut.id,
+      "Visit Japan Web QR codes, screenshotted",
+      "aaron",
+      false,
+    ],
+    ["flight:" + firstOut.id, "JR Pass exchange orders", "savea", false],
+    ["flight:" + firstOut.id, "eSIM installed before leaving", null, false],
+    ["flight:" + firstHome.id, "Passports (both)", "savea", false],
+    ["flight:" + firstHome.id, "Tax-free receipts for customs", "aaron", false],
+  ].map(([list, label, owner, done], i) => ({
+    list,
+    label,
+    owner,
+    done,
+    position: i + 1,
+  })),
+);
+if (listError) throw listError;
+
 console.log("Honeymoon board seeded with the sample Japan trip.");

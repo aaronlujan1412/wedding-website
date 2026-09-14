@@ -22,6 +22,8 @@ export const BACKUP_TABLES = [
   "trip_days",
   "trip_items",
   "trip_docs",
+  "trip_flights",
+  "trip_checklist_items",
 ] as const;
 
 export const BACKUP_BUCKET = "backups";
