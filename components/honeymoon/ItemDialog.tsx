@@ -24,17 +24,30 @@ import {
 import {
   BOOKING_STATUSES,
   KINDS,
+  LANES,
+  LANE_ORDER,
   PLANNERS,
   WEEKDAYS,
   formatDayLong,
 } from "./trip";
-import type { BookingStatus, ItemKind, Planner, TripItem } from "./types";
+import type {
+  BookingStatus,
+  ItemKind,
+  Lane,
+  Planner,
+  TripItem,
+} from "./types";
 
 /** A brand-new card, or an existing one being edited. */
-export type ItemDraft = { item: TripItem | null; onDate: string | null };
+export type ItemDraft = {
+  item: TripItem | null;
+  lane: Lane;
+  onDate: string | null;
+};
 
 type FormState = {
   title: string;
+  lane: Lane;
   title_ja: string;
   kind: ItemKind;
   on_date: string;
@@ -62,6 +75,7 @@ function toForm(draft: ItemDraft): FormState {
   const item = draft.item;
   return {
     title: item?.title ?? "",
+    lane: item?.lane ?? draft.lane,
     title_ja: item?.title_ja ?? "",
     kind: item?.kind ?? "sight",
     on_date: item ? (item.on_date ?? "") : (draft.onDate ?? ""),
@@ -83,7 +97,8 @@ function toForm(draft: ItemDraft): FormState {
     map_url: item?.map_url ?? "",
     url: item?.url ?? "",
     notes: item?.notes ?? "",
-    added_by: item?.added_by ?? "aaron",
+    // A card thrown into someone's own row is theirs by default.
+    added_by: item?.added_by ?? LANES[draft.lane].planner ?? "aaron",
     must_do: item?.must_do ?? false,
   };
 }
@@ -116,7 +131,9 @@ export function ItemDialog({
             the form with fresh state instead of syncing it out of an effect. */}
         {draft && (
           <ItemForm
-            key={draft.item?.id ?? `new-${draft.onDate ?? "pool"}`}
+            key={
+              draft.item?.id ?? `new-${draft.lane}-${draft.onDate ?? "pool"}`
+            }
             draft={draft}
             days={days}
             onClose={onClose}
@@ -200,6 +217,19 @@ function ItemForm({
               onChange={(e) => set("title_ja", e.target.value)}
               placeholder="伏見稲荷大社"
               className="font-jp"
+            />
+          </Field>
+          <Field
+            label="Lane"
+            hint="Only Decided reaches the itinerary and the pocket print."
+          >
+            <SelectField
+              value={form.lane}
+              onChange={(v) => set("lane", v)}
+              options={LANE_ORDER.map((l) => ({
+                value: l,
+                label: LANES[l].label,
+              }))}
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">

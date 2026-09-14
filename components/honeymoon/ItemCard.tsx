@@ -3,6 +3,8 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronLeft,
   ChevronRight,
   GripVertical,
@@ -16,6 +18,7 @@ import { Seal } from "./Seal";
 import {
   BOOKING_STATUSES,
   KINDS,
+  LANES,
   PLANNERS,
   formatClock,
   formatDuration,
@@ -23,11 +26,14 @@ import {
   itemLength,
   itemWarnings,
 } from "./trip";
-import type { TripItem } from "./types";
+import type { Lane, TripItem } from "./types";
 
-type Actions = {
+export type CardActions = {
   onEdit: (item: TripItem) => void;
+  /** Same lane, one day left or right. */
   onNudge: (item: TripItem, delta: number) => void;
+  /** Same day, a different lane — the promote/send-back path. */
+  onMoveLane: (item: TripItem, lane: Lane) => void;
 };
 
 /**
@@ -42,7 +48,7 @@ export function ItemCardFace({
   handle,
 }: {
   item: TripItem;
-  actions?: Actions;
+  actions?: CardActions;
   dragging?: boolean;
   overlay?: boolean;
   handle?: React.ReactNode;
@@ -166,6 +172,25 @@ export function ItemCardFace({
             >
               <ChevronRight className="h-3 w-3" strokeWidth={2} />
             </NudgeButton>
+
+            {/* Agreeing is the whole point of the board, so it gets a button
+                rather than only a drag across two rows. */}
+            {item.lane === "decided" ? (
+              <NudgeButton
+                label={`Send back to ${LANES[item.added_by].label}`}
+                onClick={() => actions.onMoveLane(item, item.added_by)}
+              >
+                <ArrowDown className="h-3 w-3" strokeWidth={2} />
+              </NudgeButton>
+            ) : (
+              <NudgeButton
+                label="Agreed — move it to Decided"
+                accent
+                onClick={() => actions.onMoveLane(item, "decided")}
+              >
+                <ArrowUp className="h-3 w-3" strokeWidth={2} />
+              </NudgeButton>
+            )}
           </div>
         )}
       </div>
@@ -180,10 +205,12 @@ export function ItemCardFace({
 function NudgeButton({
   label,
   onClick,
+  accent = false,
   children,
 }: {
   label: string;
   onClick: () => void;
+  accent?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -193,7 +220,12 @@ function NudgeButton({
       title={label}
       onClick={onClick}
       onPointerDown={(e) => e.stopPropagation()}
-      className="flex h-5 w-5 items-center justify-center rounded-sm border border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      className={cn(
+        "flex h-5 w-5 items-center justify-center rounded-sm border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        accent
+          ? "border-primary/60 text-primary hover:bg-primary hover:text-primary-foreground"
+          : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+      )}
     >
       {children}
     </button>
@@ -205,7 +237,7 @@ export function SortableItemCard({
   actions,
 }: {
   item: TripItem;
-  actions: Actions;
+  actions: CardActions;
 }) {
   const {
     attributes,

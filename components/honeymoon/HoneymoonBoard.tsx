@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -15,33 +16,42 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { MapPinned, Plus, Printer, ScrollText } from "lucide-react";
+import { MapPinned, Plus, Printer, ScrollText, Search } from "lucide-react";
 import { moveItem, sortDayByTime } from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
-import { DayColumn } from "./DayColumn";
+import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
 import { DayRibbon, RIBBON_PREFIX } from "./DayRibbon";
-import { IdeaPool } from "./IdeaPool";
-import { ItemCardFace } from "./ItemCard";
+import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
+import { LaneCell } from "./LaneCell";
+import { LanePile } from "./LanePile";
 import { LegDialog } from "./LegDialog";
 import { TripDocsPanel } from "./TripDocsPanel";
 import {
-  POOL,
-  containerOf,
+  LANE_ORDER,
+  cellId,
   eachDay,
   formatYen,
   itemsIn,
+  itemsInCell,
+  parseCell,
   positionBetween,
   sumYen,
   todayISO,
   tripDays,
   yenToUsd,
 } from "./trip";
-import type { TripBoard, TripItem, TripLeg } from "./types";
+import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
+
+/** How often to pick up the other person's edits. Cheap: two tabs, one query. */
+const POLL_MS = 12_000;
+
+const COLUMN = "19rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const { legs, days: dayNotes, docs } = board;
+  const router = useRouter();
 
   // Local mirror, so a drag lands instantly instead of waiting on the round
   // trip. When the server action revalidates and new rows arrive, adopt them
@@ -57,12 +67,37 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ItemDraft | null>(null);
   const [noteDate, setNoteDate] = useState<string | null>(null);
-  const [legDialog, setLegDialog] = useState<{
-    open: boolean;
-    leg: TripLeg | null;
-  }>({ open: false, leg: null });
+  const [legDialog, setLegDialog] = useState<{ open: boolean; leg: TripLeg | null }>({
+    open: false,
+    leg: null,
+  });
   const [activeLegId, setActiveLegId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
   const [, startTransition] = useTransition();
+
+  /**
+   * Poor man's realtime.
+   *
+   * Supabase Realtime would need browser-side anon access, which breaks the
+   * deliberate "RLS on, no policies" posture. Re-fetching every few seconds
+   * gets two people working in separate lanes almost all of the benefit for
+   * none of that risk. Paused while the tab is hidden, while a card is in the
+   * air, and while a dialog is open, so it never yanks work in progress.
+   */
+  const busy = activeId !== null || draft !== null || noteDate !== null || legDialog.open;
+  useEffect(() => {
+    if (busy) return;
+
+    const tick = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    const timer = setInterval(tick, POLL_MS);
+    window.addEventListener("focus", tick);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", tick);
+    };
+  }, [busy, router]);
 
   const today = todayISO();
   const allDays = useMemo(() => tripDays(legs), [legs]);
@@ -73,32 +108,35 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     ? eachDay(activeLeg.starts_on, activeLeg.ends_on)
     : allDays;
 
-  const pool = itemsIn(items, POOL);
-  const placed = items.filter((i) => i.on_date !== null);
-  const booked = placed.filter(
-    (i) => i.booking_status === "booked" || i.booking_status === "in_hand",
-  ).length;
-  const spend = sumYen(items) + sumYen(docs);
+  const decided = items.filter((i) => i.lane === "decided");
+  const suggested = items.filter((i) => i.lane !== "decided" && i.on_date !== null);
+  const spend = sumYen(decided) + sumYen(docs);
 
   const sensors = useSensors(
     // A small threshold so a tap still reaches the buttons on the card.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
-  /** Which column an arbitrary drop target belongs to. */
-  function resolveContainer(id: string): string | null {
-    if (id.startsWith(RIBBON_PREFIX)) return id.slice(RIBBON_PREFIX.length);
-    if (id === POOL || dayLookup.has(id)) return id;
+  /** Which cell an arbitrary drop target belongs to. */
+  function resolveCell(id: string): { lane: Lane; date: string | null } | null {
+    if (id.startsWith(RIBBON_PREFIX)) {
+      // A ribbon chip names a day, not a lane — keep the card in its own row.
+      const date = id.slice(RIBBON_PREFIX.length);
+      const dragged = items.find((i) => i.id === activeId);
+      return dragged && dayLookup.has(date) ? { lane: dragged.lane, date } : null;
+    }
+
+    const cell = parseCell(id);
+    if (cell) return cell;
+
     const item = items.find((i) => i.id === id);
-    return item ? containerOf(item) : null;
+    return item ? { lane: item.lane, date: item.on_date } : null;
   }
 
   /**
-   * Where the dragged card would land: which column, and the fractional
-   * position between whichever two neighbours it is hovering between.
+   * Where the dragged card would land: which cell, and the fractional position
+   * between whichever two neighbours it is hovering between.
    */
   function computeDrop(event: DragOverEvent | DragEndEvent) {
     const { active, over } = event;
@@ -107,49 +145,48 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     const activeItem = items.find((i) => i.id === active.id);
     if (!activeItem) return null;
 
-    const container = resolveContainer(String(over.id));
-    if (container === null) return null;
+    const target = resolveCell(String(over.id));
+    if (!target) return null;
 
-    const siblings = itemsIn(items, container).filter(
-      (i) => i.id !== activeItem.id,
-    );
+    const container = cellId(target.lane, target.date);
+    const siblings = itemsIn(items, container).filter((i) => i.id !== activeItem.id);
     const overItem = items.find((i) => i.id === String(over.id));
 
     let position: number;
     if (overItem && overItem.id !== activeItem.id) {
       const dragged = active.rect.current.translated;
       const below = dragged
-        ? dragged.top + dragged.height / 2 >
-          over.rect.top + over.rect.height / 2
+        ? dragged.top + dragged.height / 2 > over.rect.top + over.rect.height / 2
         : false;
       const index = siblings.findIndex((i) => i.id === overItem.id);
       const at = below ? index + 1 : index;
-      position = positionBetween(
-        siblings[at - 1]?.position,
-        siblings[at]?.position,
-      );
+      position = positionBetween(siblings[at - 1]?.position, siblings[at]?.position);
     } else {
-      // Dropped on the column itself (or a ribbon chip) — append.
+      // Dropped on the cell itself (or a ribbon chip) — append.
       position = positionBetween(siblings.at(-1)?.position, undefined);
     }
 
-    return {
-      id: activeItem.id,
-      onDate: container === POOL ? null : container,
-      position,
-    };
+    return { id: activeItem.id, lane: target.lane, onDate: target.date, position };
   }
 
-  const lastDrop = useRef<ReturnType<typeof computeDrop>>(null);
+  type Drop = NonNullable<ReturnType<typeof computeDrop>>;
+  const lastDrop = useRef<Drop | null>(null);
 
-  function applyLocally(drop: NonNullable<ReturnType<typeof computeDrop>>) {
+  function applyLocally(drop: Drop) {
     setItems((prev) =>
       prev.map((i) =>
         i.id === drop.id
-          ? { ...i, on_date: drop.onDate, position: drop.position }
+          ? { ...i, lane: drop.lane, on_date: drop.onDate, position: drop.position }
           : i,
       ),
     );
+  }
+
+  function persist(drop: Drop) {
+    applyLocally(drop);
+    startTransition(async () => {
+      await moveItem(drop.id, drop.lane, drop.onDate, drop.position);
+    });
   }
 
   function handleDragStart(event: DragStartEvent) {
@@ -162,8 +199,13 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     if (!drop) return;
 
     const current = items.find((i) => i.id === drop.id);
-    if (current?.on_date === drop.onDate && current.position === drop.position)
+    if (
+      current?.lane === drop.lane &&
+      current.on_date === drop.onDate &&
+      current.position === drop.position
+    ) {
       return;
+    }
 
     lastDrop.current = drop;
     applyLocally(drop);
@@ -173,44 +215,47 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     setActiveId(null);
     const drop = computeDrop(event) ?? lastDrop.current;
     lastDrop.current = null;
-    if (!drop) return;
+    if (drop) persist(drop);
+  }
 
-    applyLocally(drop);
-    startTransition(async () => {
-      await moveItem(drop.id, drop.onDate, drop.position);
+  /** Append a card to the end of a cell, wherever it is coming from. */
+  function sendTo(item: TripItem, lane: Lane, onDate: string | null) {
+    const siblings = itemsIn(items, cellId(lane, onDate)).filter((i) => i.id !== item.id);
+    persist({
+      id: item.id,
+      lane,
+      onDate,
+      position: positionBetween(siblings.at(-1)?.position, undefined),
     });
   }
 
   /**
-   * The arrow buttons on every card. Dragging across a twelve-day board on a
+   * The arrow buttons on every card. Dragging across a twenty-day grid on a
    * phone is miserable, so shifting a card one day at a time is the real move
    * control — and the first nudge left off day one drops it back in the pile.
    */
-  function nudge(item: TripItem, delta: number) {
-    const index = item.on_date ? allDays.indexOf(item.on_date) : -1;
-    let target: string | null;
+  const actions: CardActions = {
+    onEdit: (item) => setDraft({ item, lane: item.lane, onDate: item.on_date }),
+    onNudge: (item, delta) => {
+      const index = item.on_date ? allDays.indexOf(item.on_date) : -1;
+      let target: string | null;
 
-    if (index === -1) {
-      if (delta < 0 || allDays.length === 0) return;
-      target = allDays[0];
-    } else {
-      const next = index + delta;
-      if (next >= allDays.length) return;
-      target = next < 0 ? null : allDays[next];
-    }
+      if (index === -1) {
+        if (delta < 0 || allDays.length === 0) return;
+        target = allDays[0];
+      } else {
+        const next = index + delta;
+        if (next >= allDays.length) return;
+        target = next < 0 ? null : allDays[next];
+      }
 
-    const siblings = itemsIn(items, target ?? POOL).filter(
-      (i) => i.id !== item.id,
-    );
-    const position = positionBetween(siblings.at(-1)?.position, undefined);
-
-    applyLocally({ id: item.id, onDate: target, position });
-    startTransition(async () => {
-      await moveItem(item.id, target, position);
-    });
-  }
+      sendTo(item, item.lane, target);
+    },
+    onMoveLane: (item, lane) => sendTo(item, lane, item.on_date),
+  };
 
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
+  const gridColumns = `${COLUMN} repeat(${visibleDays.length}, ${COLUMN})`;
 
   return (
     <main className="mx-auto min-h-screen max-w-[110rem] px-6 pt-40 pb-24">
@@ -224,19 +269,16 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               Honeymoon
             </h1>
             <p className="mt-2 font-garamond text-xl italic text-muted-foreground">
-              Fill the pile, then hand the days out between us.
+              Argue in your own row. Agree by dragging it up.
             </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
             <dl className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
               <Stat label="days" value={allDays.length} />
-              <Stat label="in the pile" value={pool.length} />
-              <Stat label="placed" value={placed.length} />
-              <Stat label="sealed" value={booked} />
-              {spend > 0 && (
-                <Stat label={yenToUsd(spend)} value={formatYen(spend)} raw />
-              )}
+              <Stat label="decided" value={decided.filter((i) => i.on_date).length} />
+              <Stat label="suggested" value={suggested.length} />
+              {spend > 0 && <Stat label={yenToUsd(spend)} value={formatYen(spend)} raw />}
             </dl>
             <div className="flex gap-3">
               <ToolLink
@@ -258,10 +300,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
       {/* Legs */}
       <div className="flex flex-wrap items-center gap-2 border-y border-border py-3">
-        <LegPill
-          active={activeLegId === null}
-          onClick={() => setActiveLegId(null)}
-        >
+        <LegPill active={activeLegId === null} onClick={() => setActiveLegId(null)}>
           Whole trip
         </LegPill>
         {legs.map((leg) => (
@@ -273,9 +312,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
           >
             {leg.name}
             {leg.name_ja && (
-              <span className="ml-1 font-jp text-[0.65rem] opacity-70">
-                {leg.name_ja}
-              </span>
+              <span className="ml-1 font-jp text-[0.65rem] opacity-70">{leg.name_ja}</span>
             )}
           </LegPill>
         ))}
@@ -287,6 +324,20 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
           <Plus className="h-3 w-3" strokeWidth={2} />
           Leg
         </button>
+
+        <label className="relative ml-auto block w-48">
+          <Search
+            className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+            strokeWidth={2}
+          />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search the piles"
+            className="h-7 w-full rounded-sm border border-input bg-background pr-2 pl-7 font-raleway text-xs text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        </label>
       </div>
 
       {legs.length === 0 ? (
@@ -304,39 +355,65 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
             <DayRibbon
               days={allDays}
               legs={legs}
-              items={items}
+              items={decided}
               activeLegId={activeLegId}
               today={today}
             />
           </div>
 
-          <div className="rail-scroll mt-4 flex h-[min(72vh,46rem)] gap-4 overflow-x-auto pb-4">
-            <IdeaPool
-              items={pool}
-              onEdit={(item) => setDraft({ item, onDate: null })}
-              onNudge={nudge}
-              onAdd={(date) => setDraft({ item: null, onDate: date })}
-            />
+          {/* One grid, three rows. Horizontal scroll moves all three lanes
+              together, which is the point — a day's three cells must always
+              line up. */}
+          <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
+            <div className="grid" style={{ gridTemplateColumns: gridColumns }}>
+              <div className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5">
+                <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
+                  Lanes
+                </p>
+                <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
+                  Only the top row prints.
+                </p>
+              </div>
+              {visibleDays.map((date) => (
+                <DayHeader
+                  key={date}
+                  date={date}
+                  note={dayNotes.find((d) => d.on_date === date)}
+                  legs={legs}
+                  decided={itemsInCell(items, "decided", date)}
+                  isToday={date === today}
+                  onEditNote={setNoteDate}
+                  onSortByTime={(d) =>
+                    startTransition(async () => {
+                      await sortDayByTime(d, "decided");
+                    })
+                  }
+                />
+              ))}
 
-            {visibleDays.map((date) => (
-              <DayColumn
-                key={date}
-                date={date}
-                note={dayNotes.find((d) => d.on_date === date)}
-                legs={legs}
-                items={itemsIn(items, date)}
-                isToday={date === today}
-                onEdit={(item) => setDraft({ item, onDate: date })}
-                onNudge={nudge}
-                onAdd={(d) => setDraft({ item: null, onDate: d })}
-                onEditNote={setNoteDate}
-                onSortByTime={(d) =>
-                  startTransition(async () => {
-                    await sortDayByTime(d);
-                  })
-                }
-              />
-            ))}
+              {LANE_ORDER.map((lane) => (
+                <Fragment key={lane}>
+                  <LanePile
+                    lane={lane}
+                    items={itemsInCell(items, lane, null)}
+                    query={query}
+                    actions={actions}
+                    onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+                  />
+                  {visibleDays.map((date) => (
+                    <LaneCell
+                      key={date}
+                      lane={lane}
+                      date={date}
+                      items={itemsInCell(items, lane, date)}
+                      isToday={date === today}
+                      actions={actions}
+                      onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+                    />
+                  ))}
+                </Fragment>
+              ))}
+            </div>
           </div>
 
           <DragOverlay>
@@ -418,9 +495,7 @@ function LegPill({
     <span
       className={cn(
         "inline-flex items-center rounded-full border transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border",
+        active ? "border-primary bg-primary text-primary-foreground" : "border-border",
       )}
     >
       <button
@@ -457,8 +532,8 @@ function EmptyTrip({ onAddLeg }: { onAddLeg: () => void }) {
         Start with a city and a stretch of days
       </h2>
       <p className="mx-auto mt-2 max-w-md font-garamond text-lg leading-relaxed text-muted-foreground">
-        Tokyo for five nights, Kyoto for four. The board draws a column for
-        every day in a leg, and everything else hangs off that.
+        Tokyo for five nights, Kyoto for four. The board draws a column for every
+        day in a leg, and all three lanes hang off that.
       </p>
       <button
         type="button"
