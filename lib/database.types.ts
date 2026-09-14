@@ -305,6 +305,7 @@ export type Database = {
           duration_min: number | null
           id: string
           kind: Database["public"]["Enums"]["trip_item_kind"]
+          lane: Database["public"]["Enums"]["trip_lane"]
           map_url: string | null
           must_do: boolean
           notes: string | null
@@ -331,6 +332,7 @@ export type Database = {
           duration_min?: number | null
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
+          lane?: Database["public"]["Enums"]["trip_lane"]
           map_url?: string | null
           must_do?: boolean
           notes?: string | null
@@ -357,6 +359,7 @@ export type Database = {
           duration_min?: number | null
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
+          lane?: Database["public"]["Enums"]["trip_lane"]
           map_url?: string | null
           must_do?: boolean
           notes?: string | null
@@ -464,6 +467,7 @@ export type Database = {
         | "lodging"
         | "shop"
         | "rest"
+      trip_lane: "decided" | "savea" | "aaron"
       trip_planner: "aaron" | "savea"
     }
     CompositeTypes: {
@@ -616,6 +620,7 @@ export const Constants = {
         "shop",
         "rest",
       ],
+      trip_lane: ["decided", "savea", "aaron"],
       trip_planner: ["aaron", "savea"],
     },
   },
