@@ -10,7 +10,7 @@ import {
   formatDuration,
   formatYen,
   itemLength,
-  itemsIn,
+  decidedOn,
   legForDay,
   parseDay,
   tripDays,
@@ -30,8 +30,8 @@ export const metadata: Metadata = {
  *
  * Roaming data in a Tokyo basement is not a plan, so this is one sheet per day
  * with the times, the addresses, the confirmation numbers and the cash you'll
- * want on you — printed, folded, in a pocket. Print styles hide the site
- * chrome; everything else is deliberately plain.
+ * want on you — printed, folded, in a pocket. Only the `decided` lane prints.
+ * Print styles hide the site chrome; everything else is deliberately plain.
  */
 export default async function PocketPage() {
   const { legs, days, items, docs } = await getTripBoard();
@@ -75,7 +75,7 @@ export default async function PocketPage() {
               date={date}
               leg={legForDay(legs, date)}
               note={days.find((d) => d.on_date === date)}
-              items={itemsIn(items, date)}
+              items={decidedOn(items, date)}
               docs={docs.filter((d) => d.starts_at?.slice(0, 10) === date)}
             />
           ))}

@@ -11,7 +11,7 @@ import {
   formatDuration,
   formatYen,
   itemLength,
-  itemsIn,
+  decidedOn,
   parseDay,
   sumYen,
   yenToUsd,
@@ -29,12 +29,14 @@ export const metadata: Metadata = {
 /**
  * The read side of the board.
  *
- * Same data, no drag handles, no warnings — the trip as you'd want to look at
- * it on the couch, in the same timeline language as the wedding schedule page.
+ * Only the `decided` lane reaches here. The two draft lanes are arguments in
+ * progress, and printing an argument is how you end up standing outside a
+ * closed museum holding a piece of paper that disagrees with itself.
  */
 export default async function ItineraryPage() {
   const { legs, days, items, docs } = await getTripBoard();
-  const spend = sumYen(items) + sumYen(docs);
+  const decided = items.filter((i) => i.lane === "decided");
+  const spend = sumYen(decided) + sumYen(docs);
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
@@ -70,7 +72,7 @@ export default async function ItineraryPage() {
 
       <div className="space-y-20 md:space-y-24">
         {legs.map((leg) => (
-          <LegSection key={leg.id} leg={leg} items={items} notes={days} />
+          <LegSection key={leg.id} leg={leg} items={decided} notes={days} />
         ))}
       </div>
     </main>
@@ -138,7 +140,7 @@ function LegSection({
             key={date}
             date={date}
             note={notes.find((n) => n.on_date === date)}
-            items={itemsIn(items, date)}
+            items={decidedOn(items, date)}
           />
         ))}
       </div>

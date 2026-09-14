@@ -33,31 +33,35 @@ export async function getHostSummary() {
 /**
  * The honeymoon board's line on the hub. `actionable` is the one that matters:
  * things whose booking window has already opened and that still aren't booked.
- * In Japan that gap is measured in minutes for the popular ones.
+ * In Japan that gap is measured in minutes for the popular ones. `suggested` is
+ * the next most useful: cards waiting in a draft lane for the other of you to
+ * agree.
  */
 async function getHoneymoonCounts() {
   const today = new Date().toISOString().slice(0, 10);
 
-  const [ideas, placed, actionable] = await Promise.all([
+  const [decided, suggested, actionable] = await Promise.all([
     supabase
       .from("trip_items")
       .select("*", { count: "exact", head: true })
-      .is("on_date", null),
-    supabase
-      .from("trip_items")
-      .select("*", { count: "exact", head: true })
+      .eq("lane", "decided")
       .not("on_date", "is", null),
     supabase
       .from("trip_items")
       .select("*", { count: "exact", head: true })
+      .neq("lane", "decided"),
+    supabase
+      .from("trip_items")
+      .select("*", { count: "exact", head: true })
+      .eq("lane", "decided")
       .in("booking_status", ["idea", "to_book"])
       .not("booking_opens_on", "is", null)
       .lte("booking_opens_on", today),
   ]);
 
   return {
-    ideas: ideas.count ?? 0,
-    placed: placed.count ?? 0,
+    decided: decided.count ?? 0,
+    suggested: suggested.count ?? 0,
     actionable: actionable.count ?? 0,
   };
 }

@@ -25,25 +25,3 @@ export async function getTripBoard(): Promise<TripBoard> {
     docs: docs.data ?? [],
   };
 }
-
-/** Counts for the host hub card, without hauling the whole board over. */
-export async function getHoneymoonSummary() {
-  const { data } = await supabase
-    .from("trip_items")
-    .select("on_date, booking_status, booking_opens_on");
-
-  const items = data ?? [];
-  const today = new Date().toISOString().slice(0, 10);
-
-  return {
-    ideas: items.filter((i) => i.on_date === null).length,
-    placed: items.filter((i) => i.on_date !== null).length,
-    // Anything whose booking window has opened and that is still not booked.
-    actionable: items.filter(
-      (i) =>
-        (i.booking_status === "idea" || i.booking_status === "to_book") &&
-        i.booking_opens_on !== null &&
-        i.booking_opens_on <= today,
-    ).length,
-  };
-}

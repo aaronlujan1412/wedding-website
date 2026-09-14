@@ -7,7 +7,7 @@ type Props = {
   photos: number;
   hiddenPhotos: number;
   awaitingReply: number;
-  honeymoon: { ideas: number; placed: number; actionable: number };
+  honeymoon: { decided: number; suggested: number; actionable: number };
 };
 
 export function HostHub({
@@ -73,11 +73,11 @@ export function HostHub({
           status={
             honeymoon.actionable > 0
               ? `${honeymoon.actionable} ready to book now`
-              : honeymoon.placed === 0
-                ? `${honeymoon.ideas} in the maybe pile`
-                : `${honeymoon.placed} placed, ${honeymoon.ideas} still loose`
+              : honeymoon.decided === 0
+                ? `${honeymoon.suggested} suggested, nothing agreed`
+                : `${honeymoon.decided} decided, ${honeymoon.suggested} suggested`
           }
-          blurb="Japan. Drag the days around, seal what's booked, print the pocket card."
+          blurb="Japan. Suggest in your own lane, agree by dragging it up, print what's decided."
         />
       </ul>
     </main>
