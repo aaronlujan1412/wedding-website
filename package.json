@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:start": "supabase start",
+    "db:start": "docker network inspect supabase_network_wedding-website >/dev/null 2>&1 || docker network create -o com.docker.network.bridge.host_binding_ipv4=127.0.0.1 supabase_network_wedding-website >/dev/null; supabase start",
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:local": "node scripts/use-db.mjs local && node --env-file=.env.local scripts/provision-buckets.mjs",

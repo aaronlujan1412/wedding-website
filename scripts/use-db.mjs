@@ -42,9 +42,11 @@ try {
 const read = (name) =>
   status.match(new RegExp(`^${name}="?([^"\\n]+)"?$`, "m"))?.[1];
 
+// Prefer the sb_publishable / sb_secret keys, which is what production uses.
+// Older CLIs only report the legacy JWTs, so fall back to those.
 const url = read("API_URL");
-const anon = read("ANON_KEY");
-const secret = read("SERVICE_ROLE_KEY");
+const anon = read("PUBLISHABLE_KEY") ?? read("ANON_KEY");
+const secret = read("SECRET_KEY") ?? read("SERVICE_ROLE_KEY");
 
 if (!url || !anon || !secret) {
   console.error("`supabase status` did not report the keys. Is the stack up?");
