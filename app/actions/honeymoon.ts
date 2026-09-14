@@ -8,6 +8,7 @@ import type {
   BookingStatus,
   DocCategory,
   ItemKind,
+  Lane,
   Planner,
   TripDoc,
   TripItem,
@@ -36,6 +37,7 @@ function blankToNull(value: string | null | undefined) {
 
 export type ItemInput = {
   title: string;
+  lane?: Lane;
   title_ja?: string | null;
   kind: ItemKind;
   on_date?: string | null;
@@ -60,6 +62,7 @@ export type ItemInput = {
 function normalise(input: ItemInput) {
   return {
     title: input.title.trim(),
+    lane: input.lane ?? "decided",
     title_ja: blankToNull(input.title_ja),
     kind: input.kind,
     on_date: blankToNull(input.on_date),
@@ -83,11 +86,12 @@ function normalise(input: ItemInput) {
   };
 }
 
-/** Next free slot at the bottom of a column. */
-async function nextPosition(onDate: string | null) {
+/** Next free slot at the bottom of a cell — ordering is scoped to lane + day. */
+async function nextPosition(lane: Lane, onDate: string | null) {
   const query = supabase
     .from("trip_items")
     .select("position")
+    .eq("lane", lane)
     .order("position", { ascending: false })
     .limit(1);
 
@@ -106,7 +110,7 @@ export async function createItem(input: ItemInput) {
 
   const { data, error } = await supabase
     .from("trip_items")
-    .insert({ ...row, position: await nextPosition(row.on_date) })
+    .insert({ ...row, position: await nextPosition(row.lane, row.on_date) })
     .select()
     .single();
 
@@ -137,10 +141,12 @@ export async function updateItem(id: string, input: ItemInput) {
 
 /**
  * A drag. The client has already worked out the fractional position from the
- * neighbours it dropped between, so this is one row write.
+ * neighbours it dropped between, so this is one row write — across lanes as
+ * well as across days, since promoting a card is just a move into `decided`.
  */
 export async function moveItem(
   id: string,
+  lane: Lane,
   onDate: string | null,
   position: number,
 ) {
@@ -149,6 +155,7 @@ export async function moveItem(
   const { error } = await supabase
     .from("trip_items")
     .update({
+      lane,
       on_date: onDate,
       position,
       updated_at: new Date().toISOString(),
@@ -187,16 +194,17 @@ export async function deleteItem(id: string) {
 }
 
 /**
- * Rewrites a day's order so timed cards run chronologically and loose cards
+ * Rewrites one cell's order so timed cards run chronologically and loose cards
  * keep their relative order at the end. Dragging never reorders behind your
  * back — this is the explicit "fix it" button instead.
  */
-export async function sortDayByTime(onDate: string) {
+export async function sortDayByTime(onDate: string, lane: Lane = "decided") {
   if (!(await isHost())) return DENIED;
 
   const { data, error } = await supabase
     .from("trip_items")
     .select("id, start_time, position")
+    .eq("lane", lane)
     .eq("on_date", onDate)
     .order("position");
 

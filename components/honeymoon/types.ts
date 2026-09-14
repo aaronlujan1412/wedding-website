@@ -8,6 +8,7 @@ export type TripDoc = Database["public"]["Tables"]["trip_docs"]["Row"];
 export type ItemKind = Database["public"]["Enums"]["trip_item_kind"];
 export type BookingStatus = Database["public"]["Enums"]["trip_booking_status"];
 export type Planner = Database["public"]["Enums"]["trip_planner"];
+export type Lane = Database["public"]["Enums"]["trip_lane"];
 export type DocCategory = Database["public"]["Enums"]["trip_doc_category"];
 
 /** Everything the board needs, read once on the server. */

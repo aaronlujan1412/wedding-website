@@ -49,6 +49,15 @@
   /* Day columns are pages of the book: one step warmer than a card. */
   --color-paper: #f6f0e4;
 
+  /* Lanes. The tint is the row's paper and the accent is its label, so lane
+     identity lives in the surface and card type stays on the 3px tab — two
+     independent channels that never fight each other. Both accents clear AA
+     on their own tint. */
+  --color-lane-savea: #2f5d7c;
+  --color-lane-savea-tint: #eaf1f6;
+  --color-lane-aaron: #5a3f78;
+  --color-lane-aaron-tint: #f1ebf6;
+
   /* Japanese place names get a real mincho where the device has one. No
      webfont: a JP family is megabytes, and this page has two readers. */
   --font-jp-stack: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",

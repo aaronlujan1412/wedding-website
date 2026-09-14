@@ -2,14 +2,67 @@ import type {
   BookingStatus,
   DocCategory,
   ItemKind,
+  Lane,
   Planner,
   TripItem,
   TripLeg,
 } from "./types";
 
 
-/** The idea pool is a container like any day; a null `on_date` lives here. */
+/** A lane's pile: cards in that lane with no day yet. */
 export const POOL = "pool";
+
+/**
+ * The three rows of the board.
+ *
+ * `decided` is the final draft and the only lane the itinerary and the pocket
+ * print read. The other two are drafting rows — throw anything in, argue later,
+ * and promote the card when you agree. A lane is where a card sits now;
+ * `added_by` is who thought of it and never changes.
+ */
+export const LANE_ORDER: Lane[] = ["decided", "savea", "aaron"];
+
+export const LANES: Record<
+  Lane,
+  {
+    label: string;
+    pile: string;
+    blurb: string;
+    accent: string;
+    tint: string;
+    planner: Planner | null;
+  }
+> = {
+  decided: {
+    label: "Decided",
+    pile: "Agreed, no day yet",
+    blurb: "The final draft. This is what prints.",
+    accent: "var(--color-primary)",
+    tint: "var(--color-paper)",
+    planner: null,
+  },
+  savea: {
+    label: "Savea's ideas",
+    pile: "Savea's pile",
+    blurb: "Her draft route. Nothing here is settled.",
+    accent: "var(--color-lane-savea)",
+    tint: "var(--color-lane-savea-tint)",
+    planner: "savea",
+  },
+  aaron: {
+    label: "Aaron's ideas",
+    pile: "Aaron's pile",
+    blurb: "His draft route. Nothing here is settled.",
+    accent: "var(--color-lane-aaron)",
+    tint: "var(--color-lane-aaron-tint)",
+    planner: "aaron",
+  },
+};
+
+/** Where a lane's card goes when it is sent back out of `decided`. */
+export function laneForPlanner(planner: Planner): Lane {
+  return planner;
+}
 
 /**
  * Hand-set, because a live FX call for a number two people glance at is not
@@ -358,12 +411,39 @@ export function positionBetween(before?: number, after?: number): number {
   return (before + after) / 2;
 }
 
+/**
+ * A cell is one lane crossed with one day — or with that lane's pile. Drop
+ * targets are addressed by this id, and ordering is scoped to it.
+ */
+export function cellId(lane: Lane, date: string | null): string {
+  return `${lane}|${date ?? POOL}`;
+}
+
+export function parseCell(id: string): { lane: Lane; date: string | null } | null {
+  const [lane, rest] = id.split("|");
+  if (!rest || !LANE_ORDER.includes(lane as Lane)) return null;
+  return { lane: lane as Lane, date: rest === POOL ? null : rest };
+}
+
 export function containerOf(item: TripItem): string {
-  return item.on_date ?? POOL;
+  return cellId(item.lane, item.on_date);
 }
 
 export function itemsIn(items: TripItem[], container: string): TripItem[] {
   return items
     .filter((i) => containerOf(i) === container)
     .sort((a, b) => a.position - b.position);
+}
+
+export function itemsInCell(
+  items: TripItem[],
+  lane: Lane,
+  date: string | null,
+): TripItem[] {
+  return itemsIn(items, cellId(lane, date));
+}
+
+/** The plan of record. Everything read-only renders from this. */
+export function decidedOn(items: TripItem[], date: string): TripItem[] {
+  return itemsInCell(items, "decided", date);
 }
