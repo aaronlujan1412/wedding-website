@@ -1,20 +1,27 @@
 #!/usr/bin/env node
 /**
- * Fills the honeymoon board with a sample Japan trip, or empties it.
+ * Snapshots, seeds, restores or empties the honeymoon board.
  *
- * The board has no bulk-delete in the UI — deleting a leg only sweeps its
- * cards back into the maybe pile — so this is how you start over. It is also
- * the fastest way to see what a full board looks like before committing to
- * planning a real one.
+ * NOTHING here is destructive by default, and that is deliberate: an earlier
+ * version of this script wiped every trip table on startup before it even read
+ * its arguments, and running it to preview a demo destroyed real planning data.
+ * The project has no PITR and no stored backups, so there was nothing to
+ * restore from. Hence the rules below.
  *
- *   node --env-file=.env.local scripts/honeymoon-demo.mjs        # wipe, then seed
- *   node --env-file=.env.local scripts/honeymoon-demo.mjs --wipe # wipe only
+ *   --status              what's in there now (the default; touches nothing)
+ *   --snapshot            dump every trip table to supabase/.backups/
+ *   --restore <file>      put a snapshot back (replaces current contents)
+ *   --seed                write the sample Japan trip
+ *   --wipe                empty every trip table
  *
- * Writes to the linked Supabase project with the secret key, so it hits the
- * same rows the site reads. Destructive by design: it clears every trip table
- * first, every time.
+ * --seed and --wipe refuse to run while the board has anything in it. Pass
+ * --force to override, and a snapshot is always written first either way.
+ *
+ *   node --env-file=.env.local scripts/honeymoon-demo.mjs --status
+ *   node --env-file=.env.local scripts/honeymoon-demo.mjs --seed --force
  */
 
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
 
 const db = createClient(
@@ -23,22 +30,137 @@ const db = createClient(
   { auth: { persistSession: false } },
 );
 
+/** Legs first on the way in; it does not matter, but it reads in trip order. */
+const TABLES = ["trip_legs", "trip_days", "trip_items", "trip_docs"];
+const KEYS = {
+  trip_days: "on_date",
+  trip_legs: "id",
+  trip_items: "id",
+  trip_docs: "id",
+};
 const NO_UUID = "00000000-0000-0000-0000-000000000000";
+const BACKUP_DIR = "supabase/.backups";
 
-/** Children first — trip_items points at dates, not at legs, but keep it tidy. */
-async function wipe() {
-  await db.from("trip_items").delete().neq("id", NO_UUID);
-  await db.from("trip_docs").delete().neq("id", NO_UUID);
-  await db.from("trip_days").delete().neq("on_date", "1900-01-01");
-  await db.from("trip_legs").delete().neq("id", NO_UUID);
+const args = process.argv.slice(2);
+const has = (flag) => args.includes(flag);
+const force = has("--force");
+
+async function counts() {
+  const out = {};
+  for (const table of TABLES) {
+    const { count } = await db
+      .from(table)
+      .select("*", { count: "exact", head: true });
+    out[table] = count ?? 0;
+  }
+  return out;
 }
 
-await wipe();
+function total(c) {
+  return Object.values(c).reduce((a, b) => a + b, 0);
+}
 
-if (process.argv.includes("--wipe")) {
+/** Always run before anything destructive. Cheap, and the only safety net. */
+async function snapshot(label = "snapshot") {
+  const data = {};
+  for (const table of TABLES) {
+    const { data: rows, error } = await db.from(table).select();
+    if (error) throw error;
+    data[table] = rows ?? [];
+  }
+
+  await mkdir(BACKUP_DIR, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const file = `${BACKUP_DIR}/${label}-${stamp}.json`;
+  await writeFile(file, JSON.stringify(data, null, 2));
+  console.log(`Snapshot written to ${file} (${total(await counts())} rows)`);
+  return file;
+}
+
+async function wipe() {
+  for (const table of TABLES) {
+    const key = KEYS[table];
+    const sentinel = key === "on_date" ? "1900-01-01" : NO_UUID;
+    const { error } = await db.from(table).delete().neq(key, sentinel);
+    if (error) throw error;
+  }
+}
+
+/** Refuses to throw away work unless you say so out loud. */
+async function guard(action) {
+  const current = await counts();
+  if (total(current) === 0) return;
+
+  if (!force) {
+    console.error(`Refusing to ${action}: the board is not empty.`);
+    for (const [table, n] of Object.entries(current)) {
+      if (n > 0) console.error(`  ${table.padEnd(12)} ${n}`);
+    }
+    console.error(
+      "\nSnapshot it first, then pass --force if you really mean it:",
+    );
+    console.error(
+      "  node --env-file=.env.local scripts/honeymoon-demo.mjs --snapshot",
+    );
+    process.exit(1);
+  }
+
+  await snapshot(`before-${action}`);
+}
+
+async function restore(file) {
+  if (!file) {
+    console.error(
+      "--restore needs a file: --restore supabase/.backups/<name>.json",
+    );
+    process.exit(1);
+  }
+
+  const data = JSON.parse(await readFile(file, "utf8"));
+  await guard("restore");
+  await wipe();
+
+  for (const table of TABLES) {
+    const rows = data[table] ?? [];
+    if (rows.length === 0) continue;
+    const { error } = await db.from(table).insert(rows);
+    if (error) throw error;
+    console.log(`  ${table.padEnd(12)} ${rows.length} restored`);
+  }
+  console.log(`Restored from ${file}.`);
+}
+
+if (has("--snapshot")) {
+  await snapshot();
+  process.exit(0);
+}
+
+if (has("--restore")) {
+  await restore(args[args.indexOf("--restore") + 1]);
+  process.exit(0);
+}
+
+if (has("--wipe")) {
+  await guard("wipe");
+  await wipe();
   console.log("Honeymoon board emptied.");
   process.exit(0);
 }
+
+if (!has("--seed")) {
+  const current = await counts();
+  console.log("Honeymoon board:");
+  for (const [table, n] of Object.entries(current)) {
+    console.log(`  ${table.padEnd(12)} ${n}`);
+  }
+  console.log(
+    "\nNothing changed. Pass --seed, --wipe, --snapshot or --restore <file>.",
+  );
+  process.exit(0);
+}
+
+await guard("seed");
+await wipe();
 
 const legs = [
   {
@@ -84,7 +206,6 @@ const legs = [
     position: 5,
   },
 ];
-// Wipe first so this is re-runnable.
 for (const t of ["trip_items", "trip_docs", "trip_days", "trip_legs"]) {
   await db
     .from(t)

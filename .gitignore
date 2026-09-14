@@ -46,3 +46,6 @@ CLAUDE.md
 
 # obsidian vault (personal planning notes, not project source)
 /Obsidian Vault/
+
+# Local snapshots taken before anything destructive touches the trip tables.
+supabase/.backups/
