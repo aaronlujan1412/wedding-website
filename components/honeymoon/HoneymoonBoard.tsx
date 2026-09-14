@@ -1,8 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { Fragment, useMemo, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -16,8 +14,13 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { MapPinned, Plus, Printer, ScrollText, Search } from "lucide-react";
-import { moveItem, sortDayByTime } from "@/app/actions/honeymoon";
+import { MapPinned, Plus, Search, X } from "lucide-react";
+import {
+  adoptLeg,
+  adoptRoute,
+  moveItem,
+  sortDayByTime,
+} from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
 import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
@@ -26,32 +29,39 @@ import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
 import { LaneCell } from "./LaneCell";
 import { LanePile } from "./LanePile";
-import { LegDialog } from "./LegDialog";
+import { LegBand } from "./LegBand";
+import { LegDialog, type LegDraft } from "./LegDialog";
+import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
+import { RateProvider } from "./RateContext";
+import { flightsOnDay } from "./flights";
+import { useLiveRefresh } from "./useLiveRefresh";
 import { TripDocsPanel } from "./TripDocsPanel";
 import {
+  LANES,
   LANE_ORDER,
+  PLANNERS,
+  adoptEffect,
   cellId,
+  describeRate,
   eachDay,
+  formatLegDates,
   formatYen,
   itemsIn,
   itemsInCell,
+  legsIn,
   parseCell,
   positionBetween,
   sumYen,
   todayISO,
   tripDays,
-  yenToUsd,
+  yenAsUsd,
 } from "./trip";
 import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
-
-/** How often to pick up the other person's edits. Cheap: two tabs, one query. */
-const POLL_MS = 12_000;
 
 const COLUMN = "19rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
-  const { legs, days: dayNotes, docs } = board;
-  const router = useRouter();
+  const { legs, days: dayNotes, docs, rate } = board;
 
   // Local mirror, so a drag lands instantly instead of waiting on the round
   // trip. When the server action revalidates and new rows arrive, adopt them
@@ -67,55 +77,172 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [draft, setDraft] = useState<ItemDraft | null>(null);
   const [noteDate, setNoteDate] = useState<string | null>(null);
-  const [legDialog, setLegDialog] = useState<{ open: boolean; leg: TripLeg | null }>({
-    open: false,
-    leg: null,
-  });
+  const [legDraft, setLegDraft] = useState<LegDraft | null>(null);
+  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
+  const [notice, setNotice] = useState<{
+    tone: "ok" | "error";
+    text: string;
+  } | null>(null);
   const [activeLegId, setActiveLegId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [, startTransition] = useTransition();
 
-  /**
-   * Poor man's realtime.
-   *
-   * Supabase Realtime would need browser-side anon access, which breaks the
-   * deliberate "RLS on, no policies" posture. Re-fetching every few seconds
-   * gets two people working in separate lanes almost all of the benefit for
-   * none of that risk. Paused while the tab is hidden, while a card is in the
-   * air, and while a dialog is open, so it never yanks work in progress.
-   */
-  const busy = activeId !== null || draft !== null || noteDate !== null || legDialog.open;
-  useEffect(() => {
-    if (busy) return;
-
-    const tick = () => {
-      if (document.visibilityState === "visible") router.refresh();
-    };
-    const timer = setInterval(tick, POLL_MS);
-    window.addEventListener("focus", tick);
-    return () => {
-      clearInterval(timer);
-      window.removeEventListener("focus", tick);
-    };
-  }, [busy, router]);
+  // Paused while anything is in progress, so a refresh never yanks work.
+  useLiveRefresh(
+    activeId !== null ||
+      draft !== null ||
+      noteDate !== null ||
+      legDraft !== null ||
+      confirm !== null,
+  );
 
   const today = todayISO();
   const allDays = useMemo(() => tripDays(legs), [legs]);
   const dayLookup = useMemo(() => new Set(allDays), [allDays]);
 
-  const activeLeg = legs.find((l) => l.id === activeLegId) ?? null;
+  // Columns span every day any lane's route covers, so a proposed extra night
+  // has somewhere to sit. The leg filter only offers the agreed route's legs.
+  const decidedLegs = legsIn(legs, "decided");
+  const activeLeg = decidedLegs.find((l) => l.id === activeLegId) ?? null;
   const visibleDays = activeLeg
     ? eachDay(activeLeg.starts_on, activeLeg.ends_on)
     : allDays;
 
   const decided = items.filter((i) => i.lane === "decided");
-  const suggested = items.filter((i) => i.lane !== "decided" && i.on_date !== null);
-  const spend = sumYen(decided) + sumYen(docs);
+  const suggested = items.filter(
+    (i) => i.lane !== "decided" && i.on_date !== null,
+  );
+  // Flights count toward the trip total like any other booked cost.
+  const spend =
+    sumYen(decided, rate) + sumYen(docs, rate) + sumYen(board.flights, rate);
+
+  /**
+   * Adopting a leg into Decided. If nothing in Decided is on those dates it just
+   * happens; if something would be replaced or shortened, say what first —
+   * that's the other person's lodging details about to be overwritten.
+   */
+  function requestAdoptLeg(leg: TripLeg) {
+    const run = () =>
+      startTransition(async () => {
+        const result = await adoptLeg(leg.id);
+        setNotice(
+          result.error
+            ? { tone: "error", text: result.error }
+            : {
+                tone: "ok",
+                text: `${leg.name} (${formatLegDates(leg)}) is in Decided.`,
+              },
+        );
+      });
+
+    const { replaced, shortened } = adoptEffect(leg, legs);
+    if (replaced.length === 0 && shortened.length === 0) return run();
+
+    setConfirm({
+      title: `Use ${leg.name} in Decided?`,
+      confirmLabel: "Use it",
+      onConfirm: run,
+      body: (
+        <>
+          <p>
+            Decided gets {leg.name} for {formatLegDates(leg)}.
+          </p>
+          {replaced.length > 0 && (
+            <p>
+              <strong>Replaces</strong>{" "}
+              {replaced
+                .map((l) => `${l.name} (${formatLegDates(l)})`)
+                .join(", ")}
+              {replaced.some((l) => l.lodging_name) &&
+                ", including its lodging details"}
+              .
+            </p>
+          )}
+          {shortened.length > 0 && (
+            <p>
+              <strong>Shortens</strong>{" "}
+              {shortened
+                .map((l) => `${l.name} (${formatLegDates(l)})`)
+                .join(", ")}
+              .
+            </p>
+          )}
+          <p className="text-muted-foreground">Cards stay on their days.</p>
+        </>
+      ),
+    });
+  }
+
+  function requestAdoptRoute(lane: Lane) {
+    const who = PLANNERS[LANES[lane].planner ?? "aaron"].label;
+    const run = () =>
+      startTransition(async () => {
+        const result = await adoptRoute(lane);
+        setNotice(
+          result.error
+            ? { tone: "error", text: result.error }
+            : { tone: "ok", text: `Decided now follows ${who}'s route.` },
+        );
+      });
+
+    if (decidedLegs.length === 0) return run();
+
+    // A route can be shorter than what Decided covers now. Days nobody's route
+    // reaches any more leave the board, and cards on them go back to their
+    // piles — the database does that sweep, so say it here first.
+    const after = tripDays([
+      ...legs.filter((l) => l.lane !== "decided"),
+      ...legsIn(legs, lane),
+    ]);
+    const lostDays = allDays.filter((d) => !after.includes(d));
+    const strandedCards = items.filter(
+      (i) => i.on_date !== null && lostDays.includes(i.on_date),
+    ).length;
+
+    setConfirm({
+      title: `Use ${who}'s whole route?`,
+      confirmLabel: `Use ${who}'s route`,
+      onConfirm: run,
+      body: (
+        <>
+          <p>
+            <strong>Replaces all {decidedLegs.length} Decided legs</strong>:{" "}
+            {decidedLegs
+              .map((l) => `${l.name} (${formatLegDates(l)})`)
+              .join(", ")}
+            .
+          </p>
+          {lostDays.length > 0 && (
+            <p>
+              <strong>
+                {formatLegDates({
+                  starts_on: lostDays[0],
+                  ends_on: lostDays[lostDays.length - 1],
+                })}{" "}
+                {lostDays.length === 1 ? "drops" : "drop"} off the board
+              </strong>
+              {strandedCards > 0 &&
+                ` — ${strandedCards} ${strandedCards === 1 ? "card" : "cards"} on ${
+                  lostDays.length === 1 ? "it goes" : "them go"
+                } back to ${strandedCards === 1 ? "its pile" : "their piles"}`}
+              .
+            </p>
+          )}
+          <p className="text-muted-foreground">
+            {who}&apos;s own lane is left as it is
+            {lostDays.length === 0 && ", and cards stay on their days"}.
+          </p>
+        </>
+      ),
+    });
+  }
 
   const sensors = useSensors(
     // A small threshold so a tap still reaches the buttons on the card.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   /** Which cell an arbitrary drop target belongs to. */
@@ -124,7 +251,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       // A ribbon chip names a day, not a lane — keep the card in its own row.
       const date = id.slice(RIBBON_PREFIX.length);
       const dragged = items.find((i) => i.id === activeId);
-      return dragged && dayLookup.has(date) ? { lane: dragged.lane, date } : null;
+      return dragged && dayLookup.has(date)
+        ? { lane: dragged.lane, date }
+        : null;
     }
 
     const cell = parseCell(id);
@@ -149,24 +278,35 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     if (!target) return null;
 
     const container = cellId(target.lane, target.date);
-    const siblings = itemsIn(items, container).filter((i) => i.id !== activeItem.id);
+    const siblings = itemsIn(items, container).filter(
+      (i) => i.id !== activeItem.id,
+    );
     const overItem = items.find((i) => i.id === String(over.id));
 
     let position: number;
     if (overItem && overItem.id !== activeItem.id) {
       const dragged = active.rect.current.translated;
       const below = dragged
-        ? dragged.top + dragged.height / 2 > over.rect.top + over.rect.height / 2
+        ? dragged.top + dragged.height / 2 >
+          over.rect.top + over.rect.height / 2
         : false;
       const index = siblings.findIndex((i) => i.id === overItem.id);
       const at = below ? index + 1 : index;
-      position = positionBetween(siblings[at - 1]?.position, siblings[at]?.position);
+      position = positionBetween(
+        siblings[at - 1]?.position,
+        siblings[at]?.position,
+      );
     } else {
       // Dropped on the cell itself (or a ribbon chip) — append.
       position = positionBetween(siblings.at(-1)?.position, undefined);
     }
 
-    return { id: activeItem.id, lane: target.lane, onDate: target.date, position };
+    return {
+      id: activeItem.id,
+      lane: target.lane,
+      onDate: target.date,
+      position,
+    };
   }
 
   type Drop = NonNullable<ReturnType<typeof computeDrop>>;
@@ -176,7 +316,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     setItems((prev) =>
       prev.map((i) =>
         i.id === drop.id
-          ? { ...i, lane: drop.lane, on_date: drop.onDate, position: drop.position }
+          ? {
+              ...i,
+              lane: drop.lane,
+              on_date: drop.onDate,
+              position: drop.position,
+            }
           : i,
       ),
     );
@@ -220,7 +365,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
   /** Append a card to the end of a cell, wherever it is coming from. */
   function sendTo(item: TripItem, lane: Lane, onDate: string | null) {
-    const siblings = itemsIn(items, cellId(lane, onDate)).filter((i) => i.id !== item.id);
+    const siblings = itemsIn(items, cellId(lane, onDate)).filter(
+      (i) => i.id !== item.id,
+    );
     persist({
       id: item.id,
       lane,
@@ -257,189 +404,256 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
   const gridColumns = `${COLUMN} repeat(${visibleDays.length}, ${COLUMN})`;
 
+  /**
+   * Grid rows, placed explicitly now that each lane is two rows tall: row 1 is
+   * the day headers, then for each lane a leg band and its cells beneath. The
+   * pile spans both so the lane stays named alongside its route.
+   */
+  const bandRow = (laneIndex: number) => 2 + laneIndex * 2;
+  const cellRow = (laneIndex: number) => 3 + laneIndex * 2;
+
   return (
-    <main className="mx-auto min-h-screen max-w-[110rem] px-6 pt-40 pb-24">
-      <header className="mb-8">
-        <p className="font-raleway text-xs uppercase tracking-[0.3em] text-muted-foreground">
-          Back of house · just the two of us
-        </p>
-        <div className="mt-2 flex flex-wrap items-end justify-between gap-x-8 gap-y-4">
-          <div>
-            <h1 className="font-corinthia text-7xl leading-none text-pop md:text-8xl">
-              Honeymoon
-            </h1>
-            <p className="mt-2 font-garamond text-xl italic text-muted-foreground">
-              Argue in your own row. Agree by dragging it up.
+    <RateProvider rate={rate}>
+      <main className="mx-auto mt-6 max-w-[110rem]">
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
+          <p className="font-garamond text-xl italic text-muted-foreground">
+            Argue in your own row. Agree by dragging it up.
+          </p>
+          <div className="text-right">
+            <dl className="flex flex-wrap justify-end gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
+              <Stat label="days" value={allDays.length} />
+              <Stat
+                label="decided"
+                value={decided.filter((i) => i.on_date).length}
+              />
+              <Stat label="suggested" value={suggested.length} />
+              {spend > 0 && (
+                <Stat
+                  label={yenAsUsd(spend, rate)}
+                  value={formatYen(spend)}
+                  raw
+                />
+              )}
+            </dl>
+            <p
+              className="mt-1 font-mono text-[0.65rem] text-muted-foreground tabular-nums slashed-zero"
+              title="Costs are stored in the currency you typed them in and converted at this rate for totals."
+            >
+              {describeRate(rate)}
             </p>
           </div>
-
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-            <dl className="flex flex-wrap gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
-              <Stat label="days" value={allDays.length} />
-              <Stat label="decided" value={decided.filter((i) => i.on_date).length} />
-              <Stat label="suggested" value={suggested.length} />
-              {spend > 0 && <Stat label={yenToUsd(spend)} value={formatYen(spend)} raw />}
-            </dl>
-            <div className="flex gap-3">
-              <ToolLink
-                href="/honeymoon/itinerary"
-                icon={<ScrollText className="h-3.5 w-3.5" strokeWidth={1.5} />}
-              >
-                Itinerary
-              </ToolLink>
-              <ToolLink
-                href="/honeymoon/pocket"
-                icon={<Printer className="h-3.5 w-3.5" strokeWidth={1.5} />}
-              >
-                Pocket
-              </ToolLink>
-            </div>
-          </div>
         </div>
-      </header>
 
-      {/* Legs */}
-      <div className="flex flex-wrap items-center gap-2 border-y border-border py-3">
-        <LegPill active={activeLegId === null} onClick={() => setActiveLegId(null)}>
-          Whole trip
-        </LegPill>
-        {legs.map((leg) => (
+        {/* Legs */}
+        <div className="flex flex-wrap items-center gap-2 border-y border-border py-3">
           <LegPill
-            key={leg.id}
-            active={activeLegId === leg.id}
-            onClick={() => setActiveLegId(leg.id)}
-            onEdit={() => setLegDialog({ open: true, leg })}
+            active={activeLegId === null}
+            onClick={() => setActiveLegId(null)}
           >
-            {leg.name}
-            {leg.name_ja && (
-              <span className="ml-1 font-jp text-[0.65rem] opacity-70">{leg.name_ja}</span>
-            )}
+            Whole trip
           </LegPill>
-        ))}
-        <button
-          type="button"
-          onClick={() => setLegDialog({ open: true, leg: null })}
-          className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <Plus className="h-3 w-3" strokeWidth={2} />
-          Leg
-        </button>
+          {decidedLegs.map((leg) => (
+            <LegPill
+              key={leg.id}
+              active={activeLegId === leg.id}
+              onClick={() => setActiveLegId(leg.id)}
+              onEdit={() => setLegDraft({ leg, lane: leg.lane })}
+            >
+              {leg.name}
+              {leg.name_ja && (
+                <span className="ml-1 font-jp text-[0.65rem] opacity-70">
+                  {leg.name_ja}
+                </span>
+              )}
+            </LegPill>
+          ))}
+          <button
+            type="button"
+            onClick={() => setLegDraft({ leg: null, lane: "decided" })}
+            className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
+            <Plus className="h-3 w-3" strokeWidth={2} />
+            Leg
+          </button>
 
-        <label className="relative ml-auto block w-48">
-          <Search
-            className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
-            strokeWidth={2}
-          />
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search the piles"
-            className="h-7 w-full rounded-sm border border-input bg-background pr-2 pl-7 font-raleway text-xs text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-          />
-        </label>
-      </div>
-
-      {legs.length === 0 ? (
-        <EmptyTrip onAddLeg={() => setLegDialog({ open: true, leg: null })} />
-      ) : (
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCorners}
-          onDragStart={handleDragStart}
-          onDragOver={handleDragOver}
-          onDragEnd={handleDragEnd}
-          onDragCancel={() => setActiveId(null)}
-        >
-          <div className="mt-4">
-            <DayRibbon
-              days={allDays}
-              legs={legs}
-              items={decided}
-              activeLegId={activeLegId}
-              today={today}
+          <label className="relative ml-auto block w-48">
+            <Search
+              className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
+              strokeWidth={2}
             />
-          </div>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search the piles"
+              className="h-7 w-full rounded-sm border border-input bg-background pr-2 pl-7 font-raleway text-xs text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            />
+          </label>
+        </div>
 
-          {/* One grid, three rows. Horizontal scroll moves all three lanes
+        {notice && (
+          <p
+            role={notice.tone === "error" ? "alert" : "status"}
+            className={cn(
+              "mt-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2 font-raleway text-sm",
+              notice.tone === "error"
+                ? "border-destructive/40 bg-destructive/10 text-destructive"
+                : "border-primary/30 bg-primary/5 text-primary",
+            )}
+          >
+            {notice.text}
+            <button
+              type="button"
+              onClick={() => setNotice(null)}
+              aria-label="Dismiss"
+              className="rounded-sm opacity-70 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-ring"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={2} />
+            </button>
+          </p>
+        )}
+
+        {legs.length === 0 ? (
+          <EmptyTrip
+            onAddLeg={() => setLegDraft({ leg: null, lane: "decided" })}
+          />
+        ) : (
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCorners}
+            onDragStart={handleDragStart}
+            onDragOver={handleDragOver}
+            onDragEnd={handleDragEnd}
+            onDragCancel={() => setActiveId(null)}
+          >
+            <div className="mt-4">
+              <DayRibbon
+                days={allDays}
+                legs={decidedLegs}
+                items={decided}
+                activeLegId={activeLegId}
+                today={today}
+              />
+            </div>
+
+            {/* One grid, three rows. Horizontal scroll moves all three lanes
               together, which is the point — a day's three cells must always
               line up. */}
-          <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
-            <div className="grid" style={{ gridTemplateColumns: gridColumns }}>
-              <div className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5">
-                <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
-                  Lanes
-                </p>
-                <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
-                  Only the top row prints.
-                </p>
-              </div>
-              {visibleDays.map((date) => (
-                <DayHeader
-                  key={date}
-                  date={date}
-                  note={dayNotes.find((d) => d.on_date === date)}
-                  legs={legs}
-                  decided={itemsInCell(items, "decided", date)}
-                  isToday={date === today}
-                  onEditNote={setNoteDate}
-                  onSortByTime={(d) =>
-                    startTransition(async () => {
-                      await sortDayByTime(d, "decided");
-                    })
-                  }
-                />
-              ))}
-
-              {LANE_ORDER.map((lane) => (
-                <Fragment key={lane}>
-                  <LanePile
-                    lane={lane}
-                    items={itemsInCell(items, lane, null)}
-                    query={query}
-                    actions={actions}
-                    onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+            <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
+              <div
+                className="grid"
+                style={{ gridTemplateColumns: gridColumns }}
+              >
+                <div
+                  style={{ gridRow: 1, gridColumn: 1 }}
+                  className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5"
+                >
+                  <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
+                    Lanes
+                  </p>
+                  <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
+                    Only the top row prints.
+                  </p>
+                </div>
+                {visibleDays.map((date, column) => (
+                  <DayHeader
+                    key={date}
+                    style={{ gridRow: 1, gridColumn: column + 2 }}
+                    date={date}
+                    note={dayNotes.find((d) => d.on_date === date)}
+                    legs={legs}
+                    decided={itemsInCell(items, "decided", date)}
+                    flights={flightsOnDay(board.flights, date)}
+                    isToday={date === today}
+                    onEditNote={setNoteDate}
+                    onSortByTime={(d) =>
+                      startTransition(async () => {
+                        await sortDayByTime(d, "decided");
+                      })
+                    }
                   />
-                  {visibleDays.map((date) => (
-                    <LaneCell
-                      key={date}
+                ))}
+
+                {LANE_ORDER.map((lane, laneIndex) => (
+                  <Fragment key={lane}>
+                    <LanePile
+                      style={{
+                        gridRow: `${bandRow(laneIndex)} / span 2`,
+                        gridColumn: 1,
+                      }}
                       lane={lane}
-                      date={date}
-                      items={itemsInCell(items, lane, date)}
-                      isToday={date === today}
+                      items={itemsInCell(items, lane, null)}
+                      query={query}
                       actions={actions}
-                      onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+                      legCount={legsIn(legs, lane).length}
+                      onAdoptRoute={requestAdoptRoute}
+                      onAdd={(l, d) =>
+                        setDraft({ item: null, lane: l, onDate: d })
+                      }
                     />
-                  ))}
-                </Fragment>
-              ))}
-            </div>
-          </div>
-
-          <DragOverlay>
-            {dragging ? (
-              <div className="w-[15rem]">
-                <ItemCardFace item={dragging} overlay />
+                    <LegBand
+                      lane={lane}
+                      legs={legs}
+                      days={visibleDays}
+                      row={bandRow(laneIndex)}
+                      onEdit={(leg) => setLegDraft({ leg, lane: leg.lane })}
+                      onCreate={(l, from, to) =>
+                        setLegDraft({ leg: null, lane: l, from, to })
+                      }
+                      onAdopt={requestAdoptLeg}
+                    />
+                    {visibleDays.map((date, column) => (
+                      <LaneCell
+                        key={date}
+                        style={{
+                          gridRow: cellRow(laneIndex),
+                          gridColumn: column + 2,
+                        }}
+                        lane={lane}
+                        date={date}
+                        items={itemsInCell(items, lane, date)}
+                        isToday={date === today}
+                        actions={actions}
+                        onAdd={(l, d) =>
+                          setDraft({ item: null, lane: l, onDate: d })
+                        }
+                      />
+                    ))}
+                  </Fragment>
+                ))}
               </div>
-            ) : null}
-          </DragOverlay>
-        </DndContext>
-      )}
+            </div>
 
-      <TripDocsPanel docs={docs} legs={legs} />
+            <DragOverlay>
+              {dragging ? (
+                <div className="w-[15rem]">
+                  <ItemCardFace item={dragging} overlay />
+                </div>
+              ) : null}
+            </DragOverlay>
+          </DndContext>
+        )}
 
-      <ItemDialog draft={draft} days={allDays} onClose={() => setDraft(null)} />
-      <DayNoteDialog
-        date={noteDate}
-        existing={dayNotes.find((d) => d.on_date === noteDate)}
-        onClose={() => setNoteDate(null)}
-      />
-      <LegDialog
-        open={legDialog.open}
-        leg={legDialog.leg}
-        onClose={() => setLegDialog({ open: false, leg: null })}
-      />
-    </main>
+        <TripDocsPanel docs={docs} legs={decidedLegs} />
+
+        <ItemDialog
+          draft={draft}
+          days={allDays}
+          onClose={() => setDraft(null)}
+        />
+        <DayNoteDialog
+          date={noteDate}
+          existing={dayNotes.find((d) => d.on_date === noteDate)}
+          onClose={() => setNoteDate(null)}
+        />
+        <LegDialog
+          draft={legDraft}
+          onClose={() => setLegDraft(null)}
+          onAdopt={requestAdoptLeg}
+        />
+        <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
+      </main>
+    </RateProvider>
   );
 }
 
@@ -460,26 +674,6 @@ function Stat({
   );
 }
 
-function ToolLink({
-  href,
-  icon,
-  children,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex items-center gap-1.5 rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-    >
-      {icon}
-      {children}
-    </Link>
-  );
-}
-
 function LegPill({
   active,
   onClick,
@@ -495,7 +689,9 @@ function LegPill({
     <span
       className={cn(
         "inline-flex items-center rounded-full border transition-colors",
-        active ? "border-primary bg-primary text-primary-foreground" : "border-border",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border",
       )}
     >
       <button
@@ -532,8 +728,8 @@ function EmptyTrip({ onAddLeg }: { onAddLeg: () => void }) {
         Start with a city and a stretch of days
       </h2>
       <p className="mx-auto mt-2 max-w-md font-garamond text-lg leading-relaxed text-muted-foreground">
-        Tokyo for five nights, Kyoto for four. The board draws a column for every
-        day in a leg, and all three lanes hang off that.
+        Tokyo for five nights, Kyoto for four. The board draws a column for
+        every day in a leg, and all three lanes hang off that.
       </p>
       <button
         type="button"
