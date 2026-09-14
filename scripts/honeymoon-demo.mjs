@@ -9,6 +9,7 @@
  * restore from. Hence the rules below.
  *
  *   --status              what's in there now (the default; touches nothing)
+ *   --production          required for any destructive op on a non-local db
  *   --snapshot            dump every trip table to supabase/.backups/
  *   --restore <file>      put a snapshot back (replaces current contents)
  *   --seed                write the sample Japan trip
@@ -23,6 +24,7 @@
 
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
+import { assertSafeTarget, target } from "./db-target.mjs";
 
 const db = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -32,13 +34,14 @@ const db = createClient(
 
 /** Legs first on the way in; it does not matter, but it reads in trip order. */
 const TABLES = ["trip_legs", "trip_days", "trip_items", "trip_docs"];
+/** PostgREST refuses an unfiltered delete; "key is not null" matches every
+ *  row and, unlike a sentinel value, does not care what type the key is. */
 const KEYS = {
   trip_days: "on_date",
   trip_legs: "id",
   trip_items: "id",
   trip_docs: "id",
 };
-const NO_UUID = "00000000-0000-0000-0000-000000000000";
 const BACKUP_DIR = "supabase/.backups";
 
 const args = process.argv.slice(2);
@@ -79,15 +82,18 @@ async function snapshot(label = "snapshot") {
 
 async function wipe() {
   for (const table of TABLES) {
-    const key = KEYS[table];
-    const sentinel = key === "on_date" ? "1900-01-01" : NO_UUID;
-    const { error } = await db.from(table).delete().neq(key, sentinel);
+    const { error } = await db
+      .from(table)
+      .delete()
+      .not(KEYS[table], "is", null);
     if (error) throw error;
   }
 }
 
 /** Refuses to throw away work unless you say so out loud. */
 async function guard(action) {
+  assertSafeTarget(action, { production: has("--production") });
+
   const current = await counts();
   if (total(current) === 0) return;
 
@@ -149,7 +155,8 @@ if (has("--wipe")) {
 
 if (!has("--seed")) {
   const current = await counts();
-  console.log("Honeymoon board:");
+  const { url, isLocal } = target();
+  console.log(`Honeymoon board on ${url}${isLocal ? "" : "  (PRODUCTION)"}:`);
   for (const [table, n] of Object.entries(current)) {
     console.log(`  ${table.padEnd(12)} ${n}`);
   }

@@ -49,3 +49,7 @@ CLAUDE.md
 
 # Local snapshots taken before anything destructive touches the trip tables.
 supabase/.backups/
+
+# Production credentials. Never auto-loaded — scripts must opt in with
+# --env-file=.env.remote, so nothing reaches the live database by accident.
+.env.remote

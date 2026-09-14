@@ -6,7 +6,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:start": "supabase start",
+    "db:stop": "supabase stop",
+    "db:reset": "supabase db reset",
+    "db:local": "node scripts/use-db.mjs local && node --env-file=.env.local scripts/provision-buckets.mjs",
+    "db:remote": "node scripts/use-db.mjs remote",
+    "db:seed": "node --env-file=.env.local scripts/honeymoon-demo.mjs --seed",
+    "db:status": "node --env-file=.env.local scripts/honeymoon-demo.mjs",
+    "db:backups": "node --env-file=.env.remote scripts/restore-backup.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
