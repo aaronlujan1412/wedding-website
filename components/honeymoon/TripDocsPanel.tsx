@@ -22,22 +22,17 @@ import {
   formatCostConverted,
   parseCostInput,
 } from "./trip";
-import type { Currency, DocCategory, TripDoc, TripLeg } from "./types";
+import type { Currency, DocCategory, TripDoc } from "./types";
 
 /**
  * Everything that isn't an itinerary item.
  *
- * Flights, rail passes, the pocket wifi, luggage forwarding — none of it is a
- * thing you drag onto a day, so none of it is a card. Forcing it onto the board
+ * Rail passes, the pocket wifi, luggage forwarding — none of it is a thing you
+ * drag onto a day, so none of it is a card. Flights and beds have their own
+ * tabs. Forcing it onto the board
  * is what turns a trip planner into a mess.
  */
-export function TripDocsPanel({
-  docs,
-  legs,
-}: {
-  docs: TripDoc[];
-  legs: TripLeg[];
-}) {
+export function TripDocsPanel({ docs }: { docs: TripDoc[] }) {
   const [editing, setEditing] = useState<TripDoc | null>(null);
   const [open, setOpen] = useState(false);
 
@@ -68,45 +63,6 @@ export function TripDocsPanel({
           Add
         </button>
       </div>
-
-      {/* Lodging is read off the legs rather than duplicated here — one place
-          to change where you're sleeping. */}
-      {legs.some((l) => l.lodging_name) && (
-        <div className="mt-6">
-          <h3 className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
-            Beds
-          </h3>
-          <ul className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {legs
-              .filter((l) => l.lodging_name)
-              .map((leg) => (
-                <li
-                  key={leg.id}
-                  className="rounded-lg border border-border bg-card p-4"
-                >
-                  <p className="font-mono text-[0.6rem] tracking-wider text-muted-foreground tabular-nums slashed-zero">
-                    {leg.name.toUpperCase()} · {leg.starts_on} → {leg.ends_on}
-                  </p>
-                  <p className="mt-1 font-garamond text-xl text-foreground">
-                    {leg.lodging_name}
-                  </p>
-                  {leg.lodging_address && (
-                    <p className="mt-1 font-garamond text-sm leading-snug text-muted-foreground">
-                      {leg.lodging_address}
-                    </p>
-                  )}
-                  <p className="mt-2 font-mono text-[0.6rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
-                    {leg.lodging_check_in && `in ${leg.lodging_check_in}`}
-                    {leg.lodging_check_in && leg.lodging_check_out && " · "}
-                    {leg.lodging_check_out && `out ${leg.lodging_check_out}`}
-                    {leg.lodging_confirmation &&
-                      ` · ${leg.lodging_confirmation}`}
-                  </p>
-                </li>
-              ))}
-          </ul>
-        </div>
-      )}
 
       <div className="mt-8 space-y-8">
         {categories.map((category) => {

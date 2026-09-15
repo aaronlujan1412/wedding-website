@@ -30,12 +30,6 @@ type FormState = {
   name_ja: string;
   starts_on: string;
   ends_on: string;
-  lodging_name: string;
-  lodging_address: string;
-  lodging_url: string;
-  lodging_confirmation: string;
-  lodging_check_in: string;
-  lodging_check_out: string;
   note: string;
 };
 
@@ -46,20 +40,13 @@ function toForm({ leg, lane, from, to }: LegDraft): FormState {
     name_ja: leg?.name_ja ?? "",
     starts_on: leg?.starts_on ?? from ?? "",
     ends_on: leg?.ends_on ?? to ?? "",
-    lodging_name: leg?.lodging_name ?? "",
-    lodging_address: leg?.lodging_address ?? "",
-    lodging_url: leg?.lodging_url ?? "",
-    lodging_confirmation: leg?.lodging_confirmation ?? "",
-    lodging_check_in: leg?.lodging_check_in ?? "",
-    lodging_check_out: leg?.lodging_check_out ?? "",
     note: leg?.note ?? "",
   };
 }
 
 /**
- * A leg owns a stretch of dates and the bed you sleep in across them, within
- * one lane. Lodging belongs here rather than on a card, because you don't drag
- * where you sleep — it's a property of the days, not an item in them.
+ * A leg owns a stretch of dates in one lane: where you're based. Where you
+ * sleep is a stay on the Lodging tab — a leg can hold several.
  */
 export function LegDialog({
   draft,
@@ -185,49 +172,6 @@ function LegForm({
                 value={form.ends_on}
                 onChange={(e) => set("ends_on", e.target.value)}
                 required
-              />
-            </Field>
-          </div>
-        </Fieldset>
-
-        <Fieldset legend="Where you're sleeping">
-          <Field label="Place">
-            <TextInput
-              value={form.lodging_name}
-              onChange={(e) => set("lodging_name", e.target.value)}
-            />
-          </Field>
-          <Field label="Address">
-            <TextInput
-              value={form.lodging_address}
-              onChange={(e) => set("lodging_address", e.target.value)}
-            />
-          </Field>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Check in">
-              <TextInput
-                value={form.lodging_check_in}
-                onChange={(e) => set("lodging_check_in", e.target.value)}
-              />
-            </Field>
-            <Field label="Check out">
-              <TextInput
-                value={form.lodging_check_out}
-                onChange={(e) => set("lodging_check_out", e.target.value)}
-              />
-            </Field>
-            <Field label="Confirmation number">
-              <TextInput
-                value={form.lodging_confirmation}
-                onChange={(e) => set("lodging_confirmation", e.target.value)}
-              />
-            </Field>
-            <Field label="Booking link">
-              <TextInput
-                type="url"
-                value={form.lodging_url}
-                onChange={(e) => set("lodging_url", e.target.value)}
-                placeholder="https://"
               />
             </Field>
           </div>

@@ -2,8 +2,9 @@
 
 import { ArrowUp, BedDouble, Check, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { staysIn } from "./stays";
 import { LANES, formatLegDates, isAdopted, legSegments } from "./trip";
-import type { Lane, TripLeg } from "./types";
+import type { Lane, TripLeg, TripStay } from "./types";
 
 const PILE_WIDTH = "19rem";
 
@@ -20,6 +21,7 @@ const PILE_WIDTH = "19rem";
 export function LegBand({
   lane,
   legs,
+  stays,
   days,
   row,
   onEdit,
@@ -28,6 +30,7 @@ export function LegBand({
 }: {
   lane: Lane;
   legs: TripLeg[];
+  stays: TripStay[];
   days: string[];
   row: number;
   onEdit: (leg: TripLeg) => void;
@@ -72,6 +75,18 @@ export function LegBand({
 
         const { leg } = segment;
         const adopted = isAdopted(leg, legs);
+        // Where this lane sleeps during the leg, read off the Lodging tab.
+        const beds = [
+          ...new Set(
+            staysIn(stays, lane)
+              .filter(
+                (s) =>
+                  s.check_in_on <= leg.ends_on &&
+                  s.check_out_on > leg.starts_on,
+              )
+              .map((s) => s.name),
+          ),
+        ].join(" · ");
 
         return (
           <div
@@ -106,16 +121,16 @@ export function LegBand({
                 <span className="font-mono text-[0.6rem] text-muted-foreground tabular-nums slashed-zero">
                   {formatLegDates(leg)}
                 </span>
-                {leg.lodging_name && (
+                {beds && (
                   <span
                     className="flex items-center gap-0.5 truncate font-garamond text-xs text-muted-foreground"
-                    title={leg.lodging_name}
+                    title={beds}
                   >
                     <BedDouble
                       className="h-3 w-3 flex-none"
                       strokeWidth={1.5}
                     />
-                    <span className="truncate">{leg.lodging_name}</span>
+                    <span className="truncate">{beds}</span>
                   </span>
                 )}
               </button>

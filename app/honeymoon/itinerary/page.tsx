@@ -4,6 +4,12 @@ import { TimelineConnector } from "@/components/schedule/TimelineConnector";
 import { Seal } from "@/components/honeymoon/Seal";
 import { getTripBoard } from "@/lib/honeymoon-queries";
 import {
+  formatNights,
+  formatStayDates,
+  nightCount,
+  staysIn,
+} from "@/components/honeymoon/stays";
+import {
   KINDS,
   eachDay,
   formatClock,
@@ -22,6 +28,7 @@ import type {
   TripDay,
   TripItem,
   TripLeg,
+  TripStay,
 } from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
@@ -45,7 +52,9 @@ export default async function ItineraryPage() {
   // The agreed route only. Draft legs are proposals, and this page is the plan.
   const legs = legsIn(board.legs, "decided");
   const decided = items.filter((i) => i.lane === "decided");
-  const spend = sumYen(decided, rate) + sumYen(docs, rate);
+  const stays = staysIn(board.stays, "decided");
+  const spend =
+    sumYen(decided, rate) + sumYen(docs, rate) + sumYen(stays, rate);
 
   return (
     <main className="mx-auto mt-12 max-w-3xl">
@@ -78,6 +87,10 @@ export default async function ItineraryPage() {
           <LegSection
             key={leg.id}
             leg={leg}
+            stays={stays.filter(
+              (s) =>
+                s.check_in_on <= leg.ends_on && s.check_out_on > leg.starts_on,
+            )}
             items={decided}
             notes={days}
             rate={rate}
@@ -106,11 +119,13 @@ function formatRange(legs: TripLeg[]) {
 function LegSection({
   rate,
   leg,
+  stays,
   items,
   notes,
 }: {
   rate: Rate;
   leg: TripLeg;
+  stays: TripStay[];
   items: TripItem[];
   notes: TripDay[];
 }) {
@@ -130,17 +145,18 @@ function LegSection({
             </span>
           )}
         </h2>
-        {leg.lodging_name && (
-          <p className="mt-2 font-garamond text-lg text-muted-foreground">
-            {leg.lodging_name}
-            {leg.lodging_check_in && (
-              <span className="font-mono text-xs tabular-nums slashed-zero">
-                {" "}
-                · in {leg.lodging_check_in}
-              </span>
-            )}
+        {stays.map((stay) => (
+          <p
+            key={stay.id}
+            className="mt-2 font-garamond text-lg text-muted-foreground"
+          >
+            {stay.name}
+            <span className="font-mono text-xs tabular-nums slashed-zero">
+              {" "}
+              · {formatStayDates(stay)} · {formatNights(nightCount(stay))}
+            </span>
           </p>
-        )}
+        ))}
         {leg.note && (
           <p className="mt-2 font-garamond text-lg leading-relaxed text-foreground/90">
             {leg.note}

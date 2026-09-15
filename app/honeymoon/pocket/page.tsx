@@ -11,6 +11,14 @@ import {
   zoneName,
 } from "@/components/honeymoon/flights";
 import {
+  deskCashYen,
+  formatNights,
+  formatStayDates,
+  nightCount,
+  sleepsOn,
+  staysIn,
+} from "@/components/honeymoon/stays";
+import {
   DOC_CATEGORIES,
   KINDS,
   cashYen,
@@ -33,6 +41,7 @@ import type {
   TripFlight,
   TripItem,
   TripLeg,
+  TripStay,
 } from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
@@ -60,6 +69,7 @@ export default async function PocketPage() {
   // Only the agreed route prints — a proposal on paper is how you end up
   // arguing with yourself at a train station.
   const legs = legsIn(board.legs, "decided");
+  const stays = staysIn(board.stays, "decided");
   const dates = tripDays(legs);
 
   return (
@@ -80,7 +90,7 @@ export default async function PocketPage() {
         </p>
       ) : (
         <>
-          <PapersSheet legs={legs} docs={docs} />
+          <PapersSheet stays={stays} docs={docs} />
           <FlightsSheet
             flights={flightsPage.flights}
             checklist={flightsPage.checklist}
@@ -90,6 +100,8 @@ export default async function PocketPage() {
               key={date}
               date={date}
               leg={legForDay(legs, date)}
+              bed={stays.find((s) => sleepsOn(s, date))}
+              checkingIn={stays.find((s) => s.check_in_on === date)}
               rate={rate}
               note={days.find((d) => d.on_date === date)}
               items={decidedOn(items, date)}
@@ -200,9 +212,8 @@ function FlightsSheet({
   );
 }
 
-function PapersSheet({ legs, docs }: { legs: TripLeg[]; docs: TripDoc[] }) {
-  const beds = legs.filter((l) => l.lodging_name);
-  if (docs.length === 0 && beds.length === 0) return null;
+function PapersSheet({ stays, docs }: { stays: TripStay[]; docs: TripDoc[] }) {
+  if (docs.length === 0 && stays.length === 0) return null;
 
   return (
     <section className={SHEET}>
@@ -211,28 +222,52 @@ function PapersSheet({ legs, docs }: { legs: TripLeg[]; docs: TripDoc[] }) {
         Numbers you&apos;ll want without a signal
       </p>
 
-      {beds.length > 0 && (
+      {stays.length > 0 && (
         <div className="mt-6">
           <h3 className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-primary">
             Beds
           </h3>
-          <ul className="mt-2 space-y-3">
-            {beds.map((leg) => (
-              <li key={leg.id}>
+          <ul className="mt-2 space-y-4">
+            {stays.map((stay) => (
+              <li key={stay.id} className="break-inside-avoid">
                 <p className="font-garamond text-lg text-foreground">
-                  {leg.lodging_name}
+                  {stay.name}
+                  {stay.name_ja && (
+                    <span className="ml-2 font-jp text-sm">{stay.name_ja}</span>
+                  )}
                   <span className="ml-2 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
-                    {leg.starts_on} → {leg.ends_on}
+                    {formatStayDates(stay)} · {formatNights(nightCount(stay))}
                   </span>
                 </p>
-                {leg.lodging_address && (
-                  <p className="font-garamond text-base text-muted-foreground">
-                    {leg.lodging_address}
+                {/* The Japanese address is the one to show a driver, so it
+                    leads and prints larger. */}
+                {stay.address_ja && (
+                  <p className="font-jp text-base text-foreground">
+                    {stay.address_ja}
                   </p>
                 )}
-                {leg.lodging_confirmation && (
-                  <p className="font-mono text-xs text-foreground tabular-nums slashed-zero">
-                    {leg.lodging_confirmation}
+                {stay.address && (
+                  <p className="font-garamond text-base text-muted-foreground">
+                    {stay.address}
+                  </p>
+                )}
+                <p className="font-mono text-xs text-foreground tabular-nums slashed-zero">
+                  {[
+                    stay.phone && `Tel ${stay.phone}`,
+                    stay.confirmation && `Conf ${stay.confirmation}`,
+                    stay.check_in_time &&
+                      `In ${stay.check_in_time.slice(0, 5)}`,
+                    stay.check_out_time &&
+                      `Out ${stay.check_out_time.slice(0, 5)}`,
+                    deskCashYen(stay) > 0 &&
+                      `${formatYen(deskCashYen(stay))} at the desk`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+                {stay.getting_there && (
+                  <p className="font-garamond text-sm text-muted-foreground">
+                    {stay.getting_there}
                   </p>
                 )}
               </li>
@@ -277,6 +312,8 @@ function PapersSheet({ legs, docs }: { legs: TripLeg[]; docs: TripDoc[] }) {
 function DaySheet({
   date,
   leg,
+  bed,
+  checkingIn,
   note,
   items,
   docs,
@@ -285,12 +322,16 @@ function DaySheet({
   rate: Rate;
   date: string;
   leg?: TripLeg;
+  bed?: TripStay;
+  checkingIn?: TripStay;
   note?: TripDay;
   items: TripItem[];
   docs: TripDoc[];
 }) {
   const day = parseDay(date);
-  const cash = cashYen(items, rate);
+  // A stay paid at the desk is cash on the day you check in.
+  const cash =
+    cashYen(items, rate) + (checkingIn ? deskCashYen(checkingIn) : 0);
 
   return (
     <section className={SHEET}>
@@ -310,9 +351,17 @@ function DaySheet({
         </p>
       </div>
 
-      {(leg?.lodging_name || cash > 0) && (
+      {(bed || cash > 0) && (
         <p className="mt-3 flex flex-wrap gap-x-4 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
-          {leg?.lodging_name && <span>Bed: {leg.lodging_name}</span>}
+          {bed && (
+            <span>
+              {checkingIn === bed ? "Check in: " : "Bed: "}
+              {bed.name}
+              {checkingIn === bed &&
+                bed.check_in_time &&
+                ` from ${bed.check_in_time.slice(0, 5)}`}
+            </span>
+          )}
           {cash > 0 && <span>Cash on you: {formatYen(cash)}</span>}
         </p>
       )}

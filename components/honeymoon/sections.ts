@@ -1,4 +1,5 @@
 import {
+  BedDouble,
   LayoutGrid,
   Plane,
   Printer,
@@ -26,6 +27,7 @@ export type Section = {
 export const SECTIONS: Section[] = [
   { href: "/honeymoon", label: "Board", icon: LayoutGrid, exact: true },
   { href: "/honeymoon/flights", label: "Flights", icon: Plane },
+  { href: "/honeymoon/lodging", label: "Lodging", icon: BedDouble },
   { href: "/honeymoon/itinerary", label: "Itinerary", icon: ScrollText },
   { href: "/honeymoon/pocket", label: "Pocket", icon: Printer },
 ];

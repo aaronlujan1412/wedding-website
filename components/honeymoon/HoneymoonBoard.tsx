@@ -35,6 +35,7 @@ import { LegDialog, type LegDraft } from "./LegDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { RateProvider } from "./RateContext";
 import { flightsOnDay } from "./flights";
+import { staysIn } from "./stays";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { TripDocsPanel } from "./TripDocsPanel";
 import {
@@ -62,7 +63,7 @@ import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
 const COLUMN = "19rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
-  const { legs, days: dayNotes, docs, rate } = board;
+  const { legs, days: dayNotes, docs, stays, rate } = board;
 
   // Local mirror, so a drag lands instantly instead of waiting on the round
   // trip. When the server action revalidates and new rows arrive, adopt them
@@ -113,14 +114,17 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const suggested = items.filter(
     (i) => i.lane !== "decided" && i.on_date !== null,
   );
-  // Flights count toward the trip total like any other booked cost.
+  // Flights and agreed stays count toward the trip total like any other cost.
   const spend =
-    sumYen(decided, rate) + sumYen(docs, rate) + sumYen(board.flights, rate);
+    sumYen(decided, rate) +
+    sumYen(docs, rate) +
+    sumYen(board.flights, rate) +
+    sumYen(staysIn(stays, "decided"), rate);
 
   /**
    * Adopting a leg into Decided. If nothing in Decided is on those dates it just
    * happens; if something would be replaced or shortened, say what first —
-   * that's the other person's lodging details about to be overwritten.
+   * that's the other person's plan about to be overwritten.
    */
   function requestAdoptLeg(leg: TripLeg) {
     const run = () =>
@@ -154,8 +158,6 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               {replaced
                 .map((l) => `${l.name} (${formatLegDates(l)})`)
                 .join(", ")}
-              {replaced.some((l) => l.lodging_name) &&
-                ", including its lodging details"}
               .
             </p>
           )}
