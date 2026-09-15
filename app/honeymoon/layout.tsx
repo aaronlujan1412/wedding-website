@@ -11,12 +11,14 @@ export default function HoneymoonLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="px-6 pt-36 pb-24 print:px-0 print:pt-0 print:pb-0">
+    // On a phone the bottom tab bar takes the space the tabs had, so the
+    // header shrinks and the page leaves room at the bottom for the bar.
+    <div className="px-4 pt-28 pb-32 sm:px-6 sm:pt-36 sm:pb-24 print:px-0 print:pt-0 print:pb-0">
       <header className="mx-auto max-w-[110rem] text-center print:hidden">
-        <p className="font-raleway text-xs uppercase tracking-[0.2em] text-muted-foreground sm:tracking-[0.3em]">
+        <p className="font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground sm:text-xs sm:tracking-[0.3em]">
           Back of house · just the two of us
         </p>
-        <h1 className="mt-1 font-corinthia text-7xl leading-none text-pop md:text-8xl">
+        <h1 className="mt-1 font-corinthia text-6xl leading-none text-pop sm:text-7xl md:text-8xl">
           Honeymoon
         </h1>
         <SectionTabs />
