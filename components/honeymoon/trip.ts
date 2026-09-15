@@ -643,3 +643,20 @@ export function itemsInCell(
 export function decidedOn(items: TripItem[], date: string): TripItem[] {
   return itemsInCell(items, "decided", date);
 }
+
+/**
+ * Where a card lands when nudged a day left or right: a trip day, `null` for
+ * its pile (nudging left off the first day), or `undefined` when there's
+ * nowhere to go. A card in a pile nudged right lands on the first day.
+ */
+export function nudgeTarget(
+  item: TripItem,
+  delta: number,
+  days: string[],
+): string | null | undefined {
+  const index = item.on_date ? days.indexOf(item.on_date) : -1;
+  if (index === -1) return delta < 0 || days.length === 0 ? undefined : days[0];
+  const next = index + delta;
+  if (next >= days.length) return undefined;
+  return next < 0 ? null : days[next];
+}

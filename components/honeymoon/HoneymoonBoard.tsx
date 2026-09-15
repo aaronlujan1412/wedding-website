@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useRef, useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -23,6 +24,7 @@ import {
   sortDayByTime,
 } from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
+import { BoardDayView, PILES } from "./BoardDayView";
 import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
 import { DayRibbon, RIBBON_PREFIX } from "./DayRibbon";
@@ -51,7 +53,9 @@ import {
   itemsIn,
   itemsInCell,
   legsIn,
+  nudgeTarget,
   parseCell,
+  parseDay,
   positionBetween,
   sumYen,
   todayISO,
@@ -81,10 +85,29 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const [noteDate, setNoteDate] = useState<string | null>(null);
   const [legDraft, setLegDraft] = useState<LegDraft | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
-  const [notice, setNotice] = useState<{
+  const [notice, setNoticeState] = useState<{
     tone: "ok" | "error";
     text: string;
+    /** On a phone, a "Go" button to the day the card just moved to. */
+    goTo?: string;
   } | null>(null);
+  // On a phone the notice is a toast over the page, so a success clears itself.
+  // Errors stay until dismissed.
+  const noticeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function setNotice(next: typeof notice) {
+    if (noticeTimer.current) clearTimeout(noticeTimer.current);
+    setNoticeState(next);
+    if (next?.tone === "ok") {
+      noticeTimer.current = setTimeout(() => setNoticeState(null), 5000);
+    }
+  }
+
+  // The phone board shows one day at a time, kept in the URL so a refresh or
+  // the back button lands on the same page.
+  const searchParams = useSearchParams();
+  const [mobileDay, setMobileDay] = useState(
+    () => searchParams.get("day") ?? "",
+  );
   const [activeLegId, setActiveLegId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [, startTransition] = useTransition();
@@ -100,6 +123,16 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
   const today = todayISO();
   const allDays = useMemo(() => tripDays(legs), [legs]);
+  const dayShown =
+    mobileDay === PILES || allDays.includes(mobileDay)
+      ? mobileDay
+      : allDays.includes(today)
+        ? today
+        : (allDays[0] ?? PILES);
+  function showDay(day: string) {
+    setMobileDay(day);
+    window.history.replaceState(null, "", `?day=${day}`);
+  }
   const dayLookup = useMemo(() => new Set(allDays), [allDays]);
 
   // Columns span every day any lane's route covers, so a proposed extra night
@@ -387,19 +420,24 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const actions: CardActions = {
     onEdit: (item) => setDraft({ item, lane: item.lane, onDate: item.on_date }),
     onNudge: (item, delta) => {
-      const index = item.on_date ? allDays.indexOf(item.on_date) : -1;
-      let target: string | null;
-
-      if (index === -1) {
-        if (delta < 0 || allDays.length === 0) return;
-        target = allDays[0];
-      } else {
-        const next = index + delta;
-        if (next >= allDays.length) return;
-        target = next < 0 ? null : allDays[next];
-      }
-
+      const target = nudgeTarget(item, delta, allDays);
+      if (target === undefined) return;
       sendTo(item, item.lane, target);
+      // The phone board shows one day, so a nudge sends the card out of view.
+      // Say where it went, with a way to follow it.
+      setNotice({
+        tone: "ok",
+        text: `${item.title} → ${
+          target
+            ? parseDay(target).toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+              })
+            : "the pile"
+        }`,
+        goTo: target ?? PILES,
+      });
     },
     onMoveLane: (item, lane) => sendTo(item, lane, item.on_date),
     onCopy: (item, lane) =>
@@ -408,7 +446,10 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         setNotice(
           result.error
             ? { tone: "error", text: result.error }
-            : { tone: "ok", text: `Copied ${item.title} to ${LANES[lane].label}.` },
+            : {
+                tone: "ok",
+                text: `Copied ${item.title} to ${LANES[lane].label}.`,
+              },
         );
       }),
   };
@@ -427,9 +468,14 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   return (
     <RateProvider rate={rate}>
       <main className="mx-auto mt-6 max-w-[110rem]">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2">
-          <p className="font-garamond text-xl italic text-muted-foreground">
-            Argue in your own row. Agree by dragging it up.
+        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2 max-lg:mb-4">
+          <p className="font-garamond text-xl italic text-muted-foreground max-lg:text-lg max-lg:leading-snug">
+            <span className="max-lg:hidden">
+              Argue in your own row. Agree by dragging it up.
+            </span>
+            <span className="lg:hidden">
+              Argue in your own lane. Agree with the arrow.
+            </span>
           </p>
           <div className="text-right">
             <dl className="flex flex-wrap justify-end gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
@@ -457,7 +503,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         </div>
 
         {/* Legs */}
-        <div className="flex flex-wrap items-center gap-2 border-y border-border py-3">
+        <div className="flex flex-wrap items-center gap-2 border-y border-border py-3 max-lg:hidden">
           <LegPill
             active={activeLegId === null}
             onClick={() => setActiveLegId(null)}
@@ -508,12 +554,27 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
             role={notice.tone === "error" ? "alert" : "status"}
             className={cn(
               "mt-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2 font-raleway text-sm",
+              // A toast above the tab bar on a phone, where the top of the
+              // page is usually scrolled away.
+              "max-lg:fixed max-lg:inset-x-4 max-lg:bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] max-lg:z-40 max-lg:mt-0 max-lg:py-3 max-lg:shadow-lg sm:max-lg:bottom-6",
               notice.tone === "error"
-                ? "border-destructive/40 bg-destructive/10 text-destructive"
-                : "border-primary/30 bg-primary/5 text-primary",
+                ? "border-destructive/40 bg-destructive/10 text-destructive max-lg:bg-card"
+                : "border-primary/30 bg-primary/5 text-primary max-lg:bg-card",
             )}
           >
-            {notice.text}
+            <span className="min-w-0 flex-1">{notice.text}</span>
+            {notice.goTo && notice.goTo !== dayShown && (
+              <button
+                type="button"
+                onClick={() => {
+                  showDay(notice.goTo!);
+                  setNotice(null);
+                }}
+                className="font-raleway text-[0.65rem] font-semibold uppercase tracking-[0.2em] underline underline-offset-4 lg:hidden"
+              >
+                Go
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setNotice(null)}
@@ -530,123 +591,157 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
             onAddLeg={() => setLegDraft({ leg: null, lane: "decided" })}
           />
         ) : (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCorners}
-            onDragStart={handleDragStart}
-            onDragOver={handleDragOver}
-            onDragEnd={handleDragEnd}
-            onDragCancel={() => setActiveId(null)}
-          >
-            <div className="mt-4">
-              <DayRibbon
-                days={allDays}
-                legs={decidedLegs}
-                items={decided}
-                activeLegId={activeLegId}
-                today={today}
-              />
-            </div>
+          <>
+            <BoardDayView
+              selected={dayShown}
+              onSelect={showDay}
+              days={allDays}
+              legs={legs}
+              stays={stays}
+              items={items}
+              dayNotes={dayNotes}
+              flights={board.flights}
+              today={today}
+              actions={actions}
+              onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+              onEditLeg={(leg) => setLegDraft({ leg, lane: leg.lane })}
+              onCreateLeg={(l, from, to) =>
+                setLegDraft({ leg: null, lane: l, from, to })
+              }
+              onAdoptLeg={requestAdoptLeg}
+              onAdoptRoute={requestAdoptRoute}
+              onEditNote={setNoteDate}
+              onSortByTime={(d) =>
+                startTransition(async () => {
+                  await sortDayByTime(d, "decided");
+                })
+              }
+            />
+            <div className="max-lg:hidden">
+              <DndContext
+                // A fixed id: dnd-kit otherwise numbers its aria ids from a counter
+                // that keeps climbing on the server across requests, so the HTML and
+                // the client disagree and hydration complains.
+                id="honeymoon-board"
+                sensors={sensors}
+                collisionDetection={closestCorners}
+                onDragStart={handleDragStart}
+                onDragOver={handleDragOver}
+                onDragEnd={handleDragEnd}
+                onDragCancel={() => setActiveId(null)}
+              >
+                <div className="mt-4">
+                  <DayRibbon
+                    days={allDays}
+                    legs={decidedLegs}
+                    items={decided}
+                    activeLegId={activeLegId}
+                    today={today}
+                  />
+                </div>
 
-            {/* One grid, three rows. Horizontal scroll moves all three lanes
+                {/* One grid, three rows. Horizontal scroll moves all three lanes
               together, which is the point — a day's three cells must always
               line up. */}
-            <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
-              <div
-                className="grid"
-                style={{ gridTemplateColumns: gridColumns }}
-              >
-                <div
-                  style={{ gridRow: 1, gridColumn: 1 }}
-                  className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5"
-                >
-                  <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
-                    Lanes
-                  </p>
-                  <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
-                    Only the top row prints.
-                  </p>
-                </div>
-                {visibleDays.map((date, column) => (
-                  <DayHeader
-                    key={date}
-                    style={{ gridRow: 1, gridColumn: column + 2 }}
-                    date={date}
-                    note={dayNotes.find((d) => d.on_date === date)}
-                    legs={legs}
-                    decided={itemsInCell(items, "decided", date)}
-                    flights={flightsOnDay(board.flights, date)}
-                    isToday={date === today}
-                    onEditNote={setNoteDate}
-                    onSortByTime={(d) =>
-                      startTransition(async () => {
-                        await sortDayByTime(d, "decided");
-                      })
-                    }
-                  />
-                ))}
-
-                {LANE_ORDER.map((lane, laneIndex) => (
-                  <Fragment key={lane}>
-                    <LanePile
-                      style={{
-                        gridRow: `${bandRow(laneIndex)} / span 2`,
-                        gridColumn: 1,
-                      }}
-                      lane={lane}
-                      items={itemsInCell(items, lane, null)}
-                      query={query}
-                      actions={actions}
-                      legCount={legsIn(legs, lane).length}
-                      onAdoptRoute={requestAdoptRoute}
-                      onAdd={(l, d) =>
-                        setDraft({ item: null, lane: l, onDate: d })
-                      }
-                    />
-                    <LegBand
-                      lane={lane}
-                      legs={legs}
-                      days={visibleDays}
-                      row={bandRow(laneIndex)}
-                      onEdit={(leg) => setLegDraft({ leg, lane: leg.lane })}
-                      onCreate={(l, from, to) =>
-                        setLegDraft({ leg: null, lane: l, from, to })
-                      }
-                      onAdopt={requestAdoptLeg}
-                    />
+                <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
+                  <div
+                    className="grid"
+                    style={{ gridTemplateColumns: gridColumns }}
+                  >
+                    <div
+                      style={{ gridRow: 1, gridColumn: 1 }}
+                      className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5"
+                    >
+                      <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
+                        Lanes
+                      </p>
+                      <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
+                        Only the top row prints.
+                      </p>
+                    </div>
                     {visibleDays.map((date, column) => (
-                      <LaneCell
+                      <DayHeader
                         key={date}
-                        style={{
-                          gridRow: cellRow(laneIndex),
-                          gridColumn: column + 2,
-                        }}
-                        lane={lane}
+                        style={{ gridRow: 1, gridColumn: column + 2 }}
                         date={date}
-                        items={itemsInCell(items, lane, date)}
+                        note={dayNotes.find((d) => d.on_date === date)}
+                        legs={legs}
+                        decided={itemsInCell(items, "decided", date)}
+                        flights={flightsOnDay(board.flights, date)}
                         isToday={date === today}
-                        actions={actions}
-                        onAdd={(l, d) =>
-                          setDraft({ item: null, lane: l, onDate: d })
+                        onEditNote={setNoteDate}
+                        onSortByTime={(d) =>
+                          startTransition(async () => {
+                            await sortDayByTime(d, "decided");
+                          })
                         }
                       />
                     ))}
-                  </Fragment>
-                ))}
-              </div>
-            </div>
 
-            <DragOverlay>
-              {dragging ? (
-                <div className="w-[15rem]">
-                  <ItemCardFace item={dragging} overlay />
+                    {LANE_ORDER.map((lane, laneIndex) => (
+                      <Fragment key={lane}>
+                        <LanePile
+                          style={{
+                            gridRow: `${bandRow(laneIndex)} / span 2`,
+                            gridColumn: 1,
+                          }}
+                          lane={lane}
+                          items={itemsInCell(items, lane, null)}
+                          query={query}
+                          actions={actions}
+                          legCount={legsIn(legs, lane).length}
+                          onAdoptRoute={requestAdoptRoute}
+                          onAdd={(l, d) =>
+                            setDraft({ item: null, lane: l, onDate: d })
+                          }
+                        />
+                        <LegBand
+                          lane={lane}
+                          legs={legs}
+                          stays={stays}
+                          days={visibleDays}
+                          row={bandRow(laneIndex)}
+                          onEdit={(leg) => setLegDraft({ leg, lane: leg.lane })}
+                          onCreate={(l, from, to) =>
+                            setLegDraft({ leg: null, lane: l, from, to })
+                          }
+                          onAdopt={requestAdoptLeg}
+                        />
+                        {visibleDays.map((date, column) => (
+                          <LaneCell
+                            key={date}
+                            style={{
+                              gridRow: cellRow(laneIndex),
+                              gridColumn: column + 2,
+                            }}
+                            lane={lane}
+                            date={date}
+                            items={itemsInCell(items, lane, date)}
+                            isToday={date === today}
+                            actions={actions}
+                            onAdd={(l, d) =>
+                              setDraft({ item: null, lane: l, onDate: d })
+                            }
+                          />
+                        ))}
+                      </Fragment>
+                    ))}
+                  </div>
                 </div>
-              ) : null}
-            </DragOverlay>
-          </DndContext>
+
+                <DragOverlay>
+                  {dragging ? (
+                    <div className="w-[15rem]">
+                      <ItemCardFace item={dragging} overlay />
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
+            </div>
+          </>
         )}
 
-        <TripDocsPanel docs={docs} legs={decidedLegs} />
+        <TripDocsPanel docs={docs} />
 
         <ItemDialog
           draft={draft}

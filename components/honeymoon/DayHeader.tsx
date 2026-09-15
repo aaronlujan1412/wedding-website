@@ -43,8 +43,11 @@ export function DayHeader({
   onSortByTime,
   flights = [],
   style,
+  variant = "cell",
 }: {
   style?: React.CSSProperties;
+  /** A sticky grid cell on the desktop board, or the top of a day page on a phone. */
+  variant?: "cell" | "page";
   /** Flights leaving or landing on this date, from `flightsOnDay`. */
   flights?: ReturnType<typeof flightsOnDay>;
   date: string;
@@ -70,17 +73,41 @@ export function DayHeader({
     <div
       style={style}
       className={cn(
-        "sticky top-0 z-30 border-r border-b border-border bg-background px-3 py-2.5",
-        isToday && "bg-secondary",
+        variant === "cell" &&
+          "sticky top-0 z-30 border-r border-b border-border bg-background px-3 py-2.5",
+        variant === "cell" && isToday && "bg-secondary",
       )}
     >
-      <div className="flex items-baseline justify-between gap-2">
-        <p className="font-mono text-xs tracking-wider text-foreground tabular-nums slashed-zero">
-          <span className="uppercase text-muted-foreground">
-            {day.toLocaleDateString("en-US", { weekday: "short" })}
-          </span>{" "}
-          {day.toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-        </p>
+      <div
+        className={cn(
+          "flex justify-between gap-2",
+          variant === "cell" ? "items-baseline" : "items-start",
+        )}
+      >
+        {variant === "cell" ? (
+          <p className="font-mono text-xs tracking-wider text-foreground tabular-nums slashed-zero">
+            <span className="uppercase text-muted-foreground">
+              {day.toLocaleDateString("en-US", { weekday: "short" })}
+            </span>{" "}
+            {day.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+            })}
+          </p>
+        ) : (
+          <div>
+            <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-primary">
+              {day.toLocaleDateString("en-US", { weekday: "long" })}
+              {isToday && " · today"}
+            </p>
+            <h2 className="font-garamond text-3xl leading-tight text-foreground">
+              {day.toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+              })}
+            </h2>
+          </div>
+        )}
         <div className="flex items-center gap-0.5">
           <IconButton label="Day note" onClick={() => onEditNote(date)}>
             <NotebookPen className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -94,7 +121,12 @@ export function DayHeader({
         </div>
       </div>
 
-      <p className="mt-0.5 truncate font-garamond text-lg leading-tight text-foreground">
+      <p
+        className={cn(
+          "mt-0.5 font-garamond leading-tight text-foreground",
+          variant === "cell" ? "truncate text-lg" : "text-xl",
+        )}
+      >
         {note?.title || leg?.name || "No agreed leg yet"}
         {leg?.name_ja && (
           <span className="ml-1.5 font-jp text-xs text-muted-foreground">
