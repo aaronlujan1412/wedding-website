@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { Check, Copy, ExternalLink, Pencil, Plane, Plus } from "lucide-react";
+import { useState, useTransition } from "react";
+import { ExternalLink, Pencil, Plane, Plus } from "lucide-react";
 import { setFlightGate } from "@/app/actions/flights";
 import { cn } from "@/lib/utils";
 import { HOME_TZ } from "./airports";
 import { Checklist } from "./Checklist";
+import { CopyCode, Fact, Missing } from "./Facts";
 import { FlightDialog, type FlightDraft } from "./FlightDialog";
 import {
   JOURNEY_LABELS,
@@ -28,6 +29,7 @@ import { RateProvider } from "./RateContext";
 import { RouteLine } from "./RouteLine";
 import { LANES, PLANNERS } from "./trip";
 import { useLiveRefresh } from "./useLiveRefresh";
+import { useNow } from "./useNow";
 import type { ChecklistItem, Rate, TripFlight } from "./types";
 
 const CABIN_LABELS: Record<string, string> = {
@@ -59,12 +61,7 @@ export function FlightsView({
   const [draft, setDraft] = useState<FlightDraft | null>(null);
   useLiveRefresh(draft !== null);
 
-  // Start from the server's clock so the first render matches, then tick.
-  const [now, setNow] = useState(renderedAt);
-  useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 30_000);
-    return () => clearInterval(timer);
-  }, []);
+  const now = useNow(renderedAt);
 
   const journeys = groupJourneys(flights);
   const next = nextFlight(flights, now);
@@ -329,87 +326,6 @@ function NextFlight({
         </a>
       </div>
     </section>
-  );
-}
-
-function Fact({
-  label,
-  wide = false,
-  children,
-}: {
-  label: string;
-  wide?: boolean;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className={cn("bg-card px-5 py-4 sm:px-8", wide && "sm:col-span-2")}>
-      <dt className="font-raleway text-[0.6rem] uppercase tracking-[0.25em] text-muted-foreground">
-        {label}
-      </dt>
-      <dd className="mt-1 text-foreground">{children}</dd>
-    </div>
-  );
-}
-
-function Missing({
-  onAdd,
-  children,
-}: {
-  onAdd: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onAdd}
-      className="font-garamond text-lg text-muted-foreground underline decoration-dashed underline-offset-4 hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-    >
-      {children}
-    </button>
-  );
-}
-
-/** Big enough to read out to a check-in agent, one tap to paste into an app. */
-function CopyCode({ code, size = "lg" }: { code: string; size?: "lg" | "sm" }) {
-  const [copied, setCopied] = useState(false);
-
-  return (
-    <button
-      type="button"
-      onClick={async () => {
-        try {
-          await navigator.clipboard.writeText(code);
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1600);
-        } catch {
-          // No clipboard (old browser, or not a secure context): the code is
-          // still right there on screen to read out.
-        }
-      }}
-      aria-label={`Copy confirmation code ${code.split("").join(" ")}`}
-      className="group inline-flex items-center gap-2 rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-    >
-      <span
-        className={cn(
-          "font-mono font-medium tracking-[0.15em] tabular-nums slashed-zero",
-          size === "lg" ? "text-2xl" : "text-sm",
-        )}
-      >
-        {code}
-      </span>
-      <span
-        aria-live="polite"
-        className="flex items-center gap-1 font-raleway text-[0.6rem] uppercase tracking-[0.2em] text-muted-foreground group-hover:text-primary"
-      >
-        {copied ? (
-          <>
-            <Check className="h-3 w-3" strokeWidth={2} /> Copied
-          </>
-        ) : (
-          <Copy className="h-3 w-3" strokeWidth={1.5} />
-        )}
-      </span>
-    </button>
   );
 }
 
