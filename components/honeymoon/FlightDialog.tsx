@@ -19,7 +19,15 @@ import {
 import { cn } from "@/lib/utils";
 import { AIRPORTS, airport } from "./airports";
 import { CostField } from "./CostField";
-import { Field, Fieldset, SelectField, TextArea, TextInput } from "./FormParts";
+import {
+  SHEET,
+  SHEET_FOOTER,
+  Field,
+  Fieldset,
+  SelectField,
+  TextArea,
+  TextInput,
+} from "./FormParts";
 import { formatSpan, utcToZoned, zonedToUtc } from "./flights";
 import { costToInput, parseCostInput } from "./trip";
 import type { Cabin, Currency, TripFlight } from "./types";
@@ -150,7 +158,7 @@ export function FlightDialog({
 }) {
   return (
     <Dialog open={draft !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[88vh] overflow-y-auto bg-card sm:max-w-2xl">
+      <DialogContent className={cn(SHEET, "sm:max-h-[88vh] sm:max-w-2xl")}>
         {draft && (
           <FlightForm
             key={draft.flight?.id ?? "new"}
@@ -374,7 +382,7 @@ function FlightForm({
           </p>
         )}
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className={cn(SHEET_FOOTER, "sm:justify-between")}>
           {flight ? (
             <Button
               type="button"
@@ -458,7 +466,7 @@ const ZONES: string[] =
     : [];
 
 const nativeSelect =
-  "h-9 w-full rounded-md border border-input bg-background px-2 font-raleway text-sm text-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "h-10 w-full rounded-md border border-input bg-background px-2 font-raleway text-base text-foreground sm:h-9 sm:text-sm focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 function SideFields({
   legend,

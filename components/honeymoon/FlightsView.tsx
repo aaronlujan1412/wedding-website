@@ -418,14 +418,14 @@ function GateEditor({ flight }: { flight: TripFlight }) {
         placeholder="Terminal"
         aria-label="Terminal"
         autoFocus
-        className="h-8 w-24 rounded-md border border-input bg-background px-2 font-mono text-sm focus-visible:border-ring focus-visible:outline-none"
+        className="h-8 w-24 rounded-md border border-input bg-background px-2 font-mono text-base sm:text-sm focus-visible:border-ring focus-visible:outline-none"
       />
       <input
         value={gate}
         onChange={(e) => setGate(e.target.value)}
         placeholder="Gate"
         aria-label="Gate"
-        className="h-8 w-20 rounded-md border border-input bg-background px-2 font-mono text-sm focus-visible:border-ring focus-visible:outline-none"
+        className="h-8 w-20 rounded-md border border-input bg-background px-2 font-mono text-base sm:text-sm focus-visible:border-ring focus-visible:outline-none"
       />
       <button
         type="submit"

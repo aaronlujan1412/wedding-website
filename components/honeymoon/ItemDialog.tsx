@@ -11,9 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { createItem, deleteItem, updateItem } from "@/app/actions/honeymoon";
 import type { ItemInput } from "@/app/actions/honeymoon";
 import {
+  SHEET,
+  SHEET_FOOTER,
   Field,
   Fieldset,
   SelectField,
@@ -131,7 +134,7 @@ export function ItemDialog({
 }) {
   return (
     <Dialog open={draft !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto bg-card sm:max-w-xl">
+      <DialogContent className={cn(SHEET, "sm:max-h-[85vh] sm:max-w-xl")}>
         {/* Keyed on the card being edited, so opening a different one remounts
             the form with fresh state instead of syncing it out of an effect. */}
         {draft && (
@@ -434,7 +437,7 @@ function ItemForm({
           </p>
         )}
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className={cn(SHEET_FOOTER, "sm:justify-between")}>
           {existing ? (
             <Button
               type="button"

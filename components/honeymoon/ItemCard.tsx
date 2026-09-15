@@ -183,7 +183,7 @@ export function ItemCardFace({
         )}
 
         {actions && !overlay && (
-          <div className="mt-1.5 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100">
+          <div className="mt-1.5 flex gap-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 max-md:opacity-100 pointer-coarse:gap-2 pointer-coarse:opacity-100">
             <NudgeButton
               label="Move a day earlier"
               onClick={() => actions.onNudge(item, -1)}
@@ -254,7 +254,7 @@ function NudgeButton({
       onClick={onClick}
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
-        "flex h-5 w-5 items-center justify-center rounded-sm border transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        "flex h-5 w-5 items-center justify-center rounded-sm border transition-colors pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:rounded-md [&_svg]:pointer-coarse:h-4 [&_svg]:pointer-coarse:w-4 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
         accent
           ? "border-primary/60 text-primary hover:bg-primary hover:text-primary-foreground"
           : "border-border text-muted-foreground hover:border-primary hover:text-primary",

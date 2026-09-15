@@ -11,8 +11,17 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { deleteLeg, saveLeg } from "@/app/actions/honeymoon";
-import { Field, Fieldset, SelectField, TextArea, TextInput } from "./FormParts";
+import {
+  SHEET,
+  SHEET_FOOTER,
+  Field,
+  Fieldset,
+  SelectField,
+  TextArea,
+  TextInput,
+} from "./FormParts";
 import { LANES, LANE_ORDER } from "./trip";
 import type { Lane, TripLeg } from "./types";
 
@@ -59,7 +68,7 @@ export function LegDialog({
 }) {
   return (
     <Dialog open={draft !== null} onOpenChange={(next) => !next && onClose()}>
-      <DialogContent className="max-h-[85vh] overflow-y-auto bg-card sm:max-w-lg">
+      <DialogContent className={cn(SHEET, "sm:max-h-[85vh] sm:max-w-lg")}>
         {/* Keyed on the leg, so editing a different one remounts the form. */}
         {draft && (
           <LegForm
@@ -193,7 +202,7 @@ function LegForm({
           </p>
         )}
 
-        <DialogFooter className="gap-2 sm:justify-between">
+        <DialogFooter className={cn(SHEET_FOOTER, "sm:justify-between")}>
           <div className="flex gap-2">
             {leg && (
               <Button

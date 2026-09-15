@@ -10,8 +10,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { saveDayNote } from "@/app/actions/honeymoon";
-import { Field, TextArea, TextInput } from "./FormParts";
+import { SHEET, SHEET_FOOTER, Field, TextArea, TextInput } from "./FormParts";
 import { formatDayLong } from "./trip";
 import type { TripDay } from "./types";
 
@@ -27,7 +28,7 @@ export function DayNoteDialog({
 }) {
   return (
     <Dialog open={date !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-card sm:max-w-md">
+      <DialogContent className={cn(SHEET, "sm:max-w-md")}>
         {/* Keyed on the day, so switching days remounts with that day's note. */}
         {date && (
           <NoteForm
@@ -86,10 +87,7 @@ function NoteForm({
           />
         </Field>
         <Field label="Note">
-          <TextArea
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-          />
+          <TextArea value={note} onChange={(e) => setNote(e.target.value)} />
         </Field>
 
         {error && (
@@ -101,7 +99,7 @@ function NoteForm({
           </p>
         )}
 
-        <DialogFooter className="gap-2">
+        <DialogFooter className={cn(SHEET_FOOTER, "")}>
           <Button
             type="button"
             variant="ghost"

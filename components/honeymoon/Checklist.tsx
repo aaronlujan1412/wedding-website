@@ -108,7 +108,7 @@ export function Checklist({
               aria-label={item.label}
               onClick={() => patch(item.id, { done: !item.done })}
               className={cn(
-                "flex h-5 w-5 flex-none items-center justify-center rounded-sm border transition-colors",
+                "flex h-5 w-5 flex-none items-center justify-center rounded-sm border transition-colors pointer-coarse:h-7 pointer-coarse:w-7",
                 "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                 item.done
                   ? "border-primary bg-primary text-primary-foreground"
@@ -144,7 +144,7 @@ export function Checklist({
               type="button"
               onClick={() => remove(item.id)}
               aria-label={`Remove ${item.label}`}
-              className="flex h-6 w-6 flex-none items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring group-hover:opacity-100 max-md:opacity-100"
+              className="flex h-6 w-6 flex-none items-center justify-center rounded-sm text-muted-foreground opacity-0 transition-opacity hover:text-destructive focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring group-hover:opacity-100 max-md:opacity-100 pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:opacity-100"
             >
               <X className="h-3.5 w-3.5" strokeWidth={2} />
             </button>
@@ -216,7 +216,7 @@ function OwnerTag({
       aria-label={`${label}. Change who has it.`}
       style={accent ? { borderColor: accent, color: accent } : undefined}
       className={cn(
-        "flex h-6 w-6 flex-none items-center justify-center rounded-full border font-raleway text-[0.65rem] font-semibold transition-colors",
+        "flex h-6 w-6 flex-none items-center justify-center rounded-full border font-raleway text-[0.65rem] font-semibold transition-colors pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:text-xs",
         "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
         owner
           ? "bg-background"

@@ -9,6 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { SHEET, SHEET_FOOTER } from "./FormParts";
+import { cn } from "@/lib/utils";
 
 export type ConfirmRequest = {
   title: string;
@@ -32,7 +34,7 @@ export function ConfirmDialog({
 }) {
   return (
     <Dialog open={request !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="bg-card sm:max-w-md">
+      <DialogContent className={cn(SHEET, "sm:max-w-md")}>
         {request && (
           <>
             <DialogHeader>
@@ -45,7 +47,7 @@ export function ConfirmDialog({
                 </div>
               </DialogDescription>
             </DialogHeader>
-            <DialogFooter className="gap-2">
+            <DialogFooter className={cn(SHEET_FOOTER, "")}>
               <Button type="button" variant="ghost" onClick={onClose}>
                 Cancel
               </Button>

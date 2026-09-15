@@ -69,7 +69,7 @@ export function Field({
 }
 
 const controlClass =
-  "h-9 w-full rounded-md border border-input bg-background px-3 font-raleway text-sm text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "h-10 w-full rounded-md border border-input bg-background px-3 font-raleway text-base text-foreground sm:h-9 sm:text-sm placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
 export function TextInput(props: React.ComponentProps<"input">) {
   return <input {...props} className={cn(controlClass, props.className)} />;
@@ -102,7 +102,7 @@ export function SelectField<T extends string>({
 }) {
   return (
     <Select value={value} onValueChange={(v) => onChange(v as T)}>
-      <SelectTrigger className="w-full font-raleway text-sm">
+      <SelectTrigger className="w-full font-raleway text-base max-sm:h-10 sm:text-sm">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       {/* Tailwind v4 doesn't resolve the popover background variable for Radix
@@ -148,3 +148,23 @@ export function Toggle({
     </label>
   );
 }
+
+/**
+ * Every planner dialog is a centred card on a desktop and a sheet from the
+ * bottom on a phone, where it can use the full width and the thumb can reach
+ * it. The content scrolls inside the sheet, and the footer sticks to its
+ * bottom edge so Save is always in reach on a long form — which is why the
+ * sheet has no bottom padding of its own.
+ */
+export const SHEET = cn(
+  "overflow-y-auto overscroll-contain bg-card pb-0",
+  "max-sm:top-auto max-sm:bottom-0 max-sm:left-0 max-sm:max-h-[92dvh] max-sm:max-w-none",
+  "max-sm:translate-x-0 max-sm:translate-y-0 max-sm:rounded-t-2xl max-sm:rounded-b-none max-sm:border-x-0 max-sm:border-b-0",
+  "max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=open]:slide-in-from-bottom max-sm:data-[state=closed]:zoom-out-100 max-sm:data-[state=closed]:slide-out-to-bottom",
+);
+
+export const SHEET_FOOTER = cn(
+  "sticky bottom-0 z-10 -mx-6 gap-2 border-t border-border bg-card px-6 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))]",
+  // On a phone the buttons share the width, so each is a thumb-sized target.
+  "max-sm:[&>button]:h-11 max-sm:[&>div]:flex max-sm:[&>div]:w-full max-sm:[&>div>button]:h-11 max-sm:[&>div>button]:flex-1",
+);
