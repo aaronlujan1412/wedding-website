@@ -50,6 +50,7 @@ const ORDER = [
   "trip_items",
   "trip_docs",
   "trip_flights",
+  "trip_stays",
   "trip_checklist_items",
 ];
 

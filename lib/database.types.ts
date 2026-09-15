@@ -528,12 +528,6 @@ export type Database = {
           ends_on: string
           id: string
           lane: Database["public"]["Enums"]["trip_lane"]
-          lodging_address: string | null
-          lodging_check_in: string | null
-          lodging_check_out: string | null
-          lodging_confirmation: string | null
-          lodging_name: string | null
-          lodging_url: string | null
           name: string
           name_ja: string | null
           note: string | null
@@ -545,12 +539,6 @@ export type Database = {
           ends_on: string
           id?: string
           lane?: Database["public"]["Enums"]["trip_lane"]
-          lodging_address?: string | null
-          lodging_check_in?: string | null
-          lodging_check_out?: string | null
-          lodging_confirmation?: string | null
-          lodging_name?: string | null
-          lodging_url?: string | null
           name: string
           name_ja?: string | null
           note?: string | null
@@ -562,17 +550,113 @@ export type Database = {
           ends_on?: string
           id?: string
           lane?: Database["public"]["Enums"]["trip_lane"]
-          lodging_address?: string | null
-          lodging_check_in?: string | null
-          lodging_check_out?: string | null
-          lodging_confirmation?: string | null
-          lodging_name?: string | null
-          lodging_url?: string | null
           name?: string
           name_ja?: string | null
           note?: string | null
           position?: number
           starts_on?: string
+        }
+        Relationships: []
+      }
+      trip_stays: {
+        Row: {
+          added_by: Database["public"]["Enums"]["trip_planner"]
+          address: string | null
+          address_ja: string | null
+          booking_status: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_time: string | null
+          cancel_by: string | null
+          check_in_on: string
+          check_in_time: string | null
+          check_out_on: string
+          check_out_time: string | null
+          city: string | null
+          confirmation: string | null
+          cost_amount: number | null
+          cost_currency: Database["public"]["Enums"]["trip_currency"]
+          created_at: string
+          desk_cash_yen: number | null
+          dinner_time: string | null
+          forward_bags: boolean
+          getting_there: string | null
+          id: string
+          lane: Database["public"]["Enums"]["trip_lane"]
+          map_url: string | null
+          name: string
+          name_ja: string | null
+          notes: string | null
+          onsen_hours: string | null
+          payment: Database["public"]["Enums"]["trip_stay_payment"] | null
+          phone: string | null
+          tattoos_ok: boolean | null
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          address?: string | null
+          address_ja?: string | null
+          booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_time?: string | null
+          cancel_by?: string | null
+          check_in_on: string
+          check_in_time?: string | null
+          check_out_on: string
+          check_out_time?: string | null
+          city?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          created_at?: string
+          desk_cash_yen?: number | null
+          dinner_time?: string | null
+          forward_bags?: boolean
+          getting_there?: string | null
+          id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
+          map_url?: string | null
+          name: string
+          name_ja?: string | null
+          notes?: string | null
+          onsen_hours?: string | null
+          payment?: Database["public"]["Enums"]["trip_stay_payment"] | null
+          phone?: string | null
+          tattoos_ok?: boolean | null
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          address?: string | null
+          address_ja?: string | null
+          booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_time?: string | null
+          cancel_by?: string | null
+          check_in_on?: string
+          check_in_time?: string | null
+          check_out_on?: string
+          check_out_time?: string | null
+          city?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          created_at?: string
+          desk_cash_yen?: number | null
+          dinner_time?: string | null
+          forward_bags?: boolean
+          getting_there?: string | null
+          id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
+          map_url?: string | null
+          name?: string
+          name_ja?: string | null
+          notes?: string | null
+          onsen_hours?: string | null
+          payment?: Database["public"]["Enums"]["trip_stay_payment"] | null
+          phone?: string | null
+          tattoos_ok?: boolean | null
+          updated_at?: string
+          url?: string | null
         }
         Relationships: []
       }
@@ -601,6 +685,7 @@ export type Database = {
         Args: { p_lane: Database["public"]["Enums"]["trip_lane"] }
         Returns: number
       }
+      adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
       sweep_orphaned_trip_items: { Args: never; Returns: number }
     }
     Enums: {
@@ -627,6 +712,7 @@ export type Database = {
         | "rest"
       trip_lane: "decided" | "savea" | "aaron"
       trip_planner: "aaron" | "savea"
+      trip_stay_payment: "prepaid" | "at_desk"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -782,6 +868,7 @@ export const Constants = {
       ],
       trip_lane: ["decided", "savea", "aaron"],
       trip_planner: ["aaron", "savea"],
+      trip_stay_payment: ["prepaid", "at_desk"],
     },
   },
 } as const

@@ -28,6 +28,7 @@ function refresh() {
   revalidatePath("/honeymoon");
   revalidatePath("/honeymoon/itinerary");
   revalidatePath("/honeymoon/pocket");
+  revalidatePath("/honeymoon/lodging");
   revalidatePath("/hosts");
 }
 
@@ -288,12 +289,6 @@ export type LegInput = {
   name_ja?: string | null;
   starts_on: string;
   ends_on: string;
-  lodging_name?: string | null;
-  lodging_address?: string | null;
-  lodging_url?: string | null;
-  lodging_confirmation?: string | null;
-  lodging_check_in?: string | null;
-  lodging_check_out?: string | null;
   note?: string | null;
 };
 
@@ -304,12 +299,6 @@ function normaliseLeg(input: LegInput) {
     name_ja: blankToNull(input.name_ja),
     starts_on: input.starts_on,
     ends_on: input.ends_on,
-    lodging_name: blankToNull(input.lodging_name),
-    lodging_address: blankToNull(input.lodging_address),
-    lodging_url: blankToNull(input.lodging_url),
-    lodging_confirmation: blankToNull(input.lodging_confirmation),
-    lodging_check_in: blankToNull(input.lodging_check_in),
-    lodging_check_out: blankToNull(input.lodging_check_out),
     note: blankToNull(input.note),
   };
 }

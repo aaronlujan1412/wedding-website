@@ -23,6 +23,7 @@ export const BACKUP_TABLES = [
   "trip_items",
   "trip_docs",
   "trip_flights",
+  "trip_stays",
   "trip_checklist_items",
 ] as const;
 

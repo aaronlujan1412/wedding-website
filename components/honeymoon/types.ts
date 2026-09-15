@@ -5,6 +5,7 @@ export type TripDay = Database["public"]["Tables"]["trip_days"]["Row"];
 export type TripItem = Database["public"]["Tables"]["trip_items"]["Row"];
 export type TripDoc = Database["public"]["Tables"]["trip_docs"]["Row"];
 export type TripFlight = Database["public"]["Tables"]["trip_flights"]["Row"];
+export type TripStay = Database["public"]["Tables"]["trip_stays"]["Row"];
 export type ChecklistItem =
   Database["public"]["Tables"]["trip_checklist_items"]["Row"];
 export type Cabin = Database["public"]["Enums"]["trip_cabin"];
@@ -15,6 +16,7 @@ export type Planner = Database["public"]["Enums"]["trip_planner"];
 export type Lane = Database["public"]["Enums"]["trip_lane"];
 export type DocCategory = Database["public"]["Enums"]["trip_doc_category"];
 export type Currency = Database["public"]["Enums"]["trip_currency"];
+export type StayPayment = Database["public"]["Enums"]["trip_stay_payment"];
 
 /**
  * Yen per US dollar, and where that number came from. `live` is false when the
@@ -30,5 +32,6 @@ export type TripBoard = {
   items: TripItem[];
   docs: TripDoc[];
   flights: TripFlight[];
+  stays: TripStay[];
   rate: Rate;
 };

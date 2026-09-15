@@ -39,6 +39,7 @@ const TABLES = [
   "trip_items",
   "trip_docs",
   "trip_flights",
+  "trip_stays",
   "trip_checklist_items",
 ];
 /** PostgREST refuses an unfiltered delete; "key is not null" matches every
@@ -49,6 +50,7 @@ const KEYS = {
   trip_items: "id",
   trip_docs: "id",
   trip_flights: "id",
+  trip_stays: "id",
   trip_checklist_items: "id",
 };
 const BACKUP_DIR = "supabase/.backups";
@@ -185,9 +187,6 @@ const decidedLegs = [
     starts_on: "2026-12-05",
     ends_on: "2026-12-10",
     position: 1,
-    lodging_name: "Hotel Ryumeikan",
-    lodging_check_in: "15:00",
-    lodging_confirmation: "RMK-88413",
   },
   {
     name: "Hakone",
@@ -195,8 +194,6 @@ const decidedLegs = [
     starts_on: "2026-12-11",
     ends_on: "2026-12-12",
     position: 2,
-    lodging_name: "Gora Kadan",
-    lodging_check_in: "15:00",
   },
   {
     name: "Kyoto",
@@ -204,8 +201,6 @@ const decidedLegs = [
     starts_on: "2026-12-13",
     ends_on: "2026-12-18",
     position: 3,
-    lodging_name: "Ryokan Yachiyo",
-    lodging_check_in: "15:00",
   },
   {
     name: "Osaka",
@@ -232,21 +227,18 @@ const saveaLegs = [
     name_ja: "東京",
     starts_on: "2026-12-05",
     ends_on: "2026-12-11",
-    lodging_name: "Hotel Ryumeikan",
   },
   {
     name: "Hakone",
     name_ja: "箱根",
     starts_on: "2026-12-12",
     ends_on: "2026-12-14",
-    lodging_name: "Gora Kadan",
   },
   {
     name: "Kyoto",
     name_ja: "京都",
     starts_on: "2026-12-15",
     ends_on: "2026-12-22",
-    lodging_name: "Ryokan Yachiyo",
   },
 ];
 const aaronLegs = [
@@ -255,14 +247,12 @@ const aaronLegs = [
     name_ja: "東京",
     starts_on: "2026-12-05",
     ends_on: "2026-12-08",
-    lodging_name: "Hotel Ryumeikan",
   },
   {
     name: "Akihabara",
     name_ja: "秋葉原",
     starts_on: "2026-12-09",
     ends_on: "2026-12-11",
-    lodging_name: "Remm Akihabara",
   },
   {
     name: "Kyoto",
@@ -280,9 +270,6 @@ const aaronLegs = [
 
 const LEG_DEFAULTS = {
   name_ja: null,
-  lodging_name: null,
-  lodging_check_in: null,
-  lodging_confirmation: null,
 };
 const legs = [
   ...decidedLegs.map((l) => ({ ...LEG_DEFAULTS, ...l, lane: "decided" })),
@@ -718,5 +705,163 @@ const { error: listError } = await db.from("trip_checklist_items").insert(
   })),
 );
 if (listError) throw listError;
+
+// Stays. Decided sleeps somewhere every night except Osaka, which is the open
+// question: Savea wants to stay on in Kyoto, Aaron wants a hotel in Osaka, and
+// neither has budged. Aaron also fancies two nights in Akihabara over the end
+// of the Ryumeikan booking, so adopting it would show a trim.
+const STAY_DEFAULTS = {
+  lane: "decided",
+  added_by: "aaron",
+  name_ja: null,
+  city: null,
+  check_in_time: null,
+  check_out_time: null,
+  booking_status: "idea",
+  payment: null,
+  cancel_by: null,
+  confirmation: null,
+  url: null,
+  address: null,
+  address_ja: null,
+  phone: null,
+  map_url: null,
+  getting_there: null,
+  breakfast_time: null,
+  dinner_time: null,
+  onsen_hours: null,
+  tattoos_ok: null,
+  forward_bags: false,
+  cost_amount: null,
+  cost_currency: "JPY",
+  desk_cash_yen: null,
+  notes: null,
+};
+const stays = [
+  {
+    name: "Hotel Ryumeikan",
+    name_ja: "ホテル龍名館東京",
+    city: "Tokyo",
+    check_in_on: "2026-12-05",
+    check_out_on: "2026-12-11",
+    booking_status: "booked",
+    payment: "prepaid",
+    cancel_by: "2026-11-28",
+    confirmation: "RMK-88413",
+    address: "1-3-22 Yaesu, Chuo City, Tokyo",
+    address_ja: "東京都中央区八重洲1-3-22",
+    phone: "03-0000-0000",
+    getting_there: "Tokyo Station, Yaesu North exit, four minutes' walk",
+    cost_amount: 132000,
+    cost_currency: "USD",
+    desk_cash_yen: 1200,
+  },
+  {
+    name: "Gora Kadan",
+    name_ja: "強羅花壇",
+    city: "Hakone",
+    check_in_on: "2026-12-11",
+    check_out_on: "2026-12-13",
+    booking_status: "booked",
+    payment: "at_desk",
+    confirmation: "GK-2231",
+    address_ja: "神奈川県足柄下郡箱根町強羅1300",
+    phone: "0460-00-0000",
+    breakfast_time: "08:00",
+    dinner_time: "18:30",
+    onsen_hours: "15:00–24:00, 05:00–10:00",
+    tattoos_ok: false,
+    forward_bags: true,
+    cost_amount: 168000,
+    desk_cash_yen: 300,
+    notes: "Kaiseki dinner in the room. Robes provided — pack light.",
+  },
+  {
+    name: "Ryokan Yachiyo",
+    name_ja: "八千代",
+    city: "Kyoto",
+    check_in_on: "2026-12-13",
+    check_out_on: "2026-12-19",
+    check_in_time: "14:00",
+    check_out_time: "10:00",
+    booking_status: "booked",
+    cancel_by: "2026-12-06",
+    confirmation: "YCH-5530",
+    breakfast_time: "07:30",
+    cost_amount: 222000,
+  },
+  {
+    name: "Hotel Gracery Shinjuku",
+    city: "Tokyo",
+    check_in_on: "2026-12-23",
+    check_out_on: "2026-12-26",
+    booking_status: "to_book",
+    cost_amount: 72000,
+  },
+  {
+    lane: "savea",
+    added_by: "savea",
+    name: "Hoshinoya Kyoto",
+    name_ja: "星のや京都",
+    city: "Kyoto",
+    check_in_on: "2026-12-19",
+    check_out_on: "2026-12-23",
+    cost_amount: 640000,
+    url: "https://hoshinoya.com/kyoto/en/",
+    notes: "Boat in along the river. One last splurge before Tokyo.",
+  },
+  {
+    lane: "savea",
+    added_by: "savea",
+    name: "Machiya townhouse",
+    city: "Kyoto",
+    check_in_on: "2026-12-19",
+    check_out_on: "2026-12-21",
+    cost_amount: 48000,
+    notes: "Cheaper, if we only stay two more nights.",
+  },
+  {
+    lane: "aaron",
+    added_by: "aaron",
+    name: "Cross Hotel Osaka",
+    city: "Osaka",
+    check_in_on: "2026-12-19",
+    check_out_on: "2026-12-23",
+    payment: "prepaid",
+    cancel_by: "2026-12-12",
+    cost_amount: 96000,
+    notes: "Right on Dotonbori. Street food every night.",
+  },
+  {
+    lane: "aaron",
+    added_by: "aaron",
+    name: "Remm Akihabara",
+    city: "Tokyo",
+    check_in_on: "2026-12-09",
+    check_out_on: "2026-12-11",
+    cost_amount: 30000,
+  },
+].map((s) => ({ ...STAY_DEFAULTS, ...s }));
+
+const { data: savedStays, error: stayError } = await db
+  .from("trip_stays")
+  .insert(stays)
+  .select("id, name");
+if (stayError) throw stayError;
+
+const gora = savedStays.find((s) => s.name === "Gora Kadan");
+const { error: stayListError } = await db.from("trip_checklist_items").insert(
+  [
+    ["Passports for check-in", "savea", false],
+    ["Send the bags ahead at the front desk", "aaron", false],
+  ].map(([label, owner, done], i) => ({
+    list: "stay:" + gora.id,
+    label,
+    owner,
+    done,
+    position: i + 1,
+  })),
+);
+if (stayListError) throw stayListError;
 
 console.log("Honeymoon board seeded with the sample Japan trip.");

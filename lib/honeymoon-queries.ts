@@ -12,12 +12,13 @@ import type { TripBoard } from "@/components/honeymoon/types";
  * the action manifest entirely.
  */
 export async function getTripBoard(): Promise<TripBoard> {
-  const [legs, days, items, docs, flights, rate] = await Promise.all([
+  const [legs, days, items, docs, flights, stays, rate] = await Promise.all([
     supabase.from("trip_legs").select().order("starts_on"),
     supabase.from("trip_days").select().order("on_date"),
     supabase.from("trip_items").select().order("position"),
     supabase.from("trip_docs").select().order("category").order("position"),
     supabase.from("trip_flights").select().order("departs_at"),
+    supabase.from("trip_stays").select().order("check_in_on"),
     getRate(),
   ]);
 
@@ -27,6 +28,7 @@ export async function getTripBoard(): Promise<TripBoard> {
     items: items.data ?? [],
     docs: docs.data ?? [],
     flights: flights.data ?? [],
+    stays: stays.data ?? [],
     rate,
   };
 }
@@ -48,6 +50,32 @@ export async function getFlightsPage() {
   ]);
 
   return {
+    flights: flights.data ?? [],
+    checklist: checklist.data ?? [],
+    rate,
+  };
+}
+
+/**
+ * The Lodging tab: every stay in every lane, the legs and flights that decide
+ * which nights need a bed, and the stays' checklists ("stay:<id>").
+ */
+export async function getLodgingPage() {
+  const [stays, legs, flights, checklist, rate] = await Promise.all([
+    supabase.from("trip_stays").select().order("check_in_on"),
+    supabase.from("trip_legs").select().order("starts_on"),
+    supabase.from("trip_flights").select().order("departs_at"),
+    supabase
+      .from("trip_checklist_items")
+      .select()
+      .like("list", "stay:%")
+      .order("position"),
+    getRate(),
+  ]);
+
+  return {
+    stays: stays.data ?? [],
+    legs: legs.data ?? [],
     flights: flights.data ?? [],
     checklist: checklist.data ?? [],
     rate,
