@@ -208,7 +208,6 @@ function ItemForm({
             <TextInput
               value={form.title}
               onChange={(e) => set("title", e.target.value)}
-              placeholder="Fushimi Inari Taisha"
               autoFocus
               required
             />
@@ -220,7 +219,6 @@ function ItemForm({
             <TextInput
               value={form.title_ja}
               onChange={(e) => set("title_ja", e.target.value)}
-              placeholder="伏見稲荷大社"
               className="font-jp"
             />
           </Field>
@@ -291,7 +289,6 @@ function ItemForm({
                 step={15}
                 value={form.duration_min}
                 onChange={(e) => set("duration_min", e.target.value)}
-                placeholder="60"
               />
             </Field>
           </div>
@@ -314,10 +311,7 @@ function ItemForm({
                 )}
               />
             </Field>
-            <Field
-              label="Tickets go on sale"
-              hint="Ghibli Museum drops the 10th of the month before, and sells out the same morning."
-            >
+            <Field label="Tickets go on sale">
               <TextInput
                 type="date"
                 value={form.booking_opens_on}
@@ -379,7 +373,6 @@ function ItemForm({
               <TextInput
                 value={form.city}
                 onChange={(e) => set("city", e.target.value)}
-                placeholder="Kyoto"
               />
             </Field>
             <Field label="Cost" group>
@@ -403,7 +396,7 @@ function ItemForm({
                 type="url"
                 value={form.map_url}
                 onChange={(e) => set("map_url", e.target.value)}
-                placeholder="https://maps.app.goo.gl/"
+                placeholder="https://"
               />
             </Field>
             <Field label="Anything else link">
@@ -422,7 +415,6 @@ function ItemForm({
             <TextArea
               value={form.notes}
               onChange={(e) => set("notes", e.target.value)}
-              placeholder="Go at dawn, before the tour buses."
             />
           </Field>
           <Toggle

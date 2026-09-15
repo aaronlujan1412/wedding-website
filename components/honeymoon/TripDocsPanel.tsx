@@ -340,7 +340,6 @@ function DocForm({
               onChange={(e) =>
                 setForm((p) => ({ ...p, title: e.target.value }))
               }
-              placeholder="SLC → HND · Delta 167"
               autoFocus
               required
             />
@@ -351,7 +350,6 @@ function DocForm({
               onChange={(e) =>
                 setForm((p) => ({ ...p, detail: e.target.value }))
               }
-              placeholder="Seats 22A/22B. Bags checked through."
             />
           </Field>
         </Fieldset>

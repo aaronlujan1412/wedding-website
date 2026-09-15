@@ -82,7 +82,6 @@ function NoteForm({
           <TextInput
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Arrival — take it easy"
             autoFocus
           />
         </Field>
@@ -90,7 +89,6 @@ function NoteForm({
           <TextArea
             value={note}
             onChange={(e) => setNote(e.target.value)}
-            placeholder="Jet lag day. Nothing before noon."
           />
         </Field>
 

@@ -216,7 +216,6 @@ function FlightForm({
               <TextInput
                 value={form.airline}
                 onChange={(e) => set("airline", e.target.value)}
-                placeholder="Delta"
                 autoFocus
                 required
               />
@@ -225,7 +224,6 @@ function FlightForm({
               <TextInput
                 value={form.flight_number}
                 onChange={(e) => set("flight_number", e.target.value)}
-                placeholder="DL167"
                 className="font-mono uppercase"
                 required
               />
@@ -264,7 +262,6 @@ function FlightForm({
               <TextInput
                 value={form.confirmation ?? ""}
                 onChange={(e) => set("confirmation", e.target.value)}
-                placeholder="GKQ4TZ"
                 className="font-mono uppercase"
               />
             </Field>
@@ -272,7 +269,6 @@ function FlightForm({
               <TextInput
                 value={form.seat_aaron ?? ""}
                 onChange={(e) => set("seat_aaron", e.target.value)}
-                placeholder="22A"
                 className="font-mono uppercase"
               />
             </Field>
@@ -280,7 +276,6 @@ function FlightForm({
               <TextInput
                 value={form.seat_savea ?? ""}
                 onChange={(e) => set("seat_savea", e.target.value)}
-                placeholder="22B"
                 className="font-mono uppercase"
               />
             </Field>
@@ -295,7 +290,6 @@ function FlightForm({
               <TextInput
                 value={form.aircraft ?? ""}
                 onChange={(e) => set("aircraft", e.target.value)}
-                placeholder="A350"
               />
             </Field>
             <Field label="Cost" group>
@@ -310,14 +304,12 @@ function FlightForm({
               <TextInput
                 value={form.baggage ?? ""}
                 onChange={(e) => set("baggage", e.target.value)}
-                placeholder="2 checked each, 23kg · 1 carry-on"
               />
             </Field>
             <Field label="Meal">
               <TextInput
                 value={form.meal ?? ""}
                 onChange={(e) => set("meal", e.target.value)}
-                placeholder="Dinner + breakfast"
               />
             </Field>
           </div>
@@ -329,21 +321,18 @@ function FlightForm({
               <TextInput
                 value={form.departure_terminal ?? ""}
                 onChange={(e) => set("departure_terminal", e.target.value)}
-                placeholder="T1"
               />
             </Field>
             <Field label="Gate" hint="Usually only known on the day.">
               <TextInput
                 value={form.departure_gate ?? ""}
                 onChange={(e) => set("departure_gate", e.target.value)}
-                placeholder="B12"
               />
             </Field>
             <Field label="Lands at terminal">
               <TextInput
                 value={form.arrival_terminal ?? ""}
                 onChange={(e) => set("arrival_terminal", e.target.value)}
-                placeholder="T3"
               />
             </Field>
             <Field label="Check-in link" className="sm:col-span-3">
@@ -373,7 +362,6 @@ function FlightForm({
           <TextArea
             value={form.notes ?? ""}
             onChange={(e) => set("notes", e.target.value)}
-            placeholder="Lounge access with the Amex. Exit row not allowed with the lap blanket, apparently."
           />
         </Field>
 
@@ -539,7 +527,6 @@ function SideFields({
                   code: e.target.value.toUpperCase().slice(0, 3),
                 })
               }
-              placeholder="MFM"
               className="font-mono uppercase"
             />
           </Field>
@@ -547,7 +534,6 @@ function SideFields({
             <TextInput
               value={value.city}
               onChange={(e) => onChange({ ...value, city: e.target.value })}
-              placeholder="Macau"
             />
           </Field>
           <Field label="Time zone" className="col-span-2">

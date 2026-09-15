@@ -160,7 +160,6 @@ function LegForm({
               <TextInput
                 value={form.name}
                 onChange={(e) => set("name", e.target.value)}
-                placeholder="Akihabara"
                 autoFocus
                 required
               />
@@ -169,7 +168,6 @@ function LegForm({
               <TextInput
                 value={form.name_ja}
                 onChange={(e) => set("name_ja", e.target.value)}
-                placeholder="秋葉原"
                 className="font-jp"
               />
             </Field>
@@ -197,7 +195,6 @@ function LegForm({
             <TextInput
               value={form.lodging_name}
               onChange={(e) => set("lodging_name", e.target.value)}
-              placeholder="Ryokan Yachiyo"
             />
           </Field>
           <Field label="Address">
@@ -211,14 +208,12 @@ function LegForm({
               <TextInput
                 value={form.lodging_check_in}
                 onChange={(e) => set("lodging_check_in", e.target.value)}
-                placeholder="15:00"
               />
             </Field>
             <Field label="Check out">
               <TextInput
                 value={form.lodging_check_out}
                 onChange={(e) => set("lodging_check_out", e.target.value)}
-                placeholder="11:00"
               />
             </Field>
             <Field label="Confirmation number">
@@ -242,7 +237,6 @@ function LegForm({
           <TextArea
             value={form.note}
             onChange={(e) => set("note", e.target.value)}
-            placeholder="Bags forwarded ahead from Tokyo — they arrive the afternoon of the 8th."
           />
         </Field>
 
