@@ -1,5 +1,6 @@
 import { HOME_AIRPORT, airport } from "./airports";
 import type { TripFlight } from "./types";
+import { compare } from "./trip";
 
 /* ------------------------------------------------------------ time zones -- */
 
@@ -266,7 +267,7 @@ function cityOf(code: string, stored: string | null): string | null {
  */
 export function groupJourneys(flights: TripFlight[]): Journey[] {
   const sorted = [...flights].sort((a, b) =>
-    a.departs_at < b.departs_at ? -1 : 1,
+    compare(a.departs_at, b.departs_at) || compare(a.id, b.id),
   );
   const journeys: Journey[] = [];
 
@@ -341,7 +342,7 @@ export function nextFlight(
   const grace = 30 * 60_000;
   return (
     [...flights]
-      .sort((a, b) => (a.departs_at < b.departs_at ? -1 : 1))
+      .sort((a, b) => compare(a.departs_at, b.departs_at) || compare(a.id, b.id))
       .find((f) => new Date(f.departs_at).getTime() > now - grace) ?? null
   );
 }

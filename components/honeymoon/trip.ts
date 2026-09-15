@@ -131,6 +131,16 @@ export const WEEKDAYS = [
   "Saturday",
 ];
 
+/**
+ * A comparator that returns 0 for a tie. `a < b ? -1 : 1` calls equal keys
+ * unequal, and engines resolve that differently — Node and Firefox put two
+ * stays checking in the same day in different orders, which broke hydration.
+ * Always break ties on something unique.
+ */
+export function compare(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 /* ---------------------------------------------------------------- dates -- */
 
 /**
@@ -198,7 +208,7 @@ export function legForDay(legs: TripLeg[], iso: string): TripLeg | undefined {
 export function legsIn(legs: TripLeg[], lane: Lane): TripLeg[] {
   return legs
     .filter((l) => l.lane === lane)
-    .sort((a, b) => (a.starts_on < b.starts_on ? -1 : 1));
+    .sort((a, b) => compare(a.starts_on, b.starts_on) || compare(a.id, b.id));
 }
 
 /**

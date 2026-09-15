@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+import { compare } from "@/components/honeymoon/trip";
 import type {
   BookingStatus,
   Currency,
@@ -264,7 +265,9 @@ export async function sortDayByTime(onDate: string, lane: Lane = "decided") {
   const rows = data ?? [];
   const timed = rows.filter((r) => r.start_time !== null);
   const loose = rows.filter((r) => r.start_time === null);
-  timed.sort((a, b) => (a.start_time! < b.start_time! ? -1 : 1));
+  // Ties keep their drag order: a comparator that returns 0 lets the stable
+  // sort leave them be.
+  timed.sort((a, b) => compare(a.start_time!, b.start_time!));
 
   const ordered = [...timed, ...loose];
   await Promise.all(
