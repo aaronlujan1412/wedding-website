@@ -7,6 +7,7 @@ import {
   ArrowUp,
   ChevronLeft,
   ChevronRight,
+  Copy,
   GripVertical,
   MapPin,
   Pin,
@@ -36,7 +37,16 @@ export type CardActions = {
   onNudge: (item: TripItem, delta: number) => void;
   /** Same day, a different lane — the promote/send-back path. */
   onMoveLane: (item: TripItem, lane: Lane) => void;
+  /** Leaves the original alone and puts a copy in another lane. */
+  onCopy: (item: TripItem, lane: Lane) => void;
 };
+
+/** An idea card's copy goes to the other person's lane. Decided has none. */
+function copyTarget(lane: Lane): Lane | null {
+  if (lane === "savea") return "aaron";
+  if (lane === "aaron") return "savea";
+  return null;
+}
 
 /**
  * The card face, with no drag wiring, so the same markup can be handed to the
@@ -59,6 +69,7 @@ export function ItemCardFace({
   const rate = useRate();
   const warnings = itemWarnings(item);
   const planner = PLANNERS[item.added_by];
+  const copyTo = copyTarget(item.lane);
 
   return (
     <article
@@ -202,6 +213,15 @@ export function ItemCardFace({
                 onClick={() => actions.onMoveLane(item, "decided")}
               >
                 <ArrowUp className="h-3 w-3" strokeWidth={2} />
+              </NudgeButton>
+            )}
+
+            {copyTo && (
+              <NudgeButton
+                label={`Copy to ${LANES[copyTo].label}`}
+                onClick={() => actions.onCopy(item, copyTo)}
+              >
+                <Copy className="h-3 w-3" strokeWidth={2} />
               </NudgeButton>
             )}
           </div>

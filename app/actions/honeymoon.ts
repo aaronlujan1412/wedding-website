@@ -184,6 +184,41 @@ export async function moveItem(
   return { data: true, error: null };
 }
 
+/**
+ * Take a copy of someone's idea into another lane, same day, bottom of the
+ * cell. The original stays where it is, and `added_by` comes along unchanged —
+ * it's still their idea.
+ */
+export async function copyItem(id: string, lane: Lane) {
+  if (!(await isHost())) return DENIED;
+
+  const { data: source, error: readError } = await supabase
+    .from("trip_items")
+    .select()
+    .eq("id", id)
+    .single();
+
+  if (readError) return { data: null, error: readError.message };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { id: _id, created_at, updated_at, position, ...fields } = source;
+
+  const { data, error } = await supabase
+    .from("trip_items")
+    .insert({
+      ...fields,
+      lane,
+      position: await nextPosition(lane, source.on_date),
+    })
+    .select()
+    .single();
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: data as TripItem, error: null };
+}
+
 /** Quick toggle from the card face, without opening the whole form. */
 export async function setBookingStatus(id: string, status: BookingStatus) {
   if (!(await isHost())) return DENIED;

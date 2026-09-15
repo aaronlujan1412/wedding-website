@@ -18,6 +18,7 @@ import { MapPinned, Plus, Search, X } from "lucide-react";
 import {
   adoptLeg,
   adoptRoute,
+  copyItem,
   moveItem,
   sortDayByTime,
 } from "@/app/actions/honeymoon";
@@ -399,6 +400,15 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       sendTo(item, item.lane, target);
     },
     onMoveLane: (item, lane) => sendTo(item, lane, item.on_date),
+    onCopy: (item, lane) =>
+      startTransition(async () => {
+        const result = await copyItem(item.id, lane);
+        setNotice(
+          result.error
+            ? { tone: "error", text: result.error }
+            : { tone: "ok", text: `Copied ${item.title} to ${LANES[lane].label}.` },
+        );
+      }),
   };
 
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
