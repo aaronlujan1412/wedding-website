@@ -176,7 +176,7 @@ function RouteHops({
               "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-4 py-3",
               hop.covered
                 ? "border-border bg-card"
-                : "border-pending/40 bg-pending/[0.04]",
+                : "border-pending/40 bg-pending/4",
             )}
           >
             <span className="font-mono text-[0.7rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">

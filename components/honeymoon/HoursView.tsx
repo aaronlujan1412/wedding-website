@@ -113,7 +113,7 @@ export function HoursLines({
     <div
       aria-hidden="true"
       style={style}
-      className="pointer-events-none relative z-[1] py-2"
+      className="pointer-events-none relative z-1 py-2"
     >
       <div className="relative h-full">
         {lines.map((m) => (
@@ -603,7 +603,7 @@ function HoursTrack({
             // shelf, then sets the time in the form.
             tabIndex={-1}
             aria-hidden="true"
-            className="absolute inset-x-1.5 z-[1] flex items-start rounded-md bg-primary/5 px-1.5 py-0.5 font-mono text-[0.6rem] text-primary/80 tabular-nums slashed-zero"
+            className="absolute inset-x-1.5 z-1 flex items-start rounded-md bg-primary/5 px-1.5 py-0.5 font-mono text-[0.6rem] text-primary/80 tabular-nums slashed-zero"
           >
             + {toTime(hover)}
           </button>
@@ -642,7 +642,7 @@ function HoursTrack({
               height: `${percentAt(Math.min(slot.start + itemLength(slot.item), range.end), range) - percentAt(slot.start, range)}%`,
             }}
             className={cn(
-              "pointer-events-none absolute inset-x-1.5 z-[4] rounded-md border-2 border-dashed",
+              "pointer-events-none absolute inset-x-1.5 z-4 rounded-md border-2 border-dashed",
               slot.problems.length > 0
                 ? "border-warn bg-warn/10"
                 : "border-primary bg-primary/10",
@@ -721,7 +721,7 @@ function Dark({ from, to }: { from: string | null; to: string | null }) {
         bottom: to ? `calc(100% - ${to})` : undefined,
       }}
       className={cn(
-        "pointer-events-none absolute inset-x-0 bg-foreground/[0.05]",
+        "pointer-events-none absolute inset-x-0 bg-foreground/5",
         from === null ? "-top-2 border-b" : "-bottom-2 border-t",
         "border-dashed border-foreground/15",
       )}
@@ -797,7 +797,7 @@ function HoursBlock({
         height: `${percentAt(end, range) - percentAt(start, range)}%`,
       }}
       className={cn(
-        "absolute z-[3]",
+        "absolute z-3",
         !item.pinned && "cursor-grab active:cursor-grabbing",
       )}
     >
@@ -1010,12 +1010,12 @@ function AnchorBlock({
       // Fixed, not a card: outlined in the route's green, never dragged. A
       // side that runs off the day fades out instead of stopping at an edge.
       className={cn(
-        "absolute z-[2] flex flex-col overflow-hidden rounded-md border border-primary/50 bg-primary/5 px-1.5 py-0.5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        "absolute z-2 flex flex-col overflow-hidden rounded-md border border-primary/50 bg-primary/5 px-1.5 py-0.5 text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
         !began &&
-          "justify-end rounded-t-none border-t-0 [mask-image:linear-gradient(to_bottom,transparent,black_3rem)]",
+          "justify-end rounded-t-none border-t-0 mask-[linear-gradient(to_bottom,transparent,black_3rem)]",
         began &&
           !ends &&
-          "rounded-b-none border-b-0 [mask-image:linear-gradient(to_top,transparent,black_3rem)]",
+          "rounded-b-none border-b-0 mask-[linear-gradient(to_top,transparent,black_3rem)]",
       )}
     >
       <span className="flex min-w-0 items-center gap-1 font-raleway text-xs font-semibold">
@@ -1045,7 +1045,7 @@ function MarkLine({ mark, top }: { mark: Mark; top: string }) {
   return (
     <div
       style={{ top }}
-      className="pointer-events-none absolute inset-x-0 z-[1] border-t border-primary/60"
+      className="pointer-events-none absolute inset-x-0 z-1 border-t border-primary/60"
     >
       <Link
         href="/honeymoon/lodging"
