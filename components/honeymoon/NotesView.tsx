@@ -6,17 +6,24 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import {
   ArrowLeft,
+  AtSign,
+  BedDouble,
   Bold,
+  CalendarDays,
   CheckSquare,
   Italic,
   Link2,
   List,
+  Plane,
   Plus,
+  SquarePlus,
   Strikethrough,
+  TramFront,
   Trash2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
+  createItem,
   deleteNote,
   deleteNotebook,
   saveNote,
@@ -39,15 +46,19 @@ import {
 } from "./FormParts";
 import {
   BOARD_NOTEBOOK,
+  mentionLink,
   noteTitle,
   notePreview,
   notebookAccent,
   notebookTint,
+  plainText,
+  searchMentions,
   type Attached,
+  type Mention,
 } from "./notes";
-import { PLANNERS, eachDay, formatDayLong } from "./trip";
+import { PLANNERS, eachDay, formatDayLong, kindOf } from "./trip";
 import { useLiveRefresh } from "./useLiveRefresh";
-import type { Note, Notebook, Planner, Trip } from "./types";
+import type { Lane, Note, Notebook, Planner, Trip } from "./types";
 
 /**
  * Somewhere to write that isn't attached to anything.
@@ -66,11 +77,14 @@ export function NotesView({
   notebooks,
   notes: seeded,
   attached,
+  mentions: known,
 }: {
   trip: Trip | null;
   notebooks: Notebook[];
   notes: Note[];
   attached: Attached[];
+  /** Everything on the trip a note can point at. */
+  mentions: Mention[];
 }) {
   // Same mirror as the board: server rows are the truth, adopted during render
   // when they change, with local edits landing instantly in between.
@@ -80,6 +94,11 @@ export function NotesView({
     setSeededFrom(seeded);
     setNotes(seeded);
   }
+
+  // A card made from a note is mentionable immediately, without waiting for
+  // the poll to bring it back around.
+  const [freshCards, setFreshCards] = useState<Mention[]>([]);
+  const mentions = [...freshCards, ...known];
 
   const [notebookId, setNotebookId] = useState(
     () => notebooks[0]?.id ?? BOARD_NOTEBOOK,
@@ -294,6 +313,14 @@ export function NotesView({
                 key={open.id}
                 note={open}
                 days={days}
+                mentions={mentions}
+                // A card made in someone's notebook lands in their pile. A
+                // shared notebook has no one pile, so it goes to the agreed
+                // one, which is where "we both wrote this down" belongs.
+                lane={notebook?.owner ?? "decided"}
+                onCardMade={(mention) =>
+                  setFreshCards((prev) => [mention, ...prev])
+                }
                 onDirty={setDirty}
                 onSaved={keep}
                 onClose={() => openNote(null)}
@@ -359,17 +386,25 @@ type Draft = { title: string; body: string; on_date: string };
 function NoteEditor({
   note,
   days,
+  mentions,
+  lane,
   onDirty,
   onSaved,
   onClose,
   onDeleted,
+  onCardMade,
 }: {
   note: Note;
   days: string[];
+  /** Everything on the trip a note can point at, for `@`. */
+  mentions: Mention[];
+  /** Where "Make a card" puts one: the notebook's owner, or the agreed pile. */
+  lane: Lane;
   onDirty: (dirty: boolean) => void;
   onSaved: (note: Note) => void;
   onClose: () => void;
   onDeleted: (id: string) => void;
+  onCardMade: (mention: Mention) => void;
 }) {
   const [draft, setDraft] = useState<Draft>({
     title: note.title,
@@ -381,7 +416,15 @@ function NoteEditor({
   const [savedAt, setSavedAt] = useState<string | null>(note.updated_at);
   const [merged, setMerged] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // An open `@` picker: what has been typed since the @, and where it started.
+  const [picking, setPicking] = useState<{ query: string; at: number } | null>(
+    null,
+  );
+  const [highlighted, setHighlighted] = useState(0);
+  const [made, setMade] = useState<Mention | null>(null);
   const [, startTransition] = useTransition();
+
+  const offered = picking ? searchMentions(mentions, picking.query) : [];
 
   const box = useRef<HTMLTextAreaElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -479,7 +522,107 @@ function NoteEditor({
     requestAnimationFrame(() => el.focus());
   }
 
+  /**
+   * An `@` anywhere in the note opens the picker on what follows it, until a
+   * second space suggests it was just an email address or an aside.
+   */
+  function watchForMention(el: HTMLTextAreaElement) {
+    const before = el.value.slice(0, el.selectionStart);
+    const found = /@([^@\n]{0,24})$/.exec(before);
+    const query = found?.[1] ?? "";
+    if (!found || /\s\s/.test(query)) {
+      setPicking(null);
+      return;
+    }
+    setPicking({ query, at: found.index });
+    setHighlighted(0);
+  }
+
+  /** Swaps the `@half-typed` for a link that points at the thing itself. */
+  function insertMention(mention: Mention) {
+    const el = box.current;
+    if (!el || !picking) return;
+    const value = latest.current.body;
+    const body =
+      value.slice(0, picking.at) +
+      mentionLink(mention) +
+      " " +
+      value.slice(el.selectionStart);
+    const caret = picking.at + mentionLink(mention).length + 1;
+    setPicking(null);
+    change({ body });
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(caret, caret);
+    });
+  }
+
+  /**
+   * The line the cursor is on, as a card in the pile — and the line becomes a
+   * chip pointing at it. Notes are where ideas start; the pile is where they
+   * live, and retyping them in between is how they get lost.
+   */
+  function makeCard() {
+    const el = box.current;
+    if (!el) return;
+    const value = latest.current.body;
+    const from = value.lastIndexOf("\n", el.selectionStart - 1) + 1;
+    const to = value.indexOf("\n", el.selectionStart);
+    const end = to === -1 ? value.length : to;
+    const line = value.slice(from, end);
+    const marker = /^(\s*(?:[-*+]\s+(?:\[[ xX]\]\s*)?|\d+\.\s+))?/.exec(line);
+    const lead = marker?.[0] ?? "";
+    const title = plainText(line);
+    if (!title) return;
+
+    startTransition(async () => {
+      const { data } = await createItem({
+        title,
+        kind: "unsorted",
+        lane,
+        // Nobody is signed in as themselves, so a shared notebook's cards are
+        // filed under the name the schema already defaults to.
+        added_by: lane === "decided" ? "aaron" : lane,
+      });
+      if (!data) return;
+      const mention: Mention = {
+        href: `/honeymoon?item=${data.id}`,
+        type: "card",
+        label: data.title,
+        detail: "in a pile",
+        kind: data.kind,
+      };
+      onCardMade(mention);
+      setMade(mention);
+      change({
+        body:
+          value.slice(0, from) + lead + mentionLink(mention) + value.slice(end),
+      });
+    });
+  }
+
   function keys(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (picking && offered.length > 0) {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        setHighlighted((at) => {
+          const next = e.key === "ArrowDown" ? at + 1 : at - 1;
+          return (next + offered.length) % offered.length;
+        });
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        insertMention(offered[highlighted]);
+        return;
+      }
+    }
+    if (picking && e.key === "Escape") {
+      e.preventDefault();
+      setPicking(null);
+      return;
+    }
+
     if (!(e.metaKey || e.ctrlKey)) return;
     const key = e.key.toLowerCase();
     if (key === "b") {
@@ -552,6 +695,33 @@ function NoteEditor({
             </Mark>
             <Mark label="Checkbox" onClick={() => prefix("- [ ] ")}>
               <CheckSquare className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </Mark>
+            <span className="mx-1 h-4 w-px bg-border" aria-hidden="true" />
+            <Mark
+              label="Mention something on the trip"
+              onClick={() => {
+                const el = box.current;
+                if (!el) return;
+                const caret = el.selectionStart;
+                change({
+                  body:
+                    latest.current.body.slice(0, caret) +
+                    "@" +
+                    latest.current.body.slice(caret),
+                });
+                setPicking({ query: "", at: caret });
+                setHighlighted(0);
+                requestAnimationFrame(() => {
+                  el.focus();
+                  el.setSelectionRange(caret + 1, caret + 1);
+                });
+              }}
+              hint="@"
+            >
+              <AtSign className="h-3.5 w-3.5" strokeWidth={2.25} />
+            </Mark>
+            <Mark label="Make this line a card" onClick={makeCard}>
+              <SquarePlus className="h-3.5 w-3.5" strokeWidth={2.25} />
             </Mark>
           </div>
         )}
@@ -633,6 +803,7 @@ function NoteEditor({
             {draft.body.trim() ? (
               <NoteBody
                 body={draft.body}
+                mentions={mentions}
                 onTick={(line) =>
                   change({ body: toggleTask(draft.body, line) })
                 }
@@ -644,19 +815,105 @@ function NoteEditor({
             )}
           </div>
         ) : (
-          <textarea
-            ref={box}
-            value={draft.body}
-            onChange={(e) => change({ body: e.target.value })}
-            onBlur={() => dirty.current && void save(latest.current)}
-            onKeyDown={keys}
-            placeholder="Write anything. **bold**, _italic_, - lists, - [ ] checkboxes."
-            aria-label="Note"
-            className="mt-4 min-h-72 w-full resize-y bg-transparent font-garamond text-lg leading-relaxed text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
-          />
+          <div className="relative">
+            <textarea
+              ref={box}
+              value={draft.body}
+              onChange={(e) => {
+                change({ body: e.target.value });
+                watchForMention(e.target);
+              }}
+              onBlur={() => {
+                if (dirty.current) void save(latest.current);
+                // Late enough for a click on the picker to land first.
+                setTimeout(() => setPicking(null), 150);
+              }}
+              onKeyDown={keys}
+              placeholder="Write anything. @ to mention a card, a day or a hotel."
+              aria-label="Note"
+              className="mt-4 min-h-72 w-full resize-y bg-transparent font-garamond text-lg leading-relaxed text-foreground placeholder:text-muted-foreground/50 focus:outline-none"
+            />
+
+            {picking && offered.length > 0 && (
+              <ul
+                aria-label="Mention"
+                className="absolute top-2 right-0 z-10 w-72 overflow-hidden rounded-md border border-border bg-card shadow-lg"
+              >
+                {offered.map((mention, index) => (
+                  <li key={mention.href}>
+                    <button
+                      type="button"
+                      // The textarea's blur must not beat the click.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => insertMention(mention)}
+                      onMouseEnter={() => setHighlighted(index)}
+                      className={cn(
+                        "flex w-full items-center gap-2 px-2.5 py-1.5 text-left",
+                        index === highlighted && "bg-secondary",
+                      )}
+                    >
+                      <MentionIcon mention={mention} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-raleway text-sm text-foreground">
+                          {mention.label}
+                        </span>
+                        <span className="block truncate font-mono text-[0.6rem] text-muted-foreground tabular-nums slashed-zero">
+                          {mention.detail}
+                        </span>
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {made && (
+          <p className="mt-3 flex flex-wrap items-center gap-2 font-garamond text-sm text-muted-foreground">
+            <span>
+              “{made.label}” is a card now, waiting in the pile. The line points
+              at it.
+            </span>
+            <Link
+              href={made.href}
+              className="font-raleway text-[0.65rem] text-primary underline-offset-4 hover:underline"
+            >
+              Open the board
+            </Link>
+          </p>
         )}
       </div>
     </article>
+  );
+}
+
+const MENTION_ICONS = {
+  day: CalendarDays,
+  stay: BedDouble,
+  ride: TramFront,
+  flight: Plane,
+} as const;
+
+/** A mention wears its tab's mark, and a card wears its own type's colour. */
+function MentionIcon({ mention }: { mention: Mention }) {
+  if (mention.type === "card") {
+    const kind = kindOf(mention.kind ?? "unsorted");
+    return (
+      <span
+        aria-hidden="true"
+        style={{ backgroundColor: kind.color }}
+        className="h-3.5 w-1 flex-none rounded-full"
+      />
+    );
+  }
+  const Icon = MENTION_ICONS[mention.type];
+  return (
+    <Icon
+      aria-hidden="true"
+      className="h-3.5 w-3.5 flex-none text-muted-foreground"
+      strokeWidth={2}
+    />
   );
 }
 
@@ -717,13 +974,17 @@ export function toggleTask(body: string, nth: number): string {
  */
 export function NoteBody({
   body,
+  mentions = [],
   onTick,
 }: {
   body: string;
+  /** For drawing a link to something on the trip as that thing. */
+  mentions?: Mention[];
   /** Left out where the note is only being shown, as in the board notebook. */
   onTick?: (nth: number) => void;
 }) {
   const box = useRef<HTMLDivElement>(null);
+  const known = new Map(mentions.map((m) => [m.href, m]));
 
   return (
     <div
@@ -808,18 +1069,37 @@ export function NoteBody({
               )}
             />
           ),
-          a: ({ href, className, ...props }) => (
-            <a
-              href={href}
-              target={href?.startsWith("/") ? undefined : "_blank"}
-              rel="noreferrer"
-              className={cn(
-                "text-primary underline underline-offset-4",
-                className,
-              )}
-              {...props}
-            />
-          ),
+          a: ({ href, className, children, ...props }) => {
+            const mention = href ? known.get(href) : undefined;
+            // Drawn as the thing itself, under whatever it is called now —
+            // the link holds an id, so renaming a card renames it in here.
+            if (mention) {
+              return (
+                <Link
+                  href={mention.href}
+                  title={`${mention.label} · ${mention.detail}`}
+                  className="mx-0.5 inline-flex max-w-full items-center gap-1 rounded-md border border-border bg-background px-1.5 align-baseline font-raleway text-[0.8em] text-foreground no-underline transition-colors hover:border-primary/50 hover:text-primary"
+                >
+                  <MentionIcon mention={mention} />
+                  <span className="truncate">{mention.label}</span>
+                </Link>
+              );
+            }
+            return (
+              <a
+                href={href}
+                target={href?.startsWith("/") ? undefined : "_blank"}
+                rel="noreferrer"
+                className={cn(
+                  "text-primary underline underline-offset-4",
+                  className,
+                )}
+                {...props}
+              >
+                {children}
+              </a>
+            );
+          },
           blockquote: ({ className, ...props }) => (
             <blockquote
               className={cn(

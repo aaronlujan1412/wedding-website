@@ -240,13 +240,13 @@ export async function getLodgingPage() {
 }
 
 /**
- * The Notes tab: the notebooks, everything written in them, and the notes
- * already left elsewhere on the trip.
+ * The Notes tab: the notebooks, everything written in them, and the rest of
+ * the trip in the few columns a note needs to point at it.
  *
- * That last part is the reason the tab exists in this shape. Notes were
- * already being written in five places — a day, a card, a stay, a ride, a
- * flight — and a sixth box to type in would have made that worse rather than
- * better. Only rows that actually carry a note are read.
+ * Those last rows do two jobs. They carry the notes already written on days,
+ * cards and bookings — the reason this tab gathers rather than adds a sixth
+ * place to type — and they are what `@` offers when a note mentions something.
+ * Only the columns a chip or a link needs are read, not whole rows.
  */
 export async function getNotesPage() {
   const trip = await getCurrentTrip();
@@ -264,20 +264,24 @@ export async function getNotesPage() {
           .select()
           .order("updated_at", { ascending: false }),
       ),
-      of(supabase.from("trip_days").select().not("note", "is", null)).order(
+      of(supabase.from("trip_days").select("on_date, title, note")).order(
         "on_date",
       ),
       of(
-        supabase.from("trip_items").select().not("notes", "is", null),
+        supabase.from("trip_items").select("id, title, kind, on_date, notes"),
       ).order("title"),
       of(
-        supabase.from("trip_stays").select().not("notes", "is", null),
+        supabase.from("trip_stays").select("id, name, check_in_on, notes"),
       ).order("check_in_on"),
       of(
-        supabase.from("trip_transit").select().not("notes", "is", null),
+        supabase
+          .from("trip_transit")
+          .select("id, from_place, to_place, departs_at, notes"),
       ).order("departs_at"),
       of(
-        supabase.from("trip_flights").select().not("notes", "is", null),
+        supabase
+          .from("trip_flights")
+          .select("id, from_airport, to_airport, departs_at, notes"),
       ).order("departs_at"),
     ]);
 
@@ -285,11 +289,13 @@ export async function getNotesPage() {
     trip,
     notebooks: notebooks.data ?? [],
     notes: notes.data ?? [],
-    days: days.data ?? [],
-    items: items.data ?? [],
-    stays: stays.data ?? [],
-    transit: transit.data ?? [],
-    flights: flights.data ?? [],
+    sources: {
+      days: days.data ?? [],
+      items: items.data ?? [],
+      stays: stays.data ?? [],
+      transit: transit.data ?? [],
+      flights: flights.data ?? [],
+    },
   };
 }
 

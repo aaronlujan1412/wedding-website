@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { NotesView } from "@/components/honeymoon/NotesView";
-import { attachedNotes } from "@/components/honeymoon/notes";
+import { attachedNotes, mentionsOf } from "@/components/honeymoon/notes";
 import { getNotesPage } from "@/lib/honeymoon-queries";
 
 /** Host-only and always live — never prerender it with build-time rows. */
@@ -12,15 +12,15 @@ export const metadata: Metadata = {
 };
 
 export default async function NotesPage() {
-  const { trip, notebooks, notes, days, items, stays, transit, flights } =
-    await getNotesPage();
+  const { trip, notebooks, notes, sources } = await getNotesPage();
 
   return (
     <NotesView
       trip={trip}
       notebooks={notebooks}
       notes={notes}
-      attached={attachedNotes({ days, items, stays, transit, flights })}
+      attached={attachedNotes(sources)}
+      mentions={mentionsOf(sources)}
     />
   );
 }
