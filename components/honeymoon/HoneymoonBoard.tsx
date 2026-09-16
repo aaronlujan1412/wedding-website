@@ -926,8 +926,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                     ref={scroller}
                     className="rail-scroll h-[calc(100dvh-var(--spacing-planner-bar)-1.5rem)] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
                   >
+                    {/* As wide as its columns, not as the frame. A sticky
+                        element only travels inside its containing block, so
+                        on a frame-wide grid the pinned first column came
+                        unstuck about a screen into the trip. */}
                     <div
-                      className="grid min-h-full"
+                      className="grid min-h-full w-max min-w-full"
                       style={{
                         gridTemplateColumns: gridColumns,
                         gridTemplateRows: gridRows,
