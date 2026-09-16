@@ -118,6 +118,8 @@ import type { BoardView } from "./trip";
 import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
 
 const COLUMN = "19rem";
+/** A day in Compare by the hour: two tracks, each wide enough for a title. */
+const SPLIT_COLUMN = "24rem";
 const RULER = "3rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
@@ -195,7 +197,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   // Every day's Sometime shelf shares one grid row, so they open together.
   const [shelvesOpen, setShelvesOpen] = useState(false);
   // Where the card being dragged would land on the hours, while it's over them.
-  const [slot, setSlot] = useState<(Slot & { cell: string }) | null>(null);
+  const [slot, setSlot] = useState<Slot | null>(null);
   // The shape under the pointer is the shape that was picked up.
   const [dragFace, setDragFace] = useState<"card" | "chip" | "block">("card");
   // The pile opens on the view's own lane. It used to start on Decided no
@@ -332,13 +334,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     sumYen(payableRides(decidedTransit), rate) +
     sumYen(staysIn(stays, "decided"), rate);
 
-  // Hours is one lane at a time. In Compare the choice is kept but the list is
-  // drawn, and going back to a single lane picks Hours back up.
-  const hoursLane: Lane | null =
-    layout === "hours" && BOARD_VIEWS[view].lanes.length === 1
-      ? BOARD_VIEWS[view].lanes[0]
-      : null;
-  const hours = hoursLane !== null;
+  // The lanes drawn by the hour, left to right: one, or Compare's two drafts
+  // side by side over what Decided already has.
+  const hoursLanes: Lane[] | null =
+    layout === "hours" ? BOARD_VIEWS[view].lanes : null;
+  const hours = hoursLanes !== null;
+  const split = hours && hoursLanes.length > 1;
 
   /**
    * What's already on the clock each day: the agreed trains, flights and hotel
@@ -349,35 +350,37 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       string,
       { anchors: Anchor[]; marks: Mark[]; sun: Sun }
     >();
-    if (!hoursLane) return byDay;
+    if (!hoursLanes) return byDay;
     const rides = transitIn(board.transit, "decided");
     const beds = staysIn(stays, "decided");
-    const laneRoute = legsIn(legs, hoursLane);
-    const agreedRoute = legsIn(legs, "decided");
+    // Sunset for the first leg it recognises: the lanes' own, then Decided's.
+    const routes = [...hoursLanes, "decided" as const].map((lane) =>
+      legsIn(legs, lane),
+    );
     for (const date of visibleDays) {
       byDay.set(date, {
         anchors: anchorsOnDay(date, board.flights, rides),
         marks: marksOnDay(date, beds),
-        sun: sunOn(
-          date,
-          legForDay(laneRoute, date)?.name,
-          legForDay(agreedRoute, date)?.name,
-        ),
+        sun: sunOn(date, ...routes.map((r) => legForDay(r, date)?.name)),
       });
     }
     return byDay;
-  }, [hoursLane, visibleDays, board.transit, board.flights, stays, legs]);
+  }, [hoursLanes, visibleDays, board.transit, board.flights, stays, legs]);
 
   /** The hours every day column shares, from everything in scope. */
   const range = useMemo(() => {
-    if (!hoursLane) return null;
+    if (!hoursLanes) return null;
     const inScope = new Set(visibleDays);
+    // Compare draws Decided too, behind the drafts.
+    const drawn = new Set<Lane>(
+      split ? [...hoursLanes, "decided"] : hoursLanes,
+    );
     const minutes: number[] = [];
     for (const item of items) {
       const start = itemStart(item);
       if (
         start === null ||
-        item.lane !== hoursLane ||
+        !drawn.has(item.lane) ||
         !item.on_date ||
         !inScope.has(item.on_date)
       ) {
@@ -393,7 +396,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       for (const m of marks) minutes.push(m.at);
     }
     return hoursRange(minutes);
-  }, [hoursLane, visibleDays, items, clock]);
+  }, [hoursLanes, split, visibleDays, items, clock]);
 
   /**
    * Adopting a leg into Decided. If nothing in Decided is on those dates it just
@@ -805,7 +808,14 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               item,
               start,
               onDate,
-              itemsInCell(items, drop.lane, onDate),
+              // In Compare what's already agreed is on screen behind the
+              // drafts, so landing on it is a clash worth saying.
+              split
+                ? [
+                    ...itemsInCell(items, drop.lane, onDate),
+                    ...itemsInCell(items, "decided", onDate),
+                  ]
+                : itemsInCell(items, drop.lane, onDate),
               clock.get(onDate)?.anchors ?? [],
             ),
           },
@@ -968,11 +978,13 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   // gets no lane column at all: the heading already names it, and the column
   // was 1.5rem of tint whose only job was opening the pile beside it.
   const laneColumn = shownLanes.length > 1 ? "2.75rem" : null;
-  // Hours puts its ruler where Compare puts the turned lane names.
-  const leadColumn = laneColumn ?? (hours ? RULER : null);
+  // Hours puts its ruler where Compare's list puts the turned lane names.
+  const leadColumn = hours ? RULER : laneColumn;
+  // Two tracks to a day need the room for a title each.
+  const dayWidth = split ? SPLIT_COLUMN : COLUMN;
   const gridColumns = leadColumn
-    ? `${leadColumn} repeat(${visibleDays.length}, ${COLUMN})`
-    : `repeat(${visibleDays.length}, ${COLUMN})`;
+    ? `${leadColumn} repeat(${visibleDays.length}, ${dayWidth})`
+    : `repeat(${visibleDays.length}, ${dayWidth})`;
   const dayColumn = (index: number) => index + (leadColumn ? 2 : 1);
 
   /**
@@ -987,8 +999,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const headerLane: Lane = shownLanes.length === 1 ? shownLanes[0] : "decided";
   // Hours draws its one lane as a shelf over a column of hours instead.
   const gridLanes = hours ? [] : shownLanes;
-  // Compare shows two drafts, so Decided comes along as their baseline.
-  const showSpine = shownLanes.length > 1;
+  // Compare's list shows two drafts, so Decided comes along as their baseline.
+  // By the hour it's drawn behind them instead.
+  const showSpine = !hours && shownLanes.length > 1;
 
   /**
    * Rows are placed explicitly and sized to their contents. Leaving them
@@ -1010,15 +1023,16 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     ),
   ].join(" ");
 
-  // Hours: the day headers, a draft lane's route, the Sometime shelves, then
-  // the hours — which take the rest of the frame, and never less than a
+  // Hours: the day headers, each draft lane's route, the Sometime shelves,
+  // then the hours — which take the rest of the frame, and never less than a
   // readable height per half hour.
-  const shelfRow = hoursLane && hoursLane !== "decided" ? 3 : 2;
+  const routeLanes = (hoursLanes ?? []).filter((l) => l !== "decided");
+  const shelfRow = 2 + routeLanes.length;
   const hoursRow = shelfRow + 1;
   const gridRows = range
     ? [
         "auto",
-        ...(shelfRow === 3 ? ["min-content"] : []),
+        ...routeLanes.map(() => "min-content"),
         "min-content",
         `minmax(${((range.end - range.start) / 30) * HALF_HOUR_REM}rem, 1fr)`,
       ].join(" ")
@@ -1202,7 +1216,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         : viewMeta.label}
                     </h2>
                     <p className="mt-1.5 font-garamond text-lg leading-snug text-muted-foreground italic">
-                      {viewMeta.blurb}
+                      {split
+                        ? "Both drafts by the hour, over what's agreed. The arrow on a card settles it."
+                        : viewMeta.blurb}
                     </p>
                   </div>
 
@@ -1233,8 +1249,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                     ))}
 
                   {/* List is for moving things between days; Hours is for
-                    fitting things into one. Hours draws a single lane, so
-                    Compare keeps the choice without drawing it. */}
+                    fitting things into one. */}
                   <div
                     role="radiogroup"
                     aria-label="Layout"
@@ -1242,29 +1257,23 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                   >
                     {(["list", "hours"] as const).map((l) => {
                       const on = (hours ? "hours" : "list") === l;
-                      const blocked = l === "hours" && shownLanes.length > 1;
                       return (
                         <button
                           key={l}
                           type="button"
                           role="radio"
                           aria-checked={on}
-                          aria-disabled={blocked || undefined}
                           title={
-                            blocked
-                              ? "Hours shows one lane at a time. Pick Aaron, Savea or Decided."
-                              : l === "list"
-                                ? "Each day as a list, for moving things between days"
-                                : "Each day by the hour, for fitting things into it"
+                            l === "list"
+                              ? "Each day as a list, for moving things between days"
+                              : "Each day by the hour, for fitting things into it"
                           }
-                          onClick={() => !blocked && setLayout(l)}
+                          onClick={() => setLayout(l)}
                           className={cn(
                             "rounded-full px-3 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
                             on
                               ? "bg-secondary text-primary"
                               : "text-muted-foreground hover:text-foreground",
-                            blocked &&
-                              "cursor-not-allowed opacity-50 hover:text-muted-foreground",
                           )}
                         >
                           {l === "list" ? "List" : "Hours"}
@@ -1383,15 +1392,16 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         />
                       ))}
 
-                      {hoursLane && range && (
+                      {hoursLanes && range && (
                         <>
-                          {hoursLane !== "decided" && (
+                          {routeLanes.map((lane, index) => (
                             <LegBand
-                              lane={hoursLane}
+                              key={lane}
+                              lane={lane}
                               legs={legs}
                               stays={stays}
                               days={visibleDays}
-                              row={2}
+                              row={2 + index}
                               firstColumn={dayColumn(0)}
                               stickyLeft={`calc(${RULER} + 0.75rem)`}
                               onEdit={(leg) =>
@@ -1402,7 +1412,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                               }
                               onAdopt={requestAdoptLeg}
                             />
-                          )}
+                          ))}
                           <div
                             aria-hidden="true"
                             style={{
@@ -1411,34 +1421,64 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                             }}
                             className="sticky left-0 z-20 border-r border-b border-border bg-background"
                           />
-                          {visibleDays.map((date, column) => {
-                            const cell = itemsInCell(items, hoursLane, date);
-                            return (
-                              <SometimeShelf
-                                key={date}
-                                style={{
-                                  gridRow: shelfRow,
-                                  gridColumn: dayColumn(column),
-                                }}
-                                lane={hoursLane}
-                                date={date}
-                                items={cell.filter(
-                                  (i) => i.start_time === null,
-                                )}
-                                timed={cell.filter(
-                                  (i) => i.start_time !== null,
-                                )}
-                                anchors={clock.get(date)?.anchors ?? []}
-                                expanded={shelvesOpen}
-                                onExpand={setShelvesOpen}
-                                actions={actions}
-                                onAdd={(l, d) =>
-                                  setDraft({ item: null, lane: l, onDate: d })
-                                }
-                                isToday={date === today}
-                              />
-                            );
-                          })}
+                          {visibleDays.map((date, column) => (
+                            <div
+                              key={date}
+                              style={{
+                                gridRow: shelfRow,
+                                gridColumn: dayColumn(column),
+                              }}
+                              className="grid min-w-0 auto-cols-fr grid-flow-col"
+                            >
+                              {hoursLanes.map((lane, index) => {
+                                const cell = itemsInCell(items, lane, date);
+                                return (
+                                  <SometimeShelf
+                                    key={lane}
+                                    lane={lane}
+                                    date={date}
+                                    // Two shelves a day say whose is whose.
+                                    label={
+                                      split ? (
+                                        <>
+                                          <span
+                                            style={{
+                                              color: LANES[lane].accent,
+                                            }}
+                                            className="mr-1 font-raleway text-[0.6rem] tracking-[0.15em] not-italic uppercase"
+                                          >
+                                            {LANES[lane].planner
+                                              ? PLANNERS[LANES[lane].planner]
+                                                  .label
+                                              : LANES[lane].label}
+                                          </span>
+                                          sometime
+                                        </>
+                                      ) : undefined
+                                    }
+                                    items={cell.filter(
+                                      (i) => i.start_time === null,
+                                    )}
+                                    timed={cell.filter(
+                                      (i) => i.start_time !== null,
+                                    )}
+                                    anchors={clock.get(date)?.anchors ?? []}
+                                    expanded={shelvesOpen}
+                                    onExpand={setShelvesOpen}
+                                    actions={actions}
+                                    onAdd={(l, d) =>
+                                      setDraft({
+                                        item: null,
+                                        lane: l,
+                                        onDate: d,
+                                      })
+                                    }
+                                    isToday={index === 0 && date === today}
+                                  />
+                                );
+                              })}
+                            </div>
+                          ))}
                           <HoursRuler
                             range={range}
                             style={{ gridRow: hoursRow, gridColumn: 1 }}
@@ -1452,19 +1492,26 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                                   gridRow: hoursRow,
                                   gridColumn: dayColumn(column),
                                 }}
-                                lane={hoursLane}
                                 date={date}
                                 range={range}
-                                items={itemsInCell(
-                                  items,
-                                  hoursLane,
-                                  date,
-                                ).filter((i) => i.start_time !== null)}
+                                tracks={hoursLanes.map((lane) => ({
+                                  lane,
+                                  items: itemsInCell(items, lane, date).filter(
+                                    (i) => i.start_time !== null,
+                                  ),
+                                }))}
+                                ghosts={
+                                  split
+                                    ? itemsInCell(items, "decided", date).filter(
+                                        (i) => i.start_time !== null,
+                                      )
+                                    : []
+                                }
                                 anchors={day?.anchors ?? []}
                                 marks={day?.marks ?? []}
                                 sun={day?.sun ?? sunOn(date)}
                                 slot={
-                                  slot?.cell === hoursId(hoursLane, date)
+                                  slot && parseHoursId(slot.cell)?.date === date
                                     ? slot
                                     : null
                                 }

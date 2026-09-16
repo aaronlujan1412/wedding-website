@@ -28,6 +28,7 @@ import { blockoutDetail } from "./blockouts";
 import type { CardActions } from "./ItemCard";
 import {
   SHELF_LIMIT,
+  WAKING,
   freeMinutes,
   hoursId,
   percentAt,
@@ -155,10 +156,13 @@ export function SometimeShelf({
   actions,
   onAdd,
   isToday,
+  label,
   style,
 }: {
   lane: Lane;
   date: string;
+  /** In Compare the shelf also names whose it is. */
+  label?: React.ReactNode;
   /** This day's loose cards, in drag order. */
   items: TripItem[];
   /** This day's timed cards, for what's left of the day. */
@@ -194,18 +198,20 @@ export function SometimeShelf({
       )}
     >
       <div className="flex items-center gap-2">
-        <p className="font-garamond text-sm text-muted-foreground italic">
-          Sometime
+        <p className="min-w-0 truncate font-garamond text-sm text-muted-foreground italic">
+          {label ?? "Sometime"}
         </p>
         {items.length > 0 && (
           <p
-            title="How long the cards without a time need, against what's left of 09:00–21:00 once the timed cards, trains and flights are in"
+            title={`How long the cards without a time need, against what's left of ${toTime(WAKING.start)}–${toTime(WAKING.end)} once the timed cards, trains and flights are in`}
             className={cn(
-              "ml-auto font-mono text-[0.6rem] tabular-nums slashed-zero",
+              "ml-auto font-mono text-[0.6rem] whitespace-nowrap tabular-nums slashed-zero",
               tight ? "text-warn" : "text-muted-foreground",
             )}
           >
-            {formatDuration(need)} to fit
+            {formatDuration(need)}
+            {/* Half a day's width has no room for the words; the title has them. */}
+            {!label && " to fit"}
             {tight && `, ${formatDuration(free)} free`}
           </p>
         )}
@@ -366,6 +372,8 @@ export function ShelfChipFace({
 /* ------------------------------------------------------------ the hours -- */
 
 export type Slot = {
+  /** The hours id (`hoursId`) of the track it would land in. */
+  cell: string;
   item: TripItem;
   start: number;
   /** From `slotProblems`. Any at all and the preview turns warn-coloured. */
@@ -373,15 +381,20 @@ export type Slot = {
 };
 
 /**
- * One lane's day, by the hour. Blocks sit at their exact minute; the lines are
- * a ruler to read against. Trains, flights and hotel times are drawn in place
+ * One day, by the hour. Blocks sit at their exact minute; the lines are a
+ * ruler to read against. Trains, flights and hotel times are drawn in place
  * and link to their tabs, and the evening is shaded after sunset.
+ *
+ * A day is one track per lane on screen. In Compare that's two — Savea's and
+ * Aaron's side by side — laid over what Decided already has, so "she has the
+ * shrine at ten, he has the market at ten, and we agreed on the knife shop"
+ * is one look.
  */
 export function HoursCell({
-  lane,
   date,
   range,
-  items,
+  tracks,
+  ghosts = [],
   anchors,
   marks,
   sun,
@@ -393,11 +406,12 @@ export function HoursCell({
   onResize,
   style,
 }: {
-  lane: Lane;
   date: string;
   range: Range;
-  /** This day's timed cards in the lane. */
-  items: TripItem[];
+  /** Each lane's timed cards on this day, left to right. */
+  tracks: { lane: Lane; items: TripItem[] }[];
+  /** Decided's timed cards, drawn behind the tracks. Compare only. */
+  ghosts?: TripItem[];
   anchors: Anchor[];
   marks: Mark[];
   sun: Sun;
@@ -410,6 +424,109 @@ export function HoursCell({
   onAddAt: (lane: Lane, date: string, time: string) => void;
   onResize: (item: TripItem, minutes: number) => void;
   style?: React.CSSProperties;
+}) {
+  const at = (minute: number) => `${percentAt(minute, range)}%`;
+  const split = tracks.length > 1;
+  const width = 100 / tracks.length;
+  // Each track's tint runs the full height, padding included.
+  const background = tracks
+    .map((t, i) => `${LANES[t.lane].tint} ${i * width}% ${(i + 1) * width}%`)
+    .join(", ");
+
+  return (
+    <div
+      style={{
+        ...style,
+        backgroundImage: `linear-gradient(to right, ${background})`,
+      }}
+      className={cn(
+        "relative min-w-0 border-r border-border py-2",
+        isToday && "shadow-[inset_3px_0_0_var(--color-primary)]",
+      )}
+    >
+      <div className="relative h-full">
+        {sun.rise > range.start && <Dark from={null} to={at(sun.rise)} />}
+        {sun.set < range.end && <Dark from={at(sun.set)} to={null} />}
+
+        {marks.map((mark) => (
+          <MarkLine key={mark.key} mark={mark} top={at(mark.at)} />
+        ))}
+
+        {/* With two tracks a train belongs to neither, so it runs under both
+            rather than taking a share of one. */}
+        {split &&
+          anchors.map((anchor) => {
+            const start = anchor.start ?? range.start;
+            const end = Math.min(anchor.end ?? range.end, range.end);
+            return (
+              <AnchorBlock
+                key={anchor.key}
+                anchor={anchor}
+                style={{
+                  top: at(start),
+                  height: `${percentAt(end, range) - percentAt(start, range)}%`,
+                  left: "0.25rem",
+                  right: "0.25rem",
+                }}
+              />
+            );
+          })}
+
+        {ghosts.map((item) => (
+          <Ghost key={item.id} item={item} range={range} />
+        ))}
+
+        {tracks.map((track, i) => (
+          <HoursTrack
+            key={track.lane}
+            lane={track.lane}
+            date={date}
+            range={range}
+            items={track.items}
+            // One track keeps trains in its own side-by-side layout.
+            anchors={split ? [] : anchors}
+            slot={slot?.cell === hoursId(track.lane, date) ? slot : null}
+            dragging={dragging}
+            divided={i > 0}
+            actions={actions}
+            onAddAt={onAddAt}
+            onResize={onResize}
+            style={{ left: `${i * width}%`, width: `${width}%` }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** One lane's column of hours within a day: its own drop target and ruler box. */
+function HoursTrack({
+  lane,
+  date,
+  range,
+  items,
+  anchors,
+  slot,
+  dragging,
+  divided,
+  actions,
+  onAddAt,
+  onResize,
+  style,
+}: {
+  lane: Lane;
+  date: string;
+  range: Range;
+  items: TripItem[];
+  anchors: Anchor[];
+  slot: Slot | null;
+  dragging: boolean;
+  /** A hairline from the track to its left. */
+  divided: boolean;
+  actions: CardActions;
+  onAddAt: (lane: Lane, date: string, time: string) => void;
+  onResize: (item: TripItem, minutes: number) => void;
+  style: React.CSSProperties;
 }) {
   const id = hoursId(lane, date);
   const { setNodeRef, isOver } = useDroppable({ id });
@@ -456,25 +573,24 @@ export function HoursCell({
   return (
     <div
       ref={setNodeRef}
-      // The board's collision check finds the column under the pointer by this.
+      // The board's collision check finds the track under the pointer by this.
       data-hours-cell={id}
-      style={{ ...style, backgroundColor: LANES[lane].tint }}
+      style={style}
+      // Reaches back over the day's padding, so a drop at the very top or
+      // bottom still lands on a track.
       className={cn(
-        "relative min-w-0 border-r border-border py-2 transition-shadow",
+        "absolute -top-2 -bottom-2 py-2 transition-shadow",
+        divided && "border-l border-border/70",
         isOver && "ring-2 ring-primary ring-inset",
-        isToday && "shadow-[inset_3px_0_0_var(--color-primary)]",
       )}
     >
-      {/* The box every minute on this day is measured against. */}
+      {/* The box every minute in this track is measured against. */}
       <div
         data-hours={id}
         onPointerMove={trackHover}
         onPointerLeave={() => setHover(null)}
         className="relative h-full"
       >
-        {sun.rise > range.start && <Dark from={null} to={at(sun.rise)} />}
-        {sun.set < range.end && <Dark from={at(sun.set)} to={null} />}
-
         {hover !== null && !dragging && (
           <button
             type="button"
@@ -492,10 +608,6 @@ export function HoursCell({
             + {toTime(hover)}
           </button>
         )}
-
-        {marks.map((mark) => (
-          <MarkLine key={mark.key} mark={mark} top={at(mark.at)} />
-        ))}
 
         {placed.map((span) =>
           "anchor" in span ? (
@@ -538,6 +650,55 @@ export function HoursCell({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A card Decided already has, under both drafts in Compare: a solid slab of
+ * Decided's green, the floor the two tracks are laid over. It was a dashed
+ * outline first, meant to stay quiet, but dashed is how this board says "not
+ * settled" — a route gap, an unsorted tab, a booking still to make — so the
+ * one thing you'd both agreed on read as the most up in the air.
+ *
+ * It never takes a click: the tracks on top are where the work happens.
+ */
+function Ghost({ item, range }: { item: TripItem; range: Range }) {
+  const start = itemStart(item)!;
+  const end = Math.min(start + itemLength(item), range.end);
+  const kind = kindOf(item.kind);
+  return (
+    <div
+      aria-hidden="true"
+      style={{
+        top: `${percentAt(start, range)}%`,
+        height: `${percentAt(end, range) - percentAt(start, range)}%`,
+        ...(kind.blockout && {
+          backgroundImage: `repeating-linear-gradient(135deg, transparent 0 5px, color-mix(in srgb, var(--color-primary) 14%, transparent) 5px 6px)`,
+        }),
+      }}
+      className="pointer-events-none absolute inset-x-1 z-2 flex overflow-hidden rounded-md border border-primary/45 bg-primary/16"
+    >
+      <KindTab item={item} />
+      <p className="flex min-w-0 flex-1 items-baseline gap-1.5 px-1.5 pt-0.5 leading-snug">
+        <span className="flex-none font-mono text-[0.6rem] text-foreground/75 tabular-nums slashed-zero">
+          {toTime(start)}
+        </span>
+        <span
+          className={cn(
+            "truncate font-raleway text-[0.7rem] text-foreground",
+            kind.blockout ? "italic" : "font-medium",
+          )}
+        >
+          {item.title}
+        </span>
+      </p>
+      {!kind.blockout && (
+        <StatusMark
+          status={item.booking_status}
+          className="mt-1 mr-1.5 self-start"
+        />
+      )}
     </div>
   );
 }
