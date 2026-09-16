@@ -62,9 +62,20 @@
   --color-kind-travel: #4a5661;
 
   /* Warnings had been borrowing the food and workshop hues, which put "that's
-     a march" in the same ink as a ramen card. They get their own pair. */
-  --color-warn: #a32820;
-  --color-caution: #8a6a12;
+     a march" in the same ink as a ramen card. The first attempt at their own
+     pair moved them by a spelling, not a hue: #a32820 sat ΔE 9 from food and
+     9.5 from the seal, and #8a6a12 sat ΔE 4 from workshop. At a 3px tab and
+     0.65rem type, anything under about 10 is the same ink.
+
+     Warn is ebicha 海老茶, a dark wine: at least ΔE 29 from every kind, lane
+     and the seal, and 4.8:1 on every surface a warning lands on. Bright
+     vermilion means stamped; dark wine means a problem.
+
+     Caution is kohaku 琥珀, amber. It is only ever the pace bar's fill, so it
+     is held to the 3:1 of a graphic rather than the 4.5:1 of text — do not
+     set words in it. ΔE 28 from workshop. */
+  --color-warn: #7a333a;
+  --color-caution: #ca7a2c;
 
   /* Goshuin ink. Sits a touch brighter than --color-pop2 so the seal reads as
      stamped on top of the card rather than printed as part of it. */
