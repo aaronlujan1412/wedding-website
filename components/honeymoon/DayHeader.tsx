@@ -42,7 +42,6 @@ export function DayHeader({
   note,
   legs,
   laneItems,
-  statsLane,
   marksChange = true,
   isToday,
   onEditNote,
@@ -72,13 +71,6 @@ export function DayHeader({
    * stops being a repeat and starts marking where you move.
    */
   marksChange?: boolean;
-  /**
-   * Names the lane these numbers belong to, when it isn't the one on screen.
-   * Compare shows two drafts and costs neither: the figures are Decided's, as
-   * the baseline you're weighing them against, and saying so stops "6h" being
-   * read as belonging to the row underneath it.
-   */
-  statsLane?: string;
   isToday: boolean;
   onEditNote: (date: string) => void;
   onSortByTime: (date: string) => void;
@@ -225,7 +217,6 @@ export function DayHeader({
 
       <p className="mt-1.5 flex flex-wrap items-center gap-x-2 font-mono text-[0.6rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
         <span>
-          {statsLane && `${statsLane}: `}
           {laneItems.length === 0 ? "nothing planned" : formatDuration(pace)}
         </span>
         {spend > 0 && (

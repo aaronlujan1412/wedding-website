@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { BoardDayView, PILES } from "./BoardDayView";
 import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
+import { DecidedSpineCell } from "./DecidedSpine";
 import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
 import { LaneCell } from "./LaneCell";
@@ -615,29 +616,35 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const dayColumn = (index: number) => index + (laneColumn ? 2 : 1);
 
   /**
+   * Whose day the header is describing.
+   *
+   * It used to read Decided no matter which view you were in, so Aaron's view
+   * warned that a day was a twelve-hour march when the march was on a row he
+   * could not see. With one lane on screen the header is that lane's. In
+   * Compare neither draft owns the day, so it is Decided's — the baseline you
+   * are weighing the two against, drawn as a spine directly under the header.
+   */
+  const headerLane: Lane = shownLanes.length === 1 ? shownLanes[0] : "decided";
+  // Compare shows two drafts, so Decided comes along as their baseline.
+  const showSpine = shownLanes.length > 1;
+
+  /**
    * Rows are placed explicitly and sized to their contents. Leaving them
    * implicit let a tall grid item spread its excess height evenly across every
    * row it spanned, which is where the empty half-band above a lane's cards
    * came from — the pile spanned both of its lane's rows and half its overflow
    * landed in the leg band.
    */
-  const gridRows = `auto ${shownLanes.map(() => "min-content min-content").join(" ")}`;
-
-  /**
-   * Whose day the header is describing.
-   *
-   * It used to read Decided no matter which view you were in, so Aaron's view
-   * warned that a day was a twelve-hour march when the march was on a row he
-   * could not see. With one lane on screen the header is that lane's. In
-   * Compare neither draft owns the day, so it falls back to Decided — what is
-   * already agreed is the baseline you are weighing the two against.
-   */
-  const headerLane: Lane = shownLanes.length === 1 ? shownLanes[0] : "decided";
+  const gridRows = [
+    "auto",
+    ...(showSpine ? ["min-content"] : []),
+    ...shownLanes.map(() => "min-content min-content"),
+  ].join(" ");
 
   /**
    * The columns where the agreed route changes. Everything between two of them
-   * is the same place, so only these need naming — the trip bar has the route
-   * in full, and "Tokyo" down six day headers said it a third time.
+   * is the same place, so only these need naming — the route strip has the
+   * route in full, and "Tokyo" down six day headers said it a third time.
    */
   const marksChange = useMemo(() => {
     const route = legsIn(legs, "decided");
@@ -650,8 +657,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     }
     return at;
   }, [legs, visibleDays]);
-  const bandRow = (laneIndex: number) => 2 + laneIndex * 2;
-  const cellRow = (laneIndex: number) => 3 + laneIndex * 2;
+  const lanesFrom = showSpine ? 3 : 2;
+  const bandRow = (laneIndex: number) => lanesFrom + laneIndex * 2;
+  const cellRow = (laneIndex: number) => lanesFrom + 1 + laneIndex * 2;
 
   return (
     <BoardProvider
@@ -928,11 +936,6 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                           legs={legs}
                           laneItems={itemsInCell(items, headerLane, date)}
                           marksChange={marksChange.get(date) ?? true}
-                          statsLane={
-                            shownLanes.includes(headerLane)
-                              ? undefined
-                              : LANES[headerLane].label.toLowerCase()
-                          }
                           flights={flightsOnDay(board.flights, date)}
                           transit={transitOnDay(decidedTransit, date)}
                           isToday={date === today}
@@ -944,6 +947,37 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                           }
                         />
                       ))}
+
+                      {showSpine && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setView("decided")}
+                            title={`Open ${LANES.decided.label}`}
+                            style={{
+                              gridRow: 2,
+                              gridColumn: 1,
+                              backgroundColor: LANES.decided.tint,
+                              color: LANES.decided.accent,
+                            }}
+                            className="sticky left-0 z-20 flex items-center justify-center border-r-2 border-b-2 border-r-border border-b-primary/30 font-raleway text-[0.6rem] tracking-[0.25em] uppercase transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                          >
+                            <span className="rotate-180 [writing-mode:vertical-rl]">
+                              {LANES.decided.label}
+                            </span>
+                          </button>
+                          {visibleDays.map((date, column) => (
+                            <DecidedSpineCell
+                              key={date}
+                              style={{ gridRow: 2, gridColumn: dayColumn(column) }}
+                              date={date}
+                              items={itemsInCell(items, "decided", date)}
+                              isToday={date === today}
+                              onEdit={actions.onEdit}
+                            />
+                          ))}
+                        </>
+                      )}
 
                       {shownLanes.map((lane, laneIndex) => (
                         <Fragment key={lane}>

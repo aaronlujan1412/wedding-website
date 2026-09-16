@@ -100,7 +100,7 @@ export const BOARD_VIEWS: Record<
   compare: {
     label: "Compare",
     lanes: ["savea", "aaron"],
-    blurb: "Both drafts, same days, nothing in the way.",
+    blurb: "Both drafts over what's agreed. Drag a card up to settle it.",
     pile: false,
   },
 };
