@@ -6,6 +6,12 @@ export type TripItem = Database["public"]["Tables"]["trip_items"]["Row"];
 export type TripDoc = Database["public"]["Tables"]["trip_docs"]["Row"];
 export type TripFlight = Database["public"]["Tables"]["trip_flights"]["Row"];
 export type TripStay = Database["public"]["Tables"]["trip_stays"]["Row"];
+export type RouteProposal =
+  Database["public"]["Tables"]["trip_route_proposals"]["Row"];
+export type StayProposal =
+  Database["public"]["Tables"]["trip_stay_proposals"]["Row"];
+/** A proposed route with the stays that make it up, in order. */
+export type ProposedRoute = RouteProposal & { stays: StayProposal[] };
 export type TripTransit = Database["public"]["Tables"]["trip_transit"]["Row"];
 export type ChecklistItem =
   Database["public"]["Tables"]["trip_checklist_items"]["Row"];

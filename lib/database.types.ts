@@ -589,6 +589,113 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_route_proposals: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          label: string | null
+          lodging_yen: number
+          moves: number
+          nights: number
+          position: number
+          price_basis: string
+          source: string
+          travel_km: number
+          travel_yen: number
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          label?: string | null
+          lodging_yen: number
+          moves?: number
+          nights: number
+          position?: number
+          price_basis?: string
+          source?: string
+          travel_km?: number
+          travel_yen?: number
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          label?: string | null
+          lodging_yen?: number
+          moves?: number
+          nights?: number
+          position?: number
+          price_basis?: string
+          source?: string
+          travel_km?: number
+          travel_yen?: number
+        }
+        Relationships: []
+      }
+      trip_stay_proposals: {
+        Row: {
+          breakfast: boolean
+          check_in_on: string
+          check_out_on: string
+          cost_yen: number | null
+          dinner: boolean
+          id: string
+          name: string
+          name_ja: string | null
+          per_night_yen: number | null
+          place_id: string
+          place_name: string
+          position: number
+          route_id: string
+          source_property_id: string | null
+          url: string | null
+        }
+        Insert: {
+          breakfast?: boolean
+          check_in_on: string
+          check_out_on: string
+          cost_yen?: number | null
+          dinner?: boolean
+          id?: string
+          name: string
+          name_ja?: string | null
+          per_night_yen?: number | null
+          place_id: string
+          place_name: string
+          position?: number
+          route_id: string
+          source_property_id?: string | null
+          url?: string | null
+        }
+        Update: {
+          breakfast?: boolean
+          check_in_on?: string
+          check_out_on?: string
+          cost_yen?: number | null
+          dinner?: boolean
+          id?: string
+          name?: string
+          name_ja?: string | null
+          per_night_yen?: number | null
+          place_id?: string
+          place_name?: string
+          position?: number
+          route_id?: string
+          source_property_id?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_stay_proposals_route_id_fkey"
+            columns: ["route_id"]
+            isOneToOne: false
+            referencedRelation: "trip_route_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_stays: {
         Row: {
           added_by: Database["public"]["Enums"]["trip_planner"]
@@ -804,6 +911,26 @@ export type Database = {
         Returns: number
       }
       adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
+      replace_trip_route_proposals: {
+        Args: { p_routes: Json; p_source: string }
+        Returns: number
+      }
+      send_trip_route_proposal: {
+        Args: {
+          p_lane: Database["public"]["Enums"]["trip_lane"]
+          p_planner: Database["public"]["Enums"]["trip_planner"]
+          p_route: string
+        }
+        Returns: number
+      }
+      send_trip_stay_proposal: {
+        Args: {
+          p_lane: Database["public"]["Enums"]["trip_lane"]
+          p_planner: Database["public"]["Enums"]["trip_planner"]
+          p_stay: string
+        }
+        Returns: string
+      }
       sweep_orphaned_trip_items: { Args: never; Returns: number }
     }
     Enums: {
