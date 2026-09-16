@@ -6,8 +6,6 @@ import { staysIn } from "./stays";
 import { LANES, formatLegDates, isAdopted, legSegments } from "./trip";
 import type { Lane, TripLeg, TripStay } from "./types";
 
-const PILE_WIDTH = "19rem";
-
 /**
  * One lane's route, drawn as a strip above that lane's cells.
  *
@@ -24,6 +22,8 @@ export function LegBand({
   stays,
   days,
   row,
+  firstColumn,
+  stickyLeft,
   onEdit,
   onCreate,
   onAdopt,
@@ -33,6 +33,14 @@ export function LegBand({
   stays: TripStay[];
   days: string[];
   row: number;
+  /** The grid column of the first day — after the lane column, if there is one. */
+  firstColumn: number;
+  /**
+   * Where a long leg's label pins while it scrolls: just clear of the sticky
+   * lane column. It was once the width of the pile, back when the pile was
+   * the grid's first column, and kept pinning labels 19rem in.
+   */
+  stickyLeft: string;
   onEdit: (leg: TripLeg) => void;
   onCreate: (lane: Lane, from: string, to: string) => void;
   onAdopt: (leg: TripLeg) => void;
@@ -44,7 +52,7 @@ export function LegBand({
       {legSegments(legs, lane, days).map((segment) => {
         const placement = {
           gridRow: row,
-          gridColumn: `${segment.column + 2} / span ${segment.span}`,
+          gridColumn: `${segment.column + firstColumn} / span ${segment.span}`,
           backgroundColor: meta.tint,
         };
 
@@ -63,7 +71,7 @@ export function LegBand({
                 {/* Kept in view while a long gap scrolls under the pile. */}
                 <span
                   className="sticky flex items-center gap-1"
-                  style={{ left: `calc(${PILE_WIDTH} + 0.75rem)` }}
+                  style={{ left: stickyLeft }}
                 >
                   <Plus className="h-3 w-3" strokeWidth={2} />
                   {segment.span === 1 ? "Where?" : "Where are we these days?"}
@@ -107,8 +115,11 @@ export function LegBand({
                 type="button"
                 onClick={() => onEdit(leg)}
                 title={`Edit ${leg.name}`}
-                className="sticky flex min-w-0 flex-1 items-baseline gap-1.5 truncate rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-                style={{ left: `calc(${PILE_WIDTH} + 0.75rem)` }}
+                // Shrink-wrapped, not flex-1: a sticky element as wide as its
+                // container has nowhere to slide, so a long leg's name used
+                // to scroll away with its first day.
+                className="sticky flex max-w-full min-w-0 items-baseline gap-1.5 truncate rounded-sm text-left focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                style={{ left: stickyLeft }}
               >
                 <span className="truncate font-raleway text-xs font-semibold text-foreground">
                   {leg.name}
@@ -139,7 +150,7 @@ export function LegBand({
                 (adopted ? (
                   <span
                     title="Decided already has this leg"
-                    className="flex h-6 flex-none items-center gap-0.5 px-1.5 font-raleway text-[0.55rem] uppercase tracking-[0.15em] text-primary"
+                    className="ml-auto flex h-6 flex-none items-center gap-0.5 px-1.5 font-raleway text-[0.55rem] uppercase tracking-[0.15em] text-primary"
                   >
                     <Check className="h-3 w-3" strokeWidth={2} />
                     Agreed
@@ -151,7 +162,7 @@ export function LegBand({
                     title={`Agreed — use ${leg.name} in Decided`}
                     aria-label={`Adopt ${leg.name} into Decided`}
                     className={cn(
-                      "flex h-6 w-6 flex-none items-center justify-center rounded-sm border border-primary/60 text-primary transition-colors",
+                      "ml-auto flex h-6 w-6 flex-none items-center justify-center rounded-sm border border-primary/60 text-primary transition-colors",
                       "hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
                     )}
                   >

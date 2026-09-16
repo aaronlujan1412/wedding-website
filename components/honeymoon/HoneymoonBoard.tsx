@@ -605,9 +605,14 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
   const viewMeta = BOARD_VIEWS[view];
   const shownLanes = viewMeta.lanes;
-  // One lane needs no more than a tinted edge; two need room for a turned name.
-  const laneColumn = shownLanes.length > 1 ? "2.75rem" : "1.5rem";
-  const gridColumns = `${laneColumn} repeat(${visibleDays.length}, ${COLUMN})`;
+  // Compare needs a turned name to tell its two rows apart. A single-lane view
+  // gets no lane column at all: the heading already names it, and the column
+  // was 1.5rem of tint whose only job was opening the pile beside it.
+  const laneColumn = shownLanes.length > 1 ? "2.75rem" : null;
+  const gridColumns = laneColumn
+    ? `${laneColumn} repeat(${visibleDays.length}, ${COLUMN})`
+    : `repeat(${visibleDays.length}, ${COLUMN})`;
+  const dayColumn = (index: number) => index + (laneColumn ? 2 : 1);
 
   /**
    * Rows are placed explicitly and sized to their contents. Leaving them
@@ -908,14 +913,16 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         gridTemplateRows: gridRows,
                       }}
                     >
-                      <div
-                        style={{ gridRow: 1, gridColumn: 1 }}
-                        className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background"
-                      />
+                      {laneColumn && (
+                        <div
+                          style={{ gridRow: 1, gridColumn: 1 }}
+                          className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background"
+                        />
+                      )}
                       {visibleDays.map((date, column) => (
                         <DayHeader
                           key={date}
-                          style={{ gridRow: 1, gridColumn: column + 2 }}
+                          style={{ gridRow: 1, gridColumn: dayColumn(column) }}
                           date={date}
                           note={dayNotes.find((d) => d.on_date === date)}
                           legs={legs}
@@ -940,36 +947,28 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
                       {shownLanes.map((lane, laneIndex) => (
                         <Fragment key={lane}>
-                          {/* Just the name now. The pile it used to hold is
-                            beside the board, so this column no longer decides
-                            how tall the lane is. */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setPileLane(lane);
-                              setPileOpen(true);
-                            }}
-                            title={`${LANES[lane].label} — open this pile`}
-                            style={{
-                              gridRow: `${bandRow(laneIndex)} / span 2`,
-                              gridColumn: 1,
-                              backgroundColor: LANES[lane].tint,
-                              color: LANES[lane].accent,
-                            }}
-                            className="sticky left-0 z-20 flex items-center justify-center border-r-2 border-b border-border font-raleway text-[0.6rem] tracking-[0.25em] uppercase transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-                          >
-                            {/* A tinted spine, not a label. With one lane on
-                                screen the view switcher has already named it,
-                                and in Compare the tint plus the turned name is
-                                enough to tell two rows apart. Clicking it opens
-                                that lane's pile. */}
-                            {shownLanes.length > 1 && (
-                              <span className="[writing-mode:vertical-rl] rotate-180">
+                          {/* The turned name, Compare only. Clicking it opens
+                              that person's own view: Compare has no pile to
+                              open, which is what this used to try to do. */}
+                          {laneColumn && (
+                            <button
+                              type="button"
+                              onClick={() => setView(lane)}
+                              title={`Open ${LANES[lane].label}`}
+                              style={{
+                                gridRow: `${bandRow(laneIndex)} / span 2`,
+                                gridColumn: 1,
+                                backgroundColor: LANES[lane].tint,
+                                color: LANES[lane].accent,
+                              }}
+                              className="sticky left-0 z-20 flex items-center justify-center border-r-2 border-b border-border font-raleway text-[0.6rem] tracking-[0.25em] uppercase transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                            >
+                              <span className="rotate-180 [writing-mode:vertical-rl]">
                                 {LANES[lane].label}
                               </span>
-                            )}
-                          </button>
-                          {/* Decided's route is the trip bar up top now, so
+                            </button>
+                          )}
+                          {/* Decided's route is the route strip up top, so
                               drawing it again here was the redundancy. A draft
                               lane still gets its band: that IS the proposal,
                               and in Compare two of them side by side is the
@@ -981,6 +980,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                               stays={stays}
                               days={visibleDays}
                               row={bandRow(laneIndex)}
+                              firstColumn={dayColumn(0)}
+                              stickyLeft={
+                                laneColumn
+                                  ? `calc(${laneColumn} + 0.75rem)`
+                                  : "0.75rem"
+                              }
                               onEdit={(leg) =>
                                 setLegDraft({ leg, lane: leg.lane })
                               }
@@ -995,7 +1000,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                               key={date}
                               style={{
                                 gridRow: cellRow(laneIndex),
-                                gridColumn: column + 2,
+                                gridColumn: dayColumn(column),
                               }}
                               lane={lane}
                               date={date}
