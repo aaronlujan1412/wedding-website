@@ -36,6 +36,32 @@ export const SECTIONS: Section[] = [
   { href: "/honeymoon/pocket", label: "Pocket", icon: Printer },
 ];
 
+function section(href: string): Section {
+  const found = SECTIONS.find((s) => s.href === href);
+  if (!found) throw new Error(`No honeymoon section at ${href}`);
+  return found;
+}
+
+/**
+ * A phone's bottom bar has room for five, and there are seven tabs. These four
+ * are what gets opened on a phone mid-trip — today's plan, and the times and
+ * confirmation codes someone at a counter will ask for. The fifth slot holds
+ * the rest, which is planning done at a laptop.
+ *
+ * The bar used to be a five-column grid of all seven, so Itinerary and Pocket
+ * wrapped onto a second row that sat over the page.
+ */
+export const PHONE_BAR: Section[] = [
+  section("/honeymoon/itinerary"),
+  section("/honeymoon/flights"),
+  section("/honeymoon/transit"),
+  section("/honeymoon/lodging"),
+];
+
+export const PHONE_MORE: Section[] = SECTIONS.filter(
+  (s) => !PHONE_BAR.includes(s),
+);
+
 export function isActive(section: Section, pathname: string) {
   return section.exact
     ? pathname === section.href
