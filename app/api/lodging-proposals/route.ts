@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { currentTripId } from "@/lib/honeymoon-queries";
 
 /**
  * Where HotelFinder publishes the routes it has worked out.
@@ -88,9 +89,21 @@ export async function POST(request: Request) {
   const problem = problemWith(payload.routes);
   if (problem) return Response.json({ ok: false, error: problem }, { status: 400 });
 
+  // The finder publishes against whatever trip the planner is currently on,
+  // rather than being told: it has no idea which holiday these dates belong to,
+  // and a trip id in a webhook body is a way to overwrite a different one.
+  const trip = await currentTripId();
+  if (!trip) {
+    return Response.json(
+      { ok: false, error: "there is no trip to publish against" },
+      { status: 409 },
+    );
+  }
+
   const { data, error } = await supabase.rpc("replace_trip_route_proposals", {
     p_source: source,
     p_routes: payload.routes as unknown as Stay[],
+    p_trip: trip,
   });
   if (error) {
     return Response.json({ ok: false, error: error.message }, { status: 500 });

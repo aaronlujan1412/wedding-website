@@ -18,14 +18,22 @@ export const BACKUP_TABLES = [
   "seating_tables",
   "guest_photos",
   "faq",
+  // The trip comes first on restore: everything below it carries a trip_id and
+  // the foreign key will not accept the children before the parent exists.
+  "trips",
   "trip_legs",
   "trip_days",
   "trip_items",
   "trip_docs",
   "trip_flights",
   "trip_stays",
+  "trip_transit",
   "trip_checklist_items",
 ] as const;
+
+// Deliberately absent: trip_route_proposals and trip_stay_proposals. They are
+// the lodging finder's output, regenerated on its next run, and a proposal
+// somebody acted on is already a real trip_stays row by then.
 
 export const BACKUP_BUCKET = "backups";
 

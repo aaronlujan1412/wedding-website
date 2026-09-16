@@ -252,6 +252,7 @@ export type Database = {
           list: string
           owner: Database["public"]["Enums"]["trip_planner"] | null
           position: number
+          trip_id: string
           updated_at: string
         }
         Insert: {
@@ -262,6 +263,7 @@ export type Database = {
           list: string
           owner?: Database["public"]["Enums"]["trip_planner"] | null
           position?: number
+          trip_id: string
           updated_at?: string
         }
         Update: {
@@ -272,9 +274,18 @@ export type Database = {
           list?: string
           owner?: Database["public"]["Enums"]["trip_planner"] | null
           position?: number
+          trip_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_checklist_items_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_days: {
         Row: {
@@ -282,20 +293,31 @@ export type Database = {
           note: string | null
           on_date: string
           title: string | null
+          trip_id: string
         }
         Insert: {
           created_at?: string
           note?: string | null
           on_date: string
           title?: string | null
+          trip_id: string
         }
         Update: {
           created_at?: string
           note?: string | null
           on_date?: string
           title?: string | null
+          trip_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_days_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_docs: {
         Row: {
@@ -310,6 +332,7 @@ export type Database = {
           position: number
           starts_at: string | null
           title: string
+          trip_id: string
           url: string | null
         }
         Insert: {
@@ -324,6 +347,7 @@ export type Database = {
           position?: number
           starts_at?: string | null
           title: string
+          trip_id: string
           url?: string | null
         }
         Update: {
@@ -338,9 +362,18 @@ export type Database = {
           position?: number
           starts_at?: string | null
           title?: string
+          trip_id?: string
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_docs_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_flights: {
         Row: {
@@ -371,6 +404,7 @@ export type Database = {
           status_url: string | null
           to_airport: string
           to_city: string | null
+          trip_id: string
           updated_at: string
         }
         Insert: {
@@ -401,6 +435,7 @@ export type Database = {
           status_url?: string | null
           to_airport: string
           to_city?: string | null
+          trip_id: string
           updated_at?: string
         }
         Update: {
@@ -431,9 +466,18 @@ export type Database = {
           status_url?: string | null
           to_airport?: string
           to_city?: string | null
+          trip_id?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_flights_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_items: {
         Row: {
@@ -463,6 +507,7 @@ export type Database = {
           start_time: string | null
           title: string
           title_ja: string | null
+          trip_id: string
           updated_at: string
           url: string | null
           wander_id: string | null
@@ -494,6 +539,7 @@ export type Database = {
           start_time?: string | null
           title: string
           title_ja?: string | null
+          trip_id: string
           updated_at?: string
           url?: string | null
           wander_id?: string | null
@@ -525,6 +571,7 @@ export type Database = {
           start_time?: string | null
           title?: string
           title_ja?: string | null
+          trip_id?: string
           updated_at?: string
           url?: string | null
           wander_id?: string | null
@@ -542,6 +589,13 @@ export type Database = {
             columns: ["linked_transit_id"]
             isOneToOne: false
             referencedRelation: "trip_transit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_items_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
             referencedColumns: ["id"]
           },
           {
@@ -564,6 +618,7 @@ export type Database = {
           note: string | null
           position: number
           starts_on: string
+          trip_id: string
         }
         Insert: {
           created_at?: string
@@ -575,6 +630,7 @@ export type Database = {
           note?: string | null
           position?: number
           starts_on: string
+          trip_id: string
         }
         Update: {
           created_at?: string
@@ -586,8 +642,17 @@ export type Database = {
           note?: string | null
           position?: number
           starts_on?: string
+          trip_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_legs_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_route_proposals: {
         Row: {
@@ -603,6 +668,7 @@ export type Database = {
           source: string
           travel_km: number
           travel_yen: number
+          trip_id: string
         }
         Insert: {
           created_at?: string
@@ -617,6 +683,7 @@ export type Database = {
           source?: string
           travel_km?: number
           travel_yen?: number
+          trip_id: string
         }
         Update: {
           created_at?: string
@@ -631,8 +698,17 @@ export type Database = {
           source?: string
           travel_km?: number
           travel_yen?: number
+          trip_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_route_proposals_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_stay_proposals: {
         Row: {
@@ -727,6 +803,7 @@ export type Database = {
           payment: Database["public"]["Enums"]["trip_stay_payment"] | null
           phone: string | null
           tattoos_ok: boolean | null
+          trip_id: string
           updated_at: string
           url: string | null
         }
@@ -760,6 +837,7 @@ export type Database = {
           payment?: Database["public"]["Enums"]["trip_stay_payment"] | null
           phone?: string | null
           tattoos_ok?: boolean | null
+          trip_id: string
           updated_at?: string
           url?: string | null
         }
@@ -793,10 +871,19 @@ export type Database = {
           payment?: Database["public"]["Enums"]["trip_stay_payment"] | null
           phone?: string | null
           tattoos_ok?: boolean | null
+          trip_id?: string
           updated_at?: string
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_stays_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_transit: {
         Row: {
@@ -825,6 +912,7 @@ export type Database = {
           service: string | null
           to_place: string
           to_place_ja: string | null
+          trip_id: string
           updated_at: string
         }
         Insert: {
@@ -853,6 +941,7 @@ export type Database = {
           service?: string | null
           to_place: string
           to_place_ja?: string | null
+          trip_id: string
           updated_at?: string
         }
         Update: {
@@ -881,6 +970,48 @@ export type Database = {
           service?: string | null
           to_place?: string
           to_place_ja?: string | null
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_transit_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trips: {
+        Row: {
+          created_at: string
+          ends_on: string
+          id: string
+          name: string
+          name_ja: string | null
+          note: string | null
+          starts_on: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_on: string
+          id?: string
+          name: string
+          name_ja?: string | null
+          note?: string | null
+          starts_on: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_on?: string
+          id?: string
+          name?: string
+          name_ja?: string | null
+          note?: string | null
+          starts_on?: string
           updated_at?: string
         }
         Relationships: []
@@ -907,12 +1038,15 @@ export type Database = {
     Functions: {
       adopt_trip_leg: { Args: { p_leg: string }; Returns: string }
       adopt_trip_route: {
-        Args: { p_lane: Database["public"]["Enums"]["trip_lane"] }
+        Args: {
+          p_lane: Database["public"]["Enums"]["trip_lane"]
+          p_trip: string
+        }
         Returns: number
       }
       adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
       replace_trip_route_proposals: {
-        Args: { p_routes: Json; p_source: string }
+        Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number
       }
       send_trip_route_proposal: {
@@ -931,7 +1065,7 @@ export type Database = {
         }
         Returns: string
       }
-      sweep_orphaned_trip_items: { Args: never; Returns: number }
+      sweep_orphaned_trip_items: { Args: { p_trip: string }; Returns: number }
     }
     Enums: {
       dietary: "restriction" | "preference" | "none"

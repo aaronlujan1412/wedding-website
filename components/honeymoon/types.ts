@@ -1,5 +1,6 @@
 import type { Database } from "@/lib/database.types";
 
+export type Trip = Database["public"]["Tables"]["trips"]["Row"];
 export type TripLeg = Database["public"]["Tables"]["trip_legs"]["Row"];
 export type TripDay = Database["public"]["Tables"]["trip_days"]["Row"];
 export type TripItem = Database["public"]["Tables"]["trip_items"]["Row"];
@@ -35,6 +36,10 @@ export type Rate = { yenPerUsd: number; asOf: string | null; live: boolean };
 
 /** Everything the board needs, read once on the server. */
 export type TripBoard = {
+  /** The holiday all of this belongs to. Its dates are the board's columns. */
+  trip: Trip | null;
+  /** All of them, for the picker. */
+  trips: Trip[];
   legs: TripLeg[];
   days: TripDay[];
   items: TripItem[];

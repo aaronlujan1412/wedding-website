@@ -15,12 +15,14 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { MapPinned, Plus, Search, X } from "lucide-react";
+import { MapPinned, Plus, X } from "lucide-react";
 import {
   adoptLeg,
   adoptRoute,
   copyItem,
+  deleteItem,
   moveItem,
+  restoreItem,
   sortDayByTime,
 } from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
@@ -31,9 +33,11 @@ import { DayRibbon, RIBBON_PREFIX } from "./DayRibbon";
 import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
 import { LaneCell } from "./LaneCell";
-import { LanePile } from "./LanePile";
+import { IdeaPanel } from "./IdeaPanel";
 import { LegBand } from "./LegBand";
 import { LegDialog, type LegDraft } from "./LegDialog";
+import { TripBar } from "./TripBar";
+import { TripDialog, type TripDraft } from "./TripDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { BoardProvider } from "./BoardContext";
 import { flightsOnDay } from "./flights";
@@ -42,8 +46,9 @@ import { staysIn } from "./stays";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { TripDocsPanel } from "./TripDocsPanel";
 import {
+  BOARD_VIEWS,
   LANES,
-  LANE_ORDER,
+  VIEW_ORDER,
   PLANNERS,
   adoptEffect,
   cellId,
@@ -53,6 +58,7 @@ import {
   formatYen,
   itemsIn,
   itemsInCell,
+  legForDay,
   legsIn,
   nudgeTarget,
   parseCell,
@@ -62,13 +68,15 @@ import {
   todayISO,
   tripDays,
   yenAsUsd,
+  isBoardView,
 } from "./trip";
+import type { BoardView } from "./trip";
 import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
 
 const COLUMN = "19rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
-  const { legs, days: dayNotes, docs, stays, rate } = board;
+  const { trip, legs, days: dayNotes, docs, stays, rate } = board;
 
   // Local mirror, so a drag lands instantly instead of waiting on the round
   // trip. When the server action revalidates and new rows arrive, adopt them
@@ -85,12 +93,15 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const [draft, setDraft] = useState<ItemDraft | null>(null);
   const [noteDate, setNoteDate] = useState<string | null>(null);
   const [legDraft, setLegDraft] = useState<LegDraft | null>(null);
+  const [tripDraft, setTripDraft] = useState<TripDraft | null>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [notice, setNoticeState] = useState<{
     tone: "ok" | "error";
     text: string;
     /** On a phone, a "Go" button to the day the card just moved to. */
     goTo?: string;
+    /** Puts back whatever the last action removed. */
+    undo?: () => void;
   } | null>(null);
   // On a phone the notice is a toast over the page, so a success clears itself.
   // Errors stay until dismissed.
@@ -99,7 +110,11 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     if (noticeTimer.current) clearTimeout(noticeTimer.current);
     setNoticeState(next);
     if (next?.tone === "ok") {
-      noticeTimer.current = setTimeout(() => setNoticeState(null), 5000);
+      // An undo needs long enough to notice it, read it and reach it.
+      noticeTimer.current = setTimeout(
+        () => setNoticeState(null),
+        next.undo ? 12000 : 5000,
+      );
     }
   }
 
@@ -111,6 +126,20 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   );
   const [activeLegId, setActiveLegId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  // The view lives in the URL so it survives a refresh and can be bookmarked —
+  // there is no login here, so "Aaron's view" is a link, not an account.
+  const [view, setViewState] = useState<BoardView>(() =>
+    isBoardView(searchParams.get("view"))
+      ? (searchParams.get("view") as BoardView)
+      : "decided",
+  );
+  function setView(next: BoardView) {
+    setViewState(next);
+    setPileLane(BOARD_VIEWS[next].lanes[0]);
+    window.history.replaceState(null, "", `?view=${next}`);
+  }
+  const [pileLane, setPileLane] = useState<Lane>("decided");
+  const [pileOpen, setPileOpen] = useState(true);
   const [, startTransition] = useTransition();
 
   // Paused while anything is in progress, so a refresh never yanks work.
@@ -119,11 +148,17 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       draft !== null ||
       noteDate !== null ||
       legDraft !== null ||
+      tripDraft !== null ||
       confirm !== null,
   );
 
   const today = todayISO();
-  const allDays = useMemo(() => tripDays(legs), [legs]);
+  // The trip's own dates, so a day nobody has assigned a city to is an ordinary
+  // empty column. Falling back to the legs keeps a board with no trip readable.
+  const allDays = useMemo(
+    () => (trip ? eachDay(trip.starts_on, trip.ends_on) : tripDays(legs)),
+    [trip, legs],
+  );
   const dayShown =
     mobileDay === PILES || allDays.includes(mobileDay)
       ? mobileDay
@@ -426,6 +461,33 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
    */
   const actions: CardActions = {
     onEdit: (item) => setDraft({ item, lane: item.lane, onDate: item.on_date }),
+    // Optimistic: the card goes now and the toast holds the way back. Waiting
+    // on a round trip to clear one card out of a pile of ninety is the kind of
+    // lag that makes you stop tidying.
+    onDelete: (item) => {
+      setItems((prev) => prev.filter((i) => i.id !== item.id));
+      startTransition(async () => {
+        const result = await deleteItem(item.id);
+        if (result.error) {
+          setItems((prev) => [...prev, item]);
+          setNotice({ tone: "error", text: result.error });
+          return;
+        }
+        setNotice({
+          tone: "ok",
+          text: `Deleted ${item.title}.`,
+          undo: () =>
+            startTransition(async () => {
+              const back = await restoreItem(item);
+              setNotice(
+                back.error
+                  ? { tone: "error", text: back.error }
+                  : { tone: "ok", text: `${item.title} is back.` },
+              );
+            }),
+        });
+      });
+    },
     onNudge: (item, delta) => {
       const target = nudgeTarget(item, delta, allDays);
       if (target === undefined) return;
@@ -462,13 +524,48 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   };
 
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
-  const gridColumns = `${COLUMN} repeat(${visibleDays.length}, ${COLUMN})`;
+  const viewMeta = BOARD_VIEWS[view];
+  const shownLanes = viewMeta.lanes;
+  // One lane needs no more than a tinted edge; two need room for a turned name.
+  const laneColumn = shownLanes.length > 1 ? "2.75rem" : "1.5rem";
+  const gridColumns = `${laneColumn} repeat(${visibleDays.length}, ${COLUMN})`;
 
   /**
-   * Grid rows, placed explicitly now that each lane is two rows tall: row 1 is
-   * the day headers, then for each lane a leg band and its cells beneath. The
-   * pile spans both so the lane stays named alongside its route.
+   * Rows are placed explicitly and sized to their contents. Leaving them
+   * implicit let a tall grid item spread its excess height evenly across every
+   * row it spanned, which is where the empty half-band above a lane's cards
+   * came from — the pile spanned both of its lane's rows and half its overflow
+   * landed in the leg band.
    */
+  const gridRows = `auto ${shownLanes.map(() => "min-content min-content").join(" ")}`;
+
+  /**
+   * Whose day the header is describing.
+   *
+   * It used to read Decided no matter which view you were in, so Aaron's view
+   * warned that a day was a twelve-hour march when the march was on a row he
+   * could not see. With one lane on screen the header is that lane's. In
+   * Compare neither draft owns the day, so it falls back to Decided — what is
+   * already agreed is the baseline you are weighing the two against.
+   */
+  const headerLane: Lane = shownLanes.length === 1 ? shownLanes[0] : "decided";
+
+  /**
+   * The columns where the agreed route changes. Everything between two of them
+   * is the same place, so only these need naming — the trip bar has the route
+   * in full, and "Tokyo" down six day headers said it a third time.
+   */
+  const marksChange = useMemo(() => {
+    const route = legsIn(legs, "decided");
+    const at = new Map<string, boolean>();
+    let previous: string | null = null;
+    for (const [i, date] of visibleDays.entries()) {
+      const id = legForDay(route, date)?.id ?? null;
+      at.set(date, i === 0 || id !== previous);
+      previous = id;
+    }
+    return at;
+  }, [legs, visibleDays]);
   const bandRow = (laneIndex: number) => 2 + laneIndex * 2;
   const cellRow = (laneIndex: number) => 3 + laneIndex * 2;
 
@@ -515,50 +612,72 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         </div>
 
         {/* Legs */}
-        <div className="flex flex-wrap items-center gap-2 border-y border-border py-3 max-lg:hidden">
-          <LegPill
-            active={activeLegId === null}
-            onClick={() => setActiveLegId(null)}
-          >
-            Whole trip
-          </LegPill>
-          {decidedLegs.map((leg) => (
-            <LegPill
-              key={leg.id}
-              active={activeLegId === leg.id}
-              onClick={() => setActiveLegId(leg.id)}
-              onEdit={() => setLegDraft({ leg, lane: leg.lane })}
-            >
-              {leg.name}
-              {leg.name_ja && (
-                <span className="ml-1 font-jp text-[0.65rem] opacity-70">
-                  {leg.name_ja}
-                </span>
-              )}
-            </LegPill>
-          ))}
-          <button
-            type="button"
-            onClick={() => setLegDraft({ leg: null, lane: "decided" })}
-            className="flex items-center gap-1 rounded-full border border-dashed border-border px-3 py-1 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <Plus className="h-3 w-3" strokeWidth={2} />
-            Leg
-          </button>
+        {/* The trip, and the shape of it: its dates, its legs, and where
+            you're sleeping on each one. */}
+        {trip && (
+          <div className="max-lg:hidden">
+            <TripBar
+              trip={trip}
+              trips={board.trips}
+              legs={legs}
+              stays={stays}
+              activeLegId={activeLegId}
+              onLeg={setActiveLegId}
+              onEditTrip={() => setTripDraft({ trip })}
+              onNewTrip={() => setTripDraft({ trip: null })}
+              onEditLeg={(leg) => setLegDraft({ leg, lane: leg.lane })}
+              onCreateLeg={(lane, from, to) =>
+                setLegDraft({ leg: null, lane, from, to })
+              }
+            />
+          </div>
+        )}
 
-          <label className="relative ml-auto block w-48">
-            <Search
-              className="pointer-events-none absolute top-1/2 left-2 h-3 w-3 -translate-y-1/2 text-muted-foreground"
-              strokeWidth={2}
-            />
-            <input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search the piles"
-              className="h-7 w-full rounded-sm border border-input bg-background pr-2 pl-7 font-raleway text-xs text-foreground placeholder:text-muted-foreground focus-visible:border-ring focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            />
-          </label>
+        <div className="mt-3 flex flex-wrap items-center gap-2 max-lg:hidden">
+          {/* Whose board this is right now. Three working views — one row and
+              the pile you're pulling from — and Compare, where you're choosing
+              between two drafts rather than adding to either. */}
+          <div
+            role="radiogroup"
+            aria-label="View"
+            className="ml-auto flex gap-1 rounded-full border border-border p-0.5"
+          >
+            {VIEW_ORDER.map((v) => {
+              const on = v === view;
+              const meta = BOARD_VIEWS[v];
+              const accent =
+                meta.lanes.length === 1
+                  ? LANES[meta.lanes[0]].accent
+                  : undefined;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  title={meta.blurb}
+                  onClick={() => setView(v)}
+                  style={
+                    on
+                      ? {
+                          color: accent ?? "var(--color-primary)",
+                          backgroundColor:
+                            meta.lanes.length === 1
+                              ? LANES[meta.lanes[0]].tint
+                              : "var(--color-secondary)",
+                        }
+                      : undefined
+                  }
+                  className={cn(
+                    "rounded-full px-3 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    !on && "text-muted-foreground hover:text-foreground",
+                  )}
+                >
+                  {meta.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {notice && (
@@ -587,6 +706,17 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                 Go
               </button>
             )}
+            {notice.undo && (
+              <button
+                type="button"
+                onClick={() => {
+                  notice.undo?.();
+                }}
+                className="rounded-sm font-raleway text-[0.65rem] font-semibold tracking-[0.2em] uppercase underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                Undo
+              </button>
+            )}
             <button
               type="button"
               onClick={() => setNotice(null)}
@@ -598,10 +728,8 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
           </p>
         )}
 
-        {legs.length === 0 ? (
-          <EmptyTrip
-            onAddLeg={() => setLegDraft({ leg: null, lane: "decided" })}
-          />
+        {!trip ? (
+          <NoTrip onMake={() => setTripDraft({ trip: null })} />
         ) : (
           <>
             <BoardDayView
@@ -656,90 +784,134 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                 {/* One grid, three rows. Horizontal scroll moves all three lanes
               together, which is the point — a day's three cells must always
               line up. */}
-                <div className="rail-scroll mt-4 max-h-[78vh] overflow-auto rounded-lg border border-border">
-                  <div
-                    className="grid"
-                    style={{ gridTemplateColumns: gridColumns }}
-                  >
+                <div className="mt-4 flex items-start gap-3">
+                  {viewMeta.pile && (
+                    <IdeaPanel
+                      lane={pileLane}
+                      onLane={setPileLane}
+                      items={items}
+                      query={query}
+                      onQuery={setQuery}
+                      actions={actions}
+                      onAdd={(l) =>
+                        setDraft({ item: null, lane: l, onDate: null })
+                      }
+                      onAdoptRoute={requestAdoptRoute}
+                      legCount={legsIn(legs, pileLane).length}
+                      open={pileOpen}
+                      onOpen={setPileOpen}
+                    />
+                  )}
+                  <div className="rail-scroll max-h-[78vh] min-w-0 flex-1 overflow-auto rounded-lg border border-border">
                     <div
-                      style={{ gridRow: 1, gridColumn: 1 }}
-                      className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background px-3 py-2.5"
+                      className="grid"
+                      style={{
+                        gridTemplateColumns: gridColumns,
+                        gridTemplateRows: gridRows,
+                      }}
                     >
-                      <p className="font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground">
-                        Lanes
-                      </p>
-                      <p className="mt-0.5 font-garamond text-sm leading-snug text-muted-foreground">
-                        Only the top row prints.
-                      </p>
-                    </div>
-                    {visibleDays.map((date, column) => (
-                      <DayHeader
-                        key={date}
-                        style={{ gridRow: 1, gridColumn: column + 2 }}
-                        date={date}
-                        note={dayNotes.find((d) => d.on_date === date)}
-                        legs={legs}
-                        decided={itemsInCell(items, "decided", date)}
-                        flights={flightsOnDay(board.flights, date)}
-                        transit={transitOnDay(decidedTransit, date)}
-                        isToday={date === today}
-                        onEditNote={setNoteDate}
-                        onSortByTime={(d) =>
-                          startTransition(async () => {
-                            await sortDayByTime(d, "decided");
-                          })
-                        }
+                      <div
+                        style={{ gridRow: 1, gridColumn: 1 }}
+                        className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background"
                       />
-                    ))}
-
-                    {LANE_ORDER.map((lane, laneIndex) => (
-                      <Fragment key={lane}>
-                        <LanePile
-                          style={{
-                            gridRow: `${bandRow(laneIndex)} / span 2`,
-                            gridColumn: 1,
-                          }}
-                          lane={lane}
-                          items={itemsInCell(items, lane, null)}
-                          query={query}
-                          actions={actions}
-                          legCount={legsIn(legs, lane).length}
-                          onAdoptRoute={requestAdoptRoute}
-                          onAdd={(l, d) =>
-                            setDraft({ item: null, lane: l, onDate: d })
-                          }
-                        />
-                        <LegBand
-                          lane={lane}
+                      {visibleDays.map((date, column) => (
+                        <DayHeader
+                          key={date}
+                          style={{ gridRow: 1, gridColumn: column + 2 }}
+                          date={date}
+                          note={dayNotes.find((d) => d.on_date === date)}
                           legs={legs}
-                          stays={stays}
-                          days={visibleDays}
-                          row={bandRow(laneIndex)}
-                          onEdit={(leg) => setLegDraft({ leg, lane: leg.lane })}
-                          onCreate={(l, from, to) =>
-                            setLegDraft({ leg: null, lane: l, from, to })
+                          laneItems={itemsInCell(items, headerLane, date)}
+                          marksChange={marksChange.get(date) ?? true}
+                          statsLane={
+                            shownLanes.includes(headerLane)
+                              ? undefined
+                              : LANES[headerLane].label.toLowerCase()
                           }
-                          onAdopt={requestAdoptLeg}
+                          flights={flightsOnDay(board.flights, date)}
+                          transit={transitOnDay(decidedTransit, date)}
+                          isToday={date === today}
+                          onEditNote={setNoteDate}
+                          onSortByTime={(d) =>
+                            startTransition(async () => {
+                              await sortDayByTime(d, "decided");
+                            })
+                          }
                         />
-                        {visibleDays.map((date, column) => (
-                          <LaneCell
-                            key={date}
-                            style={{
-                              gridRow: cellRow(laneIndex),
-                              gridColumn: column + 2,
+                      ))}
+
+                      {shownLanes.map((lane, laneIndex) => (
+                        <Fragment key={lane}>
+                          {/* Just the name now. The pile it used to hold is
+                            beside the board, so this column no longer decides
+                            how tall the lane is. */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setPileLane(lane);
+                              setPileOpen(true);
                             }}
-                            lane={lane}
-                            date={date}
-                            items={itemsInCell(items, lane, date)}
-                            isToday={date === today}
-                            actions={actions}
-                            onAdd={(l, d) =>
-                              setDraft({ item: null, lane: l, onDate: d })
-                            }
-                          />
-                        ))}
-                      </Fragment>
-                    ))}
+                            title={`${LANES[lane].label} — open this pile`}
+                            style={{
+                              gridRow: `${bandRow(laneIndex)} / span 2`,
+                              gridColumn: 1,
+                              backgroundColor: LANES[lane].tint,
+                              color: LANES[lane].accent,
+                            }}
+                            className="sticky left-0 z-20 flex items-center justify-center border-r-2 border-b border-border font-raleway text-[0.6rem] tracking-[0.25em] uppercase transition-colors hover:brightness-95 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+                          >
+                            {/* A tinted spine, not a label. With one lane on
+                                screen the view switcher has already named it,
+                                and in Compare the tint plus the turned name is
+                                enough to tell two rows apart. Clicking it opens
+                                that lane's pile. */}
+                            {shownLanes.length > 1 && (
+                              <span className="[writing-mode:vertical-rl] rotate-180">
+                                {LANES[lane].label}
+                              </span>
+                            )}
+                          </button>
+                          {/* Decided's route is the trip bar up top now, so
+                              drawing it again here was the redundancy. A draft
+                              lane still gets its band: that IS the proposal,
+                              and in Compare two of them side by side is the
+                              whole point of the view. */}
+                          {lane !== "decided" && (
+                            <LegBand
+                              lane={lane}
+                              legs={legs}
+                              stays={stays}
+                              days={visibleDays}
+                              row={bandRow(laneIndex)}
+                              onEdit={(leg) =>
+                                setLegDraft({ leg, lane: leg.lane })
+                              }
+                              onCreate={(l, from, to) =>
+                                setLegDraft({ leg: null, lane: l, from, to })
+                              }
+                              onAdopt={requestAdoptLeg}
+                            />
+                          )}
+                          {visibleDays.map((date, column) => (
+                            <LaneCell
+                              key={date}
+                              style={{
+                                gridRow: cellRow(laneIndex),
+                                gridColumn: column + 2,
+                              }}
+                              lane={lane}
+                              date={date}
+                              items={itemsInCell(items, lane, date)}
+                              isToday={date === today}
+                              actions={actions}
+                              onAdd={(l, d) =>
+                                setDraft({ item: null, lane: l, onDate: d })
+                              }
+                            />
+                          ))}
+                        </Fragment>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
@@ -772,6 +944,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
           onClose={() => setLegDraft(null)}
           onAdopt={requestAdoptLeg}
         />
+        <TripDialog draft={tripDraft} onClose={() => setTripDraft(null)} />
         <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       </main>
     </BoardProvider>
@@ -794,50 +967,7 @@ function Stat({
     </div>
   );
 }
-
-function LegPill({
-  active,
-  onClick,
-  onEdit,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  onEdit?: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-full border transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border",
-      )}
-    >
-      <button
-        type="button"
-        onClick={onClick}
-        aria-pressed={active}
-        className="rounded-full px-3 py-1 font-raleway text-[0.7rem] uppercase tracking-[0.2em] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        {children}
-      </button>
-      {onEdit && (
-        <button
-          type="button"
-          onClick={onEdit}
-          aria-label="Edit leg"
-          className="pr-2.5 pl-0.5 text-[0.7rem] opacity-60 hover:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          ✎
-        </button>
-      )}
-    </span>
-  );
-}
-
-function EmptyTrip({ onAddLeg }: { onAddLeg: () => void }) {
+function NoTrip({ onMake }: { onMake: () => void }) {
   return (
     <div className="mt-16 rounded-lg border border-dashed border-border px-8 py-20 text-center">
       <MapPinned
@@ -846,19 +976,20 @@ function EmptyTrip({ onAddLeg }: { onAddLeg: () => void }) {
         aria-hidden="true"
       />
       <h2 className="mt-4 font-garamond text-3xl text-foreground">
-        Start with a city and a stretch of days
+        Start with the dates you&apos;re away
       </h2>
       <p className="mx-auto mt-2 max-w-md font-garamond text-lg leading-relaxed text-muted-foreground">
-        Tokyo for five nights, Kyoto for four. The board draws a column for
-        every day in a leg, and all three lanes hang off that.
+        That&apos;s all it takes. The board draws a column for every day of it,
+        and you can start dropping ideas onto them before you&apos;ve worked out
+        which city you&apos;ll be in.
       </p>
       <button
         type="button"
-        onClick={onAddLeg}
-        className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-raleway text-[0.7rem] uppercase tracking-[0.2em] text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        onClick={onMake}
+        className="mt-6 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 font-raleway text-[0.7rem] tracking-[0.2em] text-primary-foreground uppercase transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <Plus className="h-3.5 w-3.5" strokeWidth={2} />
-        Add the first leg
+        Make a trip
       </button>
     </div>
   );

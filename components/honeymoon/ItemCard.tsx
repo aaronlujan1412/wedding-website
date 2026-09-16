@@ -14,6 +14,7 @@ import {
   Pin,
   Star,
   TramFront,
+  X,
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -43,6 +44,8 @@ export type CardActions = {
   onMoveLane: (item: TripItem, lane: Lane) => void;
   /** Leaves the original alone and puts a copy in another lane. */
   onCopy: (item: TripItem, lane: Lane) => void;
+  /** Goes straight away, with an undo in the toast rather than a confirm. */
+  onDelete: (item: TripItem) => void;
 };
 
 /** An idea card's copy goes to the other person's lane. Decided has none. */
@@ -385,6 +388,16 @@ function CardControls({
           <Copy className="h-3 w-3" strokeWidth={2} />
         </NudgeButton>
       )}
+
+      {/* Sits apart from the moves, because it is the one that doesn't move
+          anything. Deletes on the click and offers an undo in the toast. */}
+      <NudgeButton
+        label={`Delete ${item.title}`}
+        destructive
+        onClick={() => actions.onDelete(item)}
+      >
+        <X className="h-3 w-3" strokeWidth={2} />
+      </NudgeButton>
     </div>
   );
 }
@@ -397,11 +410,13 @@ function NudgeButton({
   label,
   onClick,
   accent = false,
+  destructive = false,
   children,
 }: {
   label: string;
   onClick: () => void;
   accent?: boolean;
+  destructive?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -413,9 +428,13 @@ function NudgeButton({
       onPointerDown={(e) => e.stopPropagation()}
       className={cn(
         "flex h-5 w-5 items-center justify-center rounded-sm border transition-colors pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:rounded-md [&_svg]:pointer-coarse:h-4 [&_svg]:pointer-coarse:w-4 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
-        accent
-          ? "border-primary/60 text-primary hover:bg-primary hover:text-primary-foreground"
-          : "border-border text-muted-foreground hover:border-primary hover:text-primary",
+        accent &&
+          "border-primary/60 text-primary hover:bg-primary hover:text-primary-foreground",
+        destructive &&
+          "ml-auto border-border text-muted-foreground hover:border-destructive hover:text-destructive",
+        !accent &&
+          !destructive &&
+          "border-border text-muted-foreground hover:border-primary hover:text-primary",
       )}
     >
       {children}

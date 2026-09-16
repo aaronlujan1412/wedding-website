@@ -290,7 +290,38 @@ const aaronLegs = [
   },
 ];
 
+// Everything below belongs to a trip now. Reuse the one the trips migration
+// seeded if it is still empty of a route, otherwise make one for this demo.
+const { data: existingTrip } = await db
+  .from("trips")
+  .select("id")
+  .order("created_at")
+  .limit(1)
+  .maybeSingle();
+
+let TRIP_ID = existingTrip?.id ?? null;
+if (!TRIP_ID) {
+  const { data: made, error: tripError } = await db
+    .from("trips")
+    .insert({
+      name: "Japan",
+      name_ja: "日本",
+      starts_on: "2026-12-05",
+      ends_on: "2026-12-26",
+    })
+    .select("id")
+    .single();
+  if (tripError) throw tripError;
+  TRIP_ID = made.id;
+}
+// Keep the trip's dates around whatever the demo route covers.
+await db
+  .from("trips")
+  .update({ starts_on: "2026-12-05", ends_on: "2026-12-26" })
+  .eq("id", TRIP_ID);
+
 const LEG_DEFAULTS = {
+  trip_id: TRIP_ID,
   name_ja: null,
 };
 const legs = [
@@ -553,6 +584,7 @@ const items = [
 // for any a given row omits — it does not fall back to the column default. So
 // every NOT NULL column with a default has to be spelled out here.
 const DEFAULTS = {
+  trip_id: TRIP_ID,
   closed_days: [],
   pinned: false,
   must_do: false,
@@ -570,11 +602,12 @@ if (error) throw error;
 
 await db.from("trip_days").insert([
   {
+    trip_id: TRIP_ID,
     on_date: "2026-12-05",
     title: "Arrival",
     note: "Jet lag day. Nothing before noon and no guilt about it.",
   },
-  { on_date: "2026-12-09", title: "The ambitious one" },
+  { trip_id: TRIP_ID, on_date: "2026-12-09", title: "The ambitious one" },
 ]);
 
 const docs = [
@@ -605,13 +638,19 @@ const docs = [
   const { error } = await db
     .from("trip_docs")
     .insert(
-      docs.map((d) => ({ cost_amount: null, cost_currency: "JPY", ...d })),
+      docs.map((d) => ({
+        trip_id: TRIP_ID,
+        cost_amount: null,
+        cost_currency: "JPY",
+        ...d,
+      })),
     );
   if (error) throw error;
 }
 // Flights: there via Los Angeles, home via Seattle. Times are written with the
 // airport's own UTC offset, the way a confirmation email means them.
 const FLIGHT_DEFAULTS = {
+  trip_id: TRIP_ID,
   from_city: null,
   to_city: null,
   cabin: null,
@@ -719,6 +758,7 @@ const { error: listError } = await db.from("trip_checklist_items").insert(
     ["flight:" + firstHome.id, "Passports (both)", "savea", false],
     ["flight:" + firstHome.id, "Tax-free receipts for customs", "aaron", false],
   ].map(([list, label, owner, done], i) => ({
+    trip_id: TRIP_ID,
     list,
     label,
     owner,
@@ -733,6 +773,7 @@ if (listError) throw listError;
 // neither has budged. Aaron also fancies two nights in Akihabara over the end
 // of the Ryumeikan booking, so adopting it would show a trim.
 const STAY_DEFAULTS = {
+  trip_id: TRIP_ID,
   lane: "decided",
   added_by: "aaron",
   name_ja: null,
@@ -877,6 +918,7 @@ const { error: stayListError } = await db.from("trip_checklist_items").insert(
     ["Passports for check-in", "savea", false],
     ["Send the bags ahead at the front desk", "aaron", false],
   ].map(([label, owner, done], i) => ({
+    trip_id: TRIP_ID,
     list: "stay:" + gora.id,
     label,
     owner,

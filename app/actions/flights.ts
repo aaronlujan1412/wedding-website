@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+import { currentTripId } from "@/lib/honeymoon-queries";
 import {
   checklistKey,
   groupJourneys,
@@ -163,6 +164,11 @@ export async function saveFlight(id: string | null, input: FlightInput) {
   const result = toRow(input);
   if ("error" in result) return { data: null, error: result.error };
 
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
   const { data, error } = id
     ? await supabase
         .from("trip_flights")
@@ -170,7 +176,7 @@ export async function saveFlight(id: string | null, input: FlightInput) {
         .eq("id", id)
         .select()
         .single()
-    : await supabase.from("trip_flights").insert(result.row).select().single();
+    : await supabase.from("trip_flights").insert({ ...result.row, trip_id: trip }).select().single();
 
   if (error) return { data: null, error: error.message };
 

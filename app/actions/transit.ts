@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+import { currentTripId } from "@/lib/honeymoon-queries";
 import { zonedToUtc } from "@/components/honeymoon/flights";
 import { TRANSIT_TZ } from "@/components/honeymoon/transit";
 import type {
@@ -137,6 +138,13 @@ export async function saveTransit(id: string | null, input: TransitInput) {
     };
   }
 
+  // Resolved here rather than taken from the form: a trip id in a payload is a
+  // way to write into a different holiday by editing a hidden field.
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
   const { data, error } = id
     ? await supabase
         .from("trip_transit")
@@ -144,7 +152,7 @@ export async function saveTransit(id: string | null, input: TransitInput) {
         .eq("id", id)
         .select()
         .single()
-    : await supabase.from("trip_transit").insert(row).select().single();
+    : await supabase.from("trip_transit").insert({ ...row, trip_id: trip }).select().single();
 
   if (error) return { data: null, error: error.message };
 

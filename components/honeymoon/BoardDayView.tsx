@@ -390,7 +390,7 @@ function DayPage({
         date={date}
         note={note}
         legs={legs}
-        decided={itemsInCell(items, "decided", date)}
+        laneItems={itemsInCell(items, "decided", date)}
         flights={flightsOnDay(flights, date)}
         transit={transitOnDay(transit, date)}
         isToday={isToday}

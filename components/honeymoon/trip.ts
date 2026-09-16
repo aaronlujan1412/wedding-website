@@ -60,6 +60,57 @@ export const LANES: Record<
   },
 };
 
+/**
+ * The board's views.
+ *
+ * Four jobs, not four layouts. Three of them are working views — one person's
+ * row plus the pile they are pulling from — and Compare is a deciding view,
+ * where you are choosing between two drafts rather than adding to either, so
+ * the pile gets out of the way and the days get the room.
+ *
+ * Keeping the board as one stack of three lanes made every view the worst
+ * case: 107 of the 117 cards live in piles, so the backlog set the height of a
+ * grid that is 95% empty, and reaching the third lane meant scrolling past two
+ * other people's ideas to get there.
+ */
+export type BoardView = "decided" | "savea" | "aaron" | "compare";
+
+export const BOARD_VIEWS: Record<
+  BoardView,
+  { label: string; lanes: Lane[]; blurb: string; pile: boolean }
+> = {
+  aaron: {
+    label: "Aaron",
+    lanes: ["aaron"],
+    blurb: "His row and his pile.",
+    pile: true,
+  },
+  savea: {
+    label: "Savea",
+    lanes: ["savea"],
+    blurb: "Her row and her pile.",
+    pile: true,
+  },
+  decided: {
+    label: "Decided",
+    lanes: ["decided"],
+    blurb: "What prints. Everything here is agreed.",
+    pile: true,
+  },
+  compare: {
+    label: "Compare",
+    lanes: ["savea", "aaron"],
+    blurb: "Both drafts, same days, nothing in the way.",
+    pile: false,
+  },
+};
+
+export const VIEW_ORDER: BoardView[] = ["compare", "aaron", "savea", "decided"];
+
+export function isBoardView(value: string | null): value is BoardView {
+  return value !== null && value in BOARD_VIEWS;
+}
+
 /** Where a lane's card goes when it is sent back out of `decided`. */
 export function laneForPlanner(planner: Planner): Lane {
   return planner;

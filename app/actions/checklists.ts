@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+import { currentTripId } from "@/lib/honeymoon-queries";
 import type { ChecklistItem, Planner } from "@/components/honeymoon/types";
 
 /**
@@ -48,12 +49,18 @@ export async function addChecklistItems(
   if (clean.length === 0)
     return { data: null, error: "Type what to add first." };
 
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
   const start = await nextPosition(list);
   const { data, error } = await supabase
     .from("trip_checklist_items")
     .insert(
       // Every column spelled out: a batch insert sends NULL for omissions.
       clean.map((label, i) => ({
+        trip_id: trip,
         list,
         label,
         owner,

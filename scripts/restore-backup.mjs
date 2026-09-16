@@ -45,12 +45,16 @@ const ORDER = [
   "seating_tables",
   "guest_photos",
   "faq",
+  // Parent of everything below it. Rows go in in this order and come out in
+  // reverse, so the trip exists before its children and outlives them.
+  "trips",
   "trip_legs",
   "trip_days",
   "trip_items",
   "trip_docs",
   "trip_flights",
   "trip_stays",
+  "trip_transit",
   "trip_checklist_items",
 ];
 

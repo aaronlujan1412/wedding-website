@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
+import { currentTripId } from "@/lib/honeymoon-queries";
 import { compare } from "@/components/honeymoon/trip";
 import type {
   BookingStatus,
@@ -143,9 +144,18 @@ export async function createItem(input: ItemInput) {
   const row = normalise(input);
   if (!row.title) return { data: null, error: "Give it a name first." };
 
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
   const { data, error } = await supabase
     .from("trip_items")
-    .insert({ ...row, position: await nextPosition(row.lane, row.on_date) })
+    .insert({
+      ...row,
+      trip_id: trip,
+      position: await nextPosition(row.lane, row.on_date),
+    })
     .select()
     .single();
 
@@ -227,6 +237,8 @@ export async function copyItem(id: string, lane: Lane) {
     .insert({
       ...fields,
       lane,
+      // The copy belongs to the same trip as the card it came from.
+      trip_id: source.trip_id,
       position: await nextPosition(lane, source.on_date),
     })
     .select()
@@ -325,6 +337,10 @@ function normaliseLeg(input: LegInput) {
 
 export async function saveLeg(id: string | null, input: LegInput) {
   if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
 
   const row = normaliseLeg(input);
   if (!row.name) return { data: null, error: "Give the leg a name." };
@@ -341,7 +357,7 @@ export async function saveLeg(id: string | null, input: LegInput) {
         .single()
     : await supabase
         .from("trip_legs")
-        .insert({ ...row, position: await nextLegPosition() })
+        .insert({ ...row, trip_id: trip, position: await nextLegPosition() })
         .select()
         .single();
 
@@ -418,12 +434,17 @@ export async function adoptLeg(id: string) {
 /** "Let's just do your route." Replaces every Decided leg with one lane's. */
 export async function adoptRoute(lane: Lane) {
   if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
   if (lane === "decided") {
     return { data: null, error: "Decided is already the decided route." };
   }
 
   const { data, error } = await supabase.rpc("adopt_trip_route", {
     p_lane: lane,
+    p_trip: trip,
   });
   if (error) return { data: null, error: error.message };
 
@@ -439,8 +460,13 @@ export async function saveDayNote(
   note: string | null,
 ) {
   if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
 
   const { error } = await supabase.from("trip_days").upsert({
+    trip_id: trip,
     on_date: onDate,
     title: blankToNull(title),
     note: blankToNull(note),
@@ -468,6 +494,10 @@ export type DocInput = {
 
 export async function saveDoc(id: string | null, input: DocInput) {
   if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
 
   const row = {
     category: input.category,
@@ -489,7 +519,11 @@ export async function saveDoc(id: string | null, input: DocInput) {
         .eq("id", id)
         .select()
         .single()
-    : await supabase.from("trip_docs").insert(row).select().single();
+    : await supabase
+        .from("trip_docs")
+        .insert({ ...row, trip_id: trip })
+        .select()
+        .single();
 
   if (error) return { data: null, error: error.message };
 
@@ -523,6 +557,28 @@ export async function setWanderItem(id: string, wanderId: string | null) {
     .update({ wander_id: wanderId, updated_at: new Date().toISOString() })
     .eq("id", id);
 
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
+
+/**
+ * Put a deleted card back, exactly as it was.
+ *
+ * The board's × deletes on one click and offers an undo rather than asking
+ * first: there are a hundred cards to clear out of a pile and a confirm dialog
+ * on each one is its own kind of punishment. The whole row goes to the client
+ * on every render, so restoring is an insert of what was already there — same
+ * id, same lane, same day, same position in the cell.
+ *
+ * One thing does not come back: cards that pointed at this one as their wander
+ * block were set to null by the delete, and this does not re-link them.
+ */
+export async function restoreItem(row: TripItem) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase.from("trip_items").insert(row);
   if (error) return { data: null, error: error.message };
 
   refresh();

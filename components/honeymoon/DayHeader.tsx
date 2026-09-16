@@ -31,15 +31,19 @@ import type { TripDay, TripItem, TripLeg } from "./types";
 /**
  * The sticky top cell of a day column.
  *
- * Every number here is read off the `decided` lane only. The draft lanes are
- * arguments in progress — costing or pace-checking a proposal nobody has agreed
- * to would just train you to ignore the warnings.
+ * Every number here describes one lane — whichever the current view is about.
+ * It used to always be `decided`, which meant a single-lane view could warn
+ * about a twelve-hour march sitting on a row you were not looking at. A day
+ * only ever gets costed against one lane, never a sum of them: two drafts for
+ * the same afternoon are alternatives, not an itinerary.
  */
 export function DayHeader({
   date,
   note,
   legs,
-  decided,
+  laneItems,
+  statsLane,
+  marksChange = true,
   isToday,
   onEditNote,
   onSortByTime,
@@ -58,7 +62,23 @@ export function DayHeader({
   date: string;
   note?: TripDay;
   legs: TripLeg[];
-  decided: TripItem[];
+  /** The viewed lane's cards on this day. */
+  laneItems: TripItem[];
+  /**
+   * True when the agreed route changes here — the first day of a leg, or the
+   * first day of a stretch with no leg on it. The leg's name is drawn only on
+   * those days: the trip bar already lists the route, so repeating "Tokyo" down
+   * six columns was the same word in a third place. Shown at the boundary it
+   * stops being a repeat and starts marking where you move.
+   */
+  marksChange?: boolean;
+  /**
+   * Names the lane these numbers belong to, when it isn't the one on screen.
+   * Compare shows two drafts and costs neither: the figures are Decided's, as
+   * the baseline you're weighing them against, and saying so stops "6h" being
+   * read as belonging to the row underneath it.
+   */
+  statsLane?: string;
   isToday: boolean;
   onEditNote: (date: string) => void;
   onSortByTime: (date: string) => void;
@@ -67,10 +87,10 @@ export function DayHeader({
   // The header names where the agreed route has you. Drafts show in their own
   // lane's leg band, not here.
   const leg = legForDay(legsIn(legs, "decided"), date);
-  const warnings = dayWarnings(date, decided, undefined, transit.length > 0);
-  const pace = paceMinutes(decided);
-  const spend = sumYen(decided, rate);
-  const cash = cashYen(decided, rate);
+  const warnings = dayWarnings(date, laneItems, undefined, transit.length > 0);
+  const pace = paceMinutes(laneItems);
+  const spend = sumYen(laneItems, rate);
+  const cash = cashYen(laneItems, rate);
 
   const day = parseDay(date);
 
@@ -132,12 +152,25 @@ export function DayHeader({
           variant === "cell" ? "truncate text-lg" : "text-xl",
         )}
       >
-        {note?.title || leg?.name || "No agreed leg yet"}
-        {leg?.name_ja && (
-          <span className="ml-1.5 font-jp text-xs text-muted-foreground">
-            {leg.name_ja}
-          </span>
-        )}
+        {note?.title ||
+          (marksChange ? leg?.name || "No agreed leg yet" : "\u00a0")}
+        {marksChange &&
+          (note?.title ? (
+            // The day is named for what happens on it, so where you've arrived
+            // rides along beside it rather than displacing it.
+            <span className="ml-1.5 text-sm text-muted-foreground">
+              {leg?.name}
+              {leg?.name_ja && (
+                <span className="ml-1 font-jp text-xs">{leg.name_ja}</span>
+              )}
+            </span>
+          ) : (
+            leg?.name_ja && (
+              <span className="ml-1.5 font-jp text-xs text-muted-foreground">
+                {leg.name_ja}
+              </span>
+            )
+          ))}
       </p>
 
       {transit.length > 0 && (
@@ -190,7 +223,8 @@ export function DayHeader({
 
       <p className="mt-1.5 flex flex-wrap items-center gap-x-2 font-mono text-[0.6rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
         <span>
-          {decided.length === 0 ? "nothing decided" : formatDuration(pace)}
+          {statsLane && `${statsLane}: `}
+          {laneItems.length === 0 ? "nothing planned" : formatDuration(pace)}
         </span>
         {spend > 0 && (
           <>
@@ -247,7 +281,7 @@ function PaceBar({ minutes }: { minutes: number }) {
     <div
       className="mt-2 h-1 w-full overflow-hidden rounded-full bg-border/60"
       role="img"
-      aria-label={`${formatDuration(minutes)} decided`}
+      aria-label={`${formatDuration(minutes)} planned`}
     >
       <div
         className={cn("h-full rounded-full transition-[width]", tone)}
