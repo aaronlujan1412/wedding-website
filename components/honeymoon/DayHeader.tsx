@@ -97,6 +97,8 @@ export function DayHeader({
   return (
     <div
       style={style}
+      // The board measures columns by this, and the route strip scrolls to it.
+      data-board-day={variant === "cell" ? date : undefined}
       className={cn(
         variant === "cell" &&
           "sticky top-0 z-30 border-r border-b border-border bg-background px-3 py-2.5",

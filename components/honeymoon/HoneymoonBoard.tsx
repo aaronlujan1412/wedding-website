@@ -1,6 +1,13 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState, useTransition } from "react";
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { useSearchParams } from "next/navigation";
 import {
   DndContext,
@@ -29,14 +36,15 @@ import { cn } from "@/lib/utils";
 import { BoardDayView, PILES } from "./BoardDayView";
 import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
-import { DayRibbon, RIBBON_PREFIX } from "./DayRibbon";
 import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
 import { LaneCell } from "./LaneCell";
 import { IdeaPanel } from "./IdeaPanel";
 import { LegBand } from "./LegBand";
 import { LegDialog, type LegDraft } from "./LegDialog";
+import { DAY_DROP_PREFIX } from "./RouteStrip";
 import { TripBar } from "./TripBar";
+import { TripSummary } from "./TripSummary";
 import { TripDialog, type TripDraft } from "./TripDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { BoardProvider } from "./BoardContext";
@@ -52,10 +60,8 @@ import {
   PLANNERS,
   adoptEffect,
   cellId,
-  describeRate,
   eachDay,
   formatLegDates,
-  formatYen,
   itemsIn,
   itemsInCell,
   legForDay,
@@ -67,7 +73,6 @@ import {
   sumYen,
   todayISO,
   tripDays,
-  yenAsUsd,
   isBoardView,
 } from "./trip";
 import type { BoardView } from "./trip";
@@ -179,13 +184,83 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     ? eachDay(activeLeg.starts_on, activeLeg.ends_on)
     : allDays;
 
+  // The board's scroller, so the route strip can mark which days are on
+  // screen, and a click on a strip day can bring that column into view.
+  const scroller = useRef<HTMLDivElement>(null);
+  const [onScreen, setOnScreen] = useState<{
+    first: number;
+    last: number;
+  } | null>(null);
+  const firstShown = allDays.indexOf(visibleDays[0]);
+  const shownCount = visibleDays.length;
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    let frame = 0;
+    // Measured in a frame callback rather than in the effect body: the columns
+    // are rem-sized and the lane column comes and goes with the view, so the
+    // DOM is the only honest source for where a column starts.
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const range = columnsOnScreen(el);
+        if (!range) return;
+        const next = {
+          first: firstShown + Math.min(range.first, shownCount - 1),
+          last: firstShown + Math.min(range.last, shownCount - 1),
+        };
+        setOnScreen((prev) =>
+          prev?.first === next.first && prev.last === next.last ? prev : next,
+        );
+      });
+    };
+    // A ResizeObserver reports once on observe, which is the initial measure.
+    // Watching the grid too catches a column count change that leaves the
+    // scroller's own box the same size.
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    el.addEventListener("scroll", measure, { passive: true });
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      el.removeEventListener("scroll", measure);
+    };
+  }, [firstShown, shownCount, view]);
+
+  // A strip click outside the leg the board is scoped to has to widen the
+  // board first; the scroll then waits for those columns to exist.
+  const pendingJump = useRef<string | null>(null);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    if (pendingJump.current) {
+      scrollBoardTo(el, pendingJump.current);
+      pendingJump.current = null;
+    } else {
+      // Scoping to a leg starts at its first day, not wherever the scroll
+      // position happened to clamp to.
+      el.scrollLeft = 0;
+    }
+  }, [activeLegId]);
+
+  function showOnBoard(date: string) {
+    if (
+      activeLeg &&
+      (date < activeLeg.starts_on || date > activeLeg.ends_on)
+    ) {
+      pendingJump.current = date;
+      setActiveLegId(null);
+      return;
+    }
+    if (scroller.current) scrollBoardTo(scroller.current, date);
+  }
+
   const decided = items.filter((i) => i.lane === "decided");
   // The header names the agreed day, so only the agreed route's rides belong
   // in it. A suggested night bus lives on the Transit tab until it's adopted.
   const decidedTransit = transitIn(board.transit, "decided");
-  const suggested = items.filter(
-    (i) => i.lane !== "decided" && i.on_date !== null,
-  );
   // Flights and agreed stays count toward the trip total like any other cost.
   const spend =
     sumYen(decided, rate) +
@@ -325,9 +400,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
   /** Which cell an arbitrary drop target belongs to. */
   function resolveCell(id: string): { lane: Lane; date: string | null } | null {
-    if (id.startsWith(RIBBON_PREFIX)) {
-      // A ribbon chip names a day, not a lane — keep the card in its own row.
-      const date = id.slice(RIBBON_PREFIX.length);
+    if (id.startsWith(DAY_DROP_PREFIX)) {
+      // A route strip day names a day, not a lane — keep the card in its own row.
+      const date = id.slice(DAY_DROP_PREFIX.length);
       const dragged = items.find((i) => i.id === activeId);
       return dragged && dayLookup.has(date)
         ? { lane: dragged.lane, date }
@@ -375,7 +450,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         siblings[at]?.position,
       );
     } else {
-      // Dropped on the cell itself (or a ribbon chip) — append.
+      // Dropped on the cell itself (or a route strip day) — append.
       position = positionBetween(siblings.at(-1)?.position, undefined);
     }
 
@@ -586,111 +661,27 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               Argue in your own lane. Agree with the arrow.
             </span>
           </p>
-          <div className="text-right">
-            <dl className="flex flex-wrap justify-end gap-x-5 gap-y-1 font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
-              <Stat label="days" value={allDays.length} />
-              <Stat
-                label="decided"
-                value={decided.filter((i) => i.on_date).length}
-              />
-              <Stat label="suggested" value={suggested.length} />
-              {spend > 0 && (
-                <Stat
-                  label={yenAsUsd(spend, rate)}
-                  value={formatYen(spend)}
-                  raw
-                />
-              )}
-            </dl>
-            <p
-              className="mt-1 font-mono text-[0.65rem] text-muted-foreground tabular-nums slashed-zero"
-              title="Costs are stored in the currency you typed them in and converted at this rate for totals."
-            >
-              {describeRate(rate)}
-            </p>
-          </div>
-        </div>
-
-        {/* Legs */}
-        {/* The trip, and the shape of it: its dates, its legs, and where
-            you're sleeping on each one. */}
-        {trip && (
-          <div className="max-lg:hidden">
-            <TripBar
-              trip={trip}
-              trips={board.trips}
-              legs={legs}
-              stays={stays}
-              activeLegId={activeLegId}
-              onLeg={setActiveLegId}
-              onEditTrip={() => setTripDraft({ trip })}
-              onNewTrip={() => setTripDraft({ trip: null })}
-              onEditLeg={(leg) => setLegDraft({ leg, lane: leg.lane })}
-              onCreateLeg={(lane, from, to) =>
-                setLegDraft({ leg: null, lane, from, to })
-              }
-            />
-          </div>
-        )}
-
-        <div className="mt-3 flex flex-wrap items-center gap-2 max-lg:hidden">
-          {/* Whose board this is right now. Three working views — one row and
-              the pile you're pulling from — and Compare, where you're choosing
-              between two drafts rather than adding to either. */}
-          <div
-            role="radiogroup"
-            aria-label="View"
-            className="ml-auto flex gap-1 rounded-full border border-border p-0.5"
-          >
-            {VIEW_ORDER.map((v) => {
-              const on = v === view;
-              const meta = BOARD_VIEWS[v];
-              const accent =
-                meta.lanes.length === 1
-                  ? LANES[meta.lanes[0]].accent
-                  : undefined;
-              return (
-                <button
-                  key={v}
-                  type="button"
-                  role="radio"
-                  aria-checked={on}
-                  title={meta.blurb}
-                  onClick={() => setView(v)}
-                  style={
-                    on
-                      ? {
-                          color: accent ?? "var(--color-primary)",
-                          backgroundColor:
-                            meta.lanes.length === 1
-                              ? LANES[meta.lanes[0]].tint
-                              : "var(--color-secondary)",
-                        }
-                      : undefined
-                  }
-                  className={cn(
-                    "rounded-full px-3 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                    !on && "text-muted-foreground hover:text-foreground",
-                  )}
-                >
-                  {meta.label}
-                </button>
-              );
-            })}
-          </div>
+          {/* Phones have no trip bar, so the summary sits here instead. */}
+          {trip && (
+            <div className="lg:hidden">
+              <TripSummary days={allDays} items={items} spend={spend} />
+            </div>
+          )}
         </div>
 
         {notice && (
           <p
             role={notice.tone === "error" ? "alert" : "status"}
             className={cn(
-              "mt-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2 font-raleway text-sm",
-              // A toast above the tab bar on a phone, where the top of the
-              // page is usually scrolled away.
-              "max-lg:fixed max-lg:inset-x-4 max-lg:bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] max-lg:z-40 max-lg:mt-0 max-lg:py-3 max-lg:shadow-lg sm:max-lg:bottom-6",
+              "fixed z-40 flex items-center justify-between gap-3 rounded-md border bg-card px-3 py-2 font-raleway text-sm shadow-lg",
+              // Floating rather than in the flow: in the flow, every move and
+              // every delete pushed the whole board down a line and back up.
+              // Above the tab bar on a phone; bottom centre on a desktop.
+              "max-lg:inset-x-4 max-lg:bottom-[calc(4.5rem_+_env(safe-area-inset-bottom))] max-lg:py-3 sm:max-lg:bottom-6",
+              "lg:bottom-6 lg:left-1/2 lg:w-[min(36rem,calc(100%-2rem))] lg:-translate-x-1/2",
               notice.tone === "error"
-                ? "border-destructive/40 bg-destructive/10 text-destructive max-lg:bg-card"
-                : "border-primary/30 bg-primary/5 text-primary max-lg:bg-card",
+                ? "border-destructive/40 text-destructive"
+                : "border-primary/30 text-primary",
             )}
           >
             <span className="min-w-0 flex-1">{notice.text}</span>
@@ -771,14 +762,75 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                 onDragEnd={handleDragEnd}
                 onDragCancel={() => setActiveId(null)}
               >
-                <div className="mt-4">
-                  <DayRibbon
-                    days={allDays}
-                    legs={decidedLegs}
-                    items={decided}
-                    activeLegId={activeLegId}
-                    today={today}
-                  />
+                {/* The trip, and the shape of it: its dates, how much of it is
+                    still undecided, and the route across every day. */}
+                <TripBar
+                  trip={trip}
+                  trips={board.trips}
+                  days={allDays}
+                  legs={legs}
+                  stays={stays}
+                  items={items}
+                  laneItems={items.filter((i) => i.lane === headerLane)}
+                  spend={spend}
+                  activeLegId={activeLegId}
+                  onLeg={setActiveLegId}
+                  onEditTrip={() => setTripDraft({ trip })}
+                  onNewTrip={() => setTripDraft({ trip: null })}
+                  onEditLeg={(leg) => setLegDraft({ leg, lane: leg.lane })}
+                  onCreateLeg={(lane, from, to) =>
+                    setLegDraft({ leg: null, lane, from, to })
+                  }
+                  onDay={showOnBoard}
+                  onScreen={onScreen}
+                  today={today}
+                />
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  {/* Whose board this is right now. Three working views — one row and
+                      the pile you're pulling from — and Compare, where you're choosing
+                      between two drafts rather than adding to either. */}
+                  <div
+                    role="radiogroup"
+                    aria-label="View"
+                    className="ml-auto flex gap-1 rounded-full border border-border p-0.5"
+                  >
+                    {VIEW_ORDER.map((v) => {
+                      const on = v === view;
+                      const meta = BOARD_VIEWS[v];
+                      const accent =
+                        meta.lanes.length === 1
+                          ? LANES[meta.lanes[0]].accent
+                          : undefined;
+                      return (
+                        <button
+                          key={v}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          title={meta.blurb}
+                          onClick={() => setView(v)}
+                          style={
+                            on
+                              ? {
+                                  color: accent ?? "var(--color-primary)",
+                                  backgroundColor:
+                                    meta.lanes.length === 1
+                                      ? LANES[meta.lanes[0]].tint
+                                      : "var(--color-secondary)",
+                                }
+                              : undefined
+                          }
+                          className={cn(
+                            "rounded-full px-3 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                            !on && "text-muted-foreground hover:text-foreground",
+                          )}
+                        >
+                          {meta.label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* One grid, three rows. Horizontal scroll moves all three lanes
@@ -802,7 +854,10 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                       onOpen={setPileOpen}
                     />
                   )}
-                  <div className="rail-scroll max-h-[78vh] min-w-0 flex-1 overflow-auto rounded-lg border border-border">
+                  <div
+                    ref={scroller}
+                    className="rail-scroll max-h-[78vh] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
+                  >
                     <div
                       className="grid"
                       style={{
@@ -951,21 +1006,43 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   );
 }
 
-function Stat({
-  label,
-  value,
-  raw = false,
-}: {
-  label: string;
-  value: number | string;
-  raw?: boolean;
-}) {
+/** Where a day column starts in the scroller's content, in pixels. */
+function columnX(el: HTMLElement, column: HTMLElement) {
   return (
-    <div className="flex items-baseline gap-1.5">
-      <dd className="text-foreground">{value}</dd>
-      <dt className={cn(raw ? "" : "uppercase tracking-wider")}>{label}</dt>
-    </div>
+    column.getBoundingClientRect().left -
+    el.getBoundingClientRect().left -
+    el.clientLeft +
+    el.scrollLeft
   );
+}
+
+/**
+ * Which day columns are mostly on screen, as indices into the board's columns.
+ * A column counts once its middle is visible — clear of the sticky lane column
+ * on the left, and of the scroller's edge on the right.
+ */
+function columnsOnScreen(el: HTMLElement) {
+  const first = el.querySelector<HTMLElement>("[data-board-day]");
+  if (!first || first.offsetWidth === 0) return null;
+  const width = first.offsetWidth;
+  const lane = columnX(el, first);
+  const from = Math.max(0, Math.round(el.scrollLeft / width));
+  const to = Math.floor(
+    (el.scrollLeft + el.clientWidth - lane) / width - 0.5,
+  );
+  return { first: from, last: Math.max(from, to) };
+}
+
+/** Scroll so `date` is the first column, just right of the lane column. */
+function scrollBoardTo(el: HTMLElement, date: string) {
+  const first = el.querySelector<HTMLElement>("[data-board-day]");
+  const target = el.querySelector<HTMLElement>(`[data-board-day="${date}"]`);
+  if (!first || !target) return;
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollTo({
+    left: columnX(el, target) - columnX(el, first),
+    behavior: reduced ? "auto" : "smooth",
+  });
 }
 function NoTrip({ onMake }: { onMake: () => void }) {
   return (
