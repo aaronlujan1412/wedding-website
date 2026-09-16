@@ -2,16 +2,17 @@
 
 import { createContext, useContext, useMemo } from "react";
 import { RateProvider } from "./RateContext";
-import type { Rate, TripItem, TripStay, TripTransit } from "./types";
+import type { Rate, TripItem, TripLeg, TripStay, TripTransit } from "./types";
 
 /**
  * The rest of the board, for the cards that need to look past themselves.
  *
- * Only blockouts use this: a rest band resolves the stay covering its night,
- * a wander band counts the pile ideas in its city, and a travel band names the
- * ride it points at. All three are reads across the whole board from inside a
- * single card, which is exactly the shape that would otherwise thread three
- * more props through the grid, every lane cell and every sortable card to
+ * Blockouts and the card menu use it. A rest band resolves the stay covering
+ * its night, a wander band counts the pile ideas in its city, a travel band
+ * names the ride it points at, and a right-click offers every day of the trip
+ * to send the card to. All of them are reads across the whole board from
+ * inside a single card, which is exactly the shape that would otherwise thread
+ * five more props through the grid, every lane cell and every sortable card to
  * reach one line of small print.
  *
  * It carries the rate through as well rather than sitting beside RateProvider,
@@ -26,12 +27,17 @@ type BoardData = {
   stays: TripStay[];
   items: TripItem[];
   transit: TripTransit[];
+  /** Every day of the trip, in order — the days a card can be sent to. */
+  days: string[];
+  legs: TripLeg[];
 };
 
 const BoardContext = createContext<BoardData>({
   stays: [],
   items: [],
   transit: [],
+  days: [],
+  legs: [],
 });
 
 export function BoardProvider({
@@ -39,11 +45,13 @@ export function BoardProvider({
   stays,
   items,
   transit,
+  days,
+  legs,
   children,
 }: BoardData & { rate: Rate; children: React.ReactNode }) {
   const value = useMemo(
-    () => ({ stays, items, transit }),
-    [stays, items, transit],
+    () => ({ stays, items, transit, days, legs }),
+    [stays, items, transit, days, legs],
   );
   return (
     <RateProvider rate={rate}>

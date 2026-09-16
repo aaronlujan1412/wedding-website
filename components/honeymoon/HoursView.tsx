@@ -25,6 +25,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useBoardData } from "./BoardContext";
 import { blockoutDetail } from "./blockouts";
+import { ItemMenu, cardKeys } from "./CardMenu";
 import type { CardActions } from "./ItemCard";
 import {
   PAGE_HALF_HOUR_REM,
@@ -374,8 +375,11 @@ export function ShelfChipFace({
   // the moment you're about to give a card a time.
   const warnings = itemWarnings(item).filter((w) => w.tone !== "info");
 
-  return (
+  const chip = (
     <article
+      onKeyDown={
+        actions && !overlay ? (e) => cardKeys(e, item, actions) : undefined
+      }
       style={kind.blockout ? bandStyle(kind.color) : undefined}
       className={cn(
         "group/chip flex h-full items-stretch overflow-hidden",
@@ -420,6 +424,14 @@ export function ShelfChipFace({
       )}
       {grip}
     </article>
+  );
+
+  return actions && !overlay ? (
+    <ItemMenu item={item} actions={actions}>
+      {chip}
+    </ItemMenu>
+  ) : (
+    chip
   );
 }
 
@@ -967,8 +979,11 @@ export function HoursBlockFace({
   const warnings = itemWarnings(item).filter((w) => w.tone !== "info");
   const status = kind.blockout ? null : item.booking_status;
 
-  return (
+  const block = (
     <article
+      onKeyDown={
+        actions && !overlay ? (e) => cardKeys(e, item, actions) : undefined
+      }
       style={
         kind.blockout ? bandStyle(kind.color, "var(--color-card)") : undefined
       }
@@ -1085,6 +1100,14 @@ export function HoursBlockFace({
         </span>
       )}
     </article>
+  );
+
+  return actions && !overlay ? (
+    <ItemMenu item={item} actions={actions}>
+      {block}
+    </ItemMenu>
+  ) : (
+    block
   );
 }
 

@@ -271,11 +271,22 @@ export async function setItemDuration(id: string, minutes: number) {
 }
 
 /**
- * Take a copy of someone's idea into another lane, same day, bottom of the
- * cell. The original stays where it is, and `added_by` comes along unchanged —
- * it's still their idea.
+ * Take a copy of a card: into another lane on the same day (the card's copy
+ * button), or into any cell at all (a paste). The original stays where it is,
+ * and `added_by` comes along unchanged — it's still their idea.
+ *
+ * One thing does not come along. A copy is a plan, not a reservation: two
+ * cards carrying the same confirmation number is how you end up at a counter
+ * that has never heard of you, so the copy lands as an idea with no reference.
+ * The booking link and the date bookings open both stay, because those belong
+ * to the place rather than to this particular booking.
  */
-export async function copyItem(id: string, lane: Lane) {
+export async function copyItem(
+  id: string,
+  lane: Lane,
+  /** Left out, the copy lands on the source's own day. */
+  onDate?: string | null,
+) {
   if (!(await isHost())) return DENIED;
 
   const { data: source, error: readError } = await supabase
@@ -288,15 +299,19 @@ export async function copyItem(id: string, lane: Lane) {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, created_at, updated_at, position, ...fields } = source;
+  const day = onDate === undefined ? source.on_date : onDate;
 
   const { data, error } = await supabase
     .from("trip_items")
     .insert({
       ...fields,
       lane,
+      on_date: day,
+      booking_status: "idea",
+      booking_ref: null,
       // The copy belongs to the same trip as the card it came from.
       trip_id: source.trip_id,
-      position: await nextPosition(lane, source.on_date),
+      position: await nextPosition(lane, day),
     })
     .select()
     .single();
@@ -314,6 +329,30 @@ export async function setBookingStatus(id: string, status: BookingStatus) {
   const { error } = await supabase
     .from("trip_items")
     .update({ booking_status: status, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
+
+/**
+ * The other two switches that shouldn't need the form open: must-do, and
+ * pinned. One column each, so two people editing the same card at once can't
+ * undo each other's typing by ticking a box.
+ */
+export async function setItemFlag(
+  id: string,
+  flag: "must_do" | "pinned",
+  value: boolean,
+) {
+  if (!(await isHost())) return DENIED;
+
+  const patch = flag === "pinned" ? { pinned: value } : { must_do: value };
+  const { error } = await supabase
+    .from("trip_items")
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return { data: null, error: error.message };

@@ -34,10 +34,13 @@ import {
   moveItem,
   restoreItem,
   scheduleItem,
+  setBookingStatus,
   setItemDuration,
+  setItemFlag,
   sortDayByTime,
 } from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
+import { copyToSystem, getClip, setClip } from "./clipboard";
 import { BoardDayView, PILES } from "./BoardDayView";
 import { DayHeader } from "./DayHeader";
 import { DayNoteDialog } from "./DayNoteDialog";
@@ -902,6 +905,34 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     });
   }
 
+  /** A day as a toast names it, or the pile it went back to. */
+  function whereTo(onDate: string | null) {
+    return onDate
+      ? parseDay(onDate).toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })
+      : "the pile";
+  }
+
+  /** A card change that is one column, put back if the write fails. */
+  function patchItem(item: TripItem, patch: Partial<TripItem>) {
+    const before = Object.fromEntries(
+      Object.keys(patch).map((key) => [key, item[key as keyof TripItem]]),
+    ) as Partial<TripItem>;
+    const set = (values: Partial<TripItem>) =>
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, ...values } : i)),
+      );
+    set(patch);
+    return (error: string | null) => {
+      if (!error) return;
+      set(before);
+      setNotice({ tone: "error", text: error });
+    };
+  }
+
   /**
    * The arrow buttons on every card. Dragging across a twenty-day grid on a
    * phone is miserable, so shifting a card one day at a time is the real move
@@ -944,15 +975,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       // Say where it went, with a way to follow it.
       setNotice({
         tone: "ok",
-        text: `${item.title} → ${
-          target
-            ? parseDay(target).toLocaleDateString("en-US", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })
-            : "the pile"
-        }`,
+        text: `${item.title} → ${whereTo(target)}`,
         goTo: target ?? PILES,
       });
     },
@@ -969,6 +992,85 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               },
         );
       }),
+
+    /* --- the right-click menu ------------------------------------------ */
+
+    onClip: (item, cut) => {
+      setClip({ item, cut });
+      copyToSystem(item);
+      setNotice({
+        tone: "ok",
+        text: `${cut ? "Cut" : "Copied"} ${item.title}. Right-click a day to put it there.`,
+      });
+    },
+    onPaste: (lane, onDate) => {
+      const clip = getClip();
+      if (!clip) return;
+      const live = items.find((i) => i.id === clip.item.id);
+
+      // A cut card moves. If the other window deleted it in the meantime,
+      // making it again where it was asked for is what was meant anyway.
+      if (clip.cut && live) {
+        sendTo(live, lane, onDate);
+        setClip(null);
+        setNotice({
+          tone: "ok",
+          text: `${live.title} → ${whereTo(onDate)}`,
+          goTo: onDate ?? PILES,
+        });
+        return;
+      }
+
+      startTransition(async () => {
+        const result = await copyItem(clip.item.id, lane, onDate);
+        if (result.error) {
+          setNotice({ tone: "error", text: result.error });
+          return;
+        }
+        if (clip.cut) setClip(null);
+        setNotice({
+          tone: "ok",
+          text: `${clip.item.title} → ${whereTo(onDate)}`,
+          goTo: onDate ?? PILES,
+        });
+      });
+    },
+    onDuplicate: (item) =>
+      startTransition(async () => {
+        const result = await copyItem(item.id, item.lane, item.on_date);
+        setNotice(
+          result.error
+            ? { tone: "error", text: result.error }
+            : { tone: "ok", text: `A second ${item.title}.` },
+        );
+      }),
+    onFlag: (item, flag, value) => {
+      const put = patchItem(
+        item,
+        flag === "pinned" ? { pinned: value } : { must_do: value },
+      );
+      startTransition(async () =>
+        put((await setItemFlag(item.id, flag, value)).error),
+      );
+    },
+    onStatus: (item, status) => {
+      const put = patchItem(item, { booking_status: status });
+      startTransition(async () =>
+        put((await setBookingStatus(item.id, status)).error),
+      );
+    },
+    onSend: (item, lane, onDate) => {
+      if (item.lane === lane && item.on_date === onDate) return;
+      sendTo(item, lane, onDate);
+      setNotice({
+        tone: "ok",
+        text:
+          item.lane === lane
+            ? `${item.title} → ${whereTo(onDate)}`
+            : `${item.title} → ${LANES[lane].label}, ${whereTo(onDate)}`,
+        goTo: onDate ?? PILES,
+      });
+    },
   };
 
   const dragging = activeId ? items.find((i) => i.id === activeId) : null;
@@ -1064,6 +1166,8 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       stays={stays}
       items={items}
       transit={board.transit}
+      days={allDays}
+      legs={legs}
     >
       <main className="mx-auto mt-6 max-w-[110rem]">
         {/* Phones only. On a desktop the trip bar carries the summary and the

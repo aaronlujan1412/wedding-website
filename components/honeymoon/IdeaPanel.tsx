@@ -7,6 +7,7 @@ import {
 } from "@dnd-kit/sortable";
 import { PanelLeftClose, PanelLeftOpen, Plus, Search, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CellMenu } from "./CardMenu";
 import { SortableItemCard, type CardActions } from "./ItemCard";
 import { useRate } from "./RateContext";
 import { LANES, LANE_ORDER, POOL, cellId, formatYen, sumYen } from "./trip";
@@ -174,27 +175,36 @@ export function IdeaPanel({
         </button>
       </div>
 
-      <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 pb-3">
-        <SortableContext
-          items={visible.map((i) => i.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {visible.map((item) => (
-            <SortableItemCard key={item.id} item={item} actions={actions} />
-          ))}
-        </SortableContext>
-
-        {visible.length === 0 && (
-          <p
-            id={`empty-${cellId(lane, null)}-${POOL}`}
-            className="rounded-md border border-dashed border-border px-3 py-4 text-center font-garamond text-sm leading-snug text-muted-foreground"
+      {/* The list, not the whole panel: a right-click in the search box should
+          still be the browser's own paste. */}
+      <CellMenu
+        lane={lane}
+        date={null}
+        actions={actions}
+        onAdd={() => onAdd(lane)}
+      >
+        <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 pb-3">
+          <SortableContext
+            items={visible.map((i) => i.id)}
+            strategy={verticalListSortingStrategy}
           >
-            {pile.length === 0
-              ? "Nothing loose. Throw an idea in — it doesn't have to be good."
-              : "Nothing matches that."}
-          </p>
-        )}
-      </div>
+            {visible.map((item) => (
+              <SortableItemCard key={item.id} item={item} actions={actions} />
+            ))}
+          </SortableContext>
+
+          {visible.length === 0 && (
+            <p
+              id={`empty-${cellId(lane, null)}-${POOL}`}
+              className="rounded-md border border-dashed border-border px-3 py-4 text-center font-garamond text-sm leading-snug text-muted-foreground"
+            >
+              {pile.length === 0
+                ? "Nothing loose. Throw an idea in — it doesn't have to be good."
+                : "Nothing matches that."}
+            </p>
+          )}
+        </div>
+      </CellMenu>
     </aside>
   );
 }
