@@ -43,6 +43,7 @@ export function LaneCell({
   return (
     <div
       ref={setNodeRef}
+      data-drop-zone=""
       id={`cell-${id}`}
       style={{ ...style, backgroundColor: meta.tint }}
       className={cn(

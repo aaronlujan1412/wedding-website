@@ -182,6 +182,7 @@ export function SometimeShelf({
   return (
     <div
       ref={setNodeRef}
+      data-drop-zone=""
       style={{
         ...style,
         backgroundColor: `color-mix(in srgb, ${LANES[lane].tint} 55%, var(--color-background))`,

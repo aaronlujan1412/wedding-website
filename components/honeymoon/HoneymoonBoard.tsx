@@ -24,7 +24,7 @@ import {
   type DragStartEvent,
   type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
-import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
+import { arrayMove, sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ArrowUp, MapPinned, Plus, X } from "lucide-react";
 import {
   adoptLeg,
@@ -95,6 +95,7 @@ import {
   PLANNERS,
   adoptEffect,
   cellId,
+  containerOf,
   eachDay,
   formatLegDates,
   itemsIn,
@@ -548,36 +549,49 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   );
 
   /**
-   * In Hours a day's column is one tall drop target, and the list's rule —
-   * nearest corners — let a short card in the next day's shelf win from the
-   * middle of an afternoon. So on the hours, whatever column is under the
-   * pointer is the target, read from the page as it is right now. Everything
-   * else keeps the list's rule.
+   * The pointer picks where a card goes; nearest corners only pick the slot.
+   *
+   * Nearest corners alone let tall targets lose to short ones beside them: a
+   * card let go in the middle of the pile landed on the first day of the trip,
+   * and on the hours a card in the next day's shelf won from the middle of an
+   * afternoon. So whatever is under the pointer — an hours column, a cell, a
+   * shelf, the pile, a route strip day, read from the page as it is right now
+   * — is where it goes, and inside that, nearest corners find the slot.
    */
   const collisionDetection: CollisionDetection = (args) => {
-    if (!hours) return closestCorners(args);
     const rect = args.collisionRect;
     const point = args.pointerCoordinates ?? {
       x: rect.left + rect.width / 2,
       y: rect.top + rect.height / 2,
     };
-    const id = document
-      .elementsFromPoint(point.x, point.y)
-      .map((el) => el.closest<HTMLElement>("[data-hours-cell]"))
-      .find(Boolean)?.dataset.hoursCell;
-    const column = id
-      ? args.droppableContainers.find((c) => c.id === id)
-      : undefined;
-    if (column) {
-      return [
-        { id: column.id, data: { droppableContainer: column, value: 0 } },
-      ];
+    const under = document.elementsFromPoint(point.x, point.y);
+
+    if (hours) {
+      const id = under
+        .map((el) => el.closest<HTMLElement>("[data-hours-cell]"))
+        .find(Boolean)?.dataset.hoursCell;
+      const column = id
+        ? args.droppableContainers.find((c) => c.id === id)
+        : undefined;
+      if (column) {
+        return [
+          { id: column.id, data: { droppableContainer: column, value: 0 } },
+        ];
+      }
     }
+
+    const targets = args.droppableContainers.filter(
+      (c) => !isHoursId(String(c.id)),
+    );
+    const zone = under
+      .map((el) => el.closest<HTMLElement>("[data-drop-zone]"))
+      .find(Boolean);
+    const inZone = zone
+      ? targets.filter((c) => c.node.current && zone.contains(c.node.current))
+      : [];
     return closestCorners({
       ...args,
-      droppableContainers: args.droppableContainers.filter(
-        (c) => !isHoursId(String(c.id)),
-      ),
+      droppableContainers: inZone.length > 0 ? inZone : targets,
     });
   };
 
@@ -654,8 +668,27 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     );
     const overItem = items.find((i) => i.id === String(over.id));
 
+    // Over itself is over nowhere new. This used to mean "append to the end
+    // of the cell", which moved the card out from under the pointer, onto the
+    // card that took its place, which put it back — until React gave up.
+    if (overItem?.id === activeItem.id) return null;
+
     let position: number;
-    if (overItem && overItem.id !== activeItem.id) {
+    if (overItem && containerOf(overItem) === containerOf(activeItem)) {
+      // A reorder within the cell: the card takes the slot of the one it's
+      // over, the way the sortable animation has already drawn it.
+      const cell = itemsIn(items, container);
+      const moved = arrayMove(
+        cell,
+        cell.findIndex((i) => i.id === activeItem.id),
+        cell.findIndex((i) => i.id === overItem.id),
+      );
+      const at = moved.findIndex((i) => i.id === activeItem.id);
+      position = positionBetween(
+        moved[at - 1]?.position,
+        moved[at + 1]?.position,
+      );
+    } else if (overItem) {
       const dragged = active.rect.current.translated;
       const below = dragged
         ? dragged.top + dragged.height / 2 >
@@ -687,7 +720,10 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     };
   }
 
+  // The last move made mid-drag — always into another cell — kept for a drop
+  // that ends over nothing at all.
   const lastDrop = useRef<Drop | null>(null);
+  const movedThisFrame = useRef(false);
 
   function applyLocally(drop: Drop) {
     setItems((prev) =>
@@ -787,19 +823,23 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     // few cards, so moving the card mid-drag could push it past them — its
     // drop target unmounts, the pointer is over the card that took its place,
     // the move reverses, and React gives up on the loop.
-    if (drop.startTime === null) {
-      lastDrop.current = drop;
+    if (drop.startTime === null) return;
+
+    // So does a reorder within the card's own cell: the sortable animation
+    // already shows it, and moving it for real re-measured every card under
+    // the pointer mid-drag. Only a move into another cell or pile happens now.
+    const current = items.find((i) => i.id === drop.id);
+    if (!current || cellId(drop.lane, drop.onDate) === containerOf(current)) {
       return;
     }
 
-    const current = items.find((i) => i.id === drop.id);
-    if (
-      current?.lane === drop.lane &&
-      current.on_date === drop.onDate &&
-      current.position === drop.position
-    ) {
-      return;
-    }
+    // And only once a frame: the cell it left shrinks and the one it joined
+    // grows, which can put the pointer back over the first for a moment.
+    if (movedThisFrame.current) return;
+    movedThisFrame.current = true;
+    requestAnimationFrame(() => {
+      movedThisFrame.current = false;
+    });
 
     lastDrop.current = drop;
     applyLocally(drop);

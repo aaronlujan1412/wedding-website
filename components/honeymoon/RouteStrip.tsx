@@ -284,6 +284,7 @@ function Day({
   return (
     <button
       ref={setNodeRef}
+      data-drop-zone=""
       type="button"
       onClick={() => onDay(date)}
       aria-label={`${label}: ${items.length} planned. Scroll the board to this day.`}

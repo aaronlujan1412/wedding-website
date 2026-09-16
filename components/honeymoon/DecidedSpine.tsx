@@ -45,6 +45,7 @@ export function DecidedSpineCell({
   return (
     <div
       ref={setNodeRef}
+      data-drop-zone=""
       style={{ ...style, backgroundColor: LANES.decided.tint }}
       className={cn(
         "min-h-[4.25rem] border-r border-b-2 border-r-border border-b-primary/30 px-2.5 py-2 transition-shadow",

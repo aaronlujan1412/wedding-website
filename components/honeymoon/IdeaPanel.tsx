@@ -84,6 +84,7 @@ export function IdeaPanel({
   return (
     <aside
       ref={setNodeRef}
+      data-drop-zone=""
       style={{ backgroundColor: meta.tint }}
       className={cn(
         // Not sticky: it is the grid's height, so there is nothing to stick
