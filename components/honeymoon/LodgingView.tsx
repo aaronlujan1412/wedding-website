@@ -805,7 +805,7 @@ function Option({
   return (
     <li
       id={`option-${stay.id}`}
-      className="relative flex scroll-mt-40 flex-col rounded-lg border p-4"
+      className="relative flex scroll-mt-[calc(var(--spacing-planner-bar)+1.5rem)] flex-col rounded-lg border p-4"
       style={{ backgroundColor: meta.tint, borderColor: meta.accent }}
     >
       <div className="flex items-start gap-2">
@@ -934,7 +934,7 @@ function StayRow({
   return (
     <li
       id={`stay-${stay.id}`}
-      className={cn("scroll-mt-40", done && "opacity-60")}
+      className={cn("scroll-mt-[calc(var(--spacing-planner-bar)+1.5rem)]", done && "opacity-60")}
     >
       <div className="grid gap-x-6 gap-y-2 sm:grid-cols-[9rem_1fr]">
         <div>

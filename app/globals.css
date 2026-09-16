@@ -93,6 +93,13 @@
   --color-lane-aaron: #5a3f78;
   --color-lane-aaron-tint: #f1ebf6;
 
+  /* The honeymoon planner's own top bar. Everything that has to clear it —
+     page padding, sticky strips, scroll margins, the board's one-screen
+     height — reads this one value instead of each hardcoding the height of
+     the guest navbar it replaced. Generates top-planner-bar, h-planner-bar
+     and friends; in a calc, use var(--spacing-planner-bar). */
+  --spacing-planner-bar: 3.5rem;
+
   /* Japanese place names get a real mincho where the device has one. No
      webfont: a JP family is megabytes, and this page has two readers. */
   --font-jp-stack: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
@@ -179,14 +186,8 @@
 }
 
 @media print {
-  /* The pocket view exists to be carried on paper. Without this the fixed
-     navbar prints across the top of every sheet and the footer across the
-     bottom. Scoped to that page so nothing else's print output changes. */
-  body:has(#pocket) > nav,
-  body:has(#pocket) > footer {
-    display: none !important;
-  }
-
+  /* The pocket view exists to be carried on paper. The planner has no site
+     navbar or footer to hide any more, and its own bar is print:hidden. */
   body:has(#pocket) {
     background: #fff;
   }

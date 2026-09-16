@@ -135,7 +135,7 @@ export function BoardDayView({
     <div className="lg:hidden">
       <nav
         aria-label="Days"
-        className="sticky top-[3.25rem] z-20 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6"
+        className="sticky top-planner-bar z-20 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur-sm sm:-mx-6 sm:px-6"
       >
         <ol
           ref={strip}
@@ -178,7 +178,8 @@ export function BoardDayView({
 
       <div
         ref={page}
-        className="touch-pan-y touch-pinch-zoom scroll-mt-32"
+        // Clears the planner bar and the sticky day strip under it.
+        className="touch-pan-y touch-pinch-zoom scroll-mt-[calc(var(--spacing-planner-bar)+4.75rem)]"
         // Pointer events rather than touch events, with the browser left to
         // handle vertical scrolling and pinch only: a sideways flick then
         // reaches us instead of being claimed as a pan and cancelled.

@@ -72,8 +72,8 @@ export function IdeaPanel({
       <button
         type="button"
         onClick={() => onOpen(true)}
-        // Clear of the site navbar, which is fixed and about 5.5rem tall.
-        className="sticky top-24 flex h-fit flex-none items-center gap-2 self-start rounded-lg border border-border bg-card px-2 py-3 font-raleway text-[0.65rem] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [writing-mode:vertical-rl]"
+        // Clear of the fixed planner bar.
+        className="sticky top-[calc(var(--spacing-planner-bar)+0.5rem)] flex h-fit flex-none items-center gap-2 self-start rounded-lg border border-border bg-card px-2 py-3 font-raleway text-[0.65rem] tracking-[0.2em] text-muted-foreground uppercase transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [writing-mode:vertical-rl]"
       >
         <PanelLeftOpen className="h-3.5 w-3.5 rotate-90" strokeWidth={2} />
         Ideas · {pile.length}
@@ -87,8 +87,8 @@ export function IdeaPanel({
       style={{ backgroundColor: meta.tint }}
       className={cn(
         // Not sticky: it is the grid's height, so there is nothing to stick
-        // within — and top-4 slid its tabs under the site navbar.
-        "flex h-[calc(100dvh-7rem)] w-[17rem] flex-none flex-col rounded-lg border border-border",
+        // within — and top-4 slid its tabs under the fixed bar.
+        "flex h-[calc(100dvh-var(--spacing-planner-bar)-1.5rem)] w-[17rem] flex-none flex-col rounded-lg border border-border",
         isOver && "ring-2 ring-inset ring-primary",
       )}
     >

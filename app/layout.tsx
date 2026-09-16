@@ -7,9 +7,6 @@ import {
   Cormorant_Garamond,
   Raleway,
 } from "next/font/google";
-import { Navbar } from "@/components/NavBar/NavBar";
-import { Footer } from "@/components/Footer";
-import { RsvpProvider } from "@/components/rsvp/RsvpProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -63,11 +60,10 @@ export default function RootLayout({
           ${cormorantGaramond.variable} 
           antialiased`}
       >
-        <RsvpProvider>
-          <Navbar />
-          {children}
-          <Footer />
-        </RsvpProvider>
+        {/* Chrome belongs to each section's layout: the guest site's navbar,
+            footer and RSVP modal live in app/(site)/layout.tsx, and the
+            honeymoon planner draws its own bar. */}
+        {children}
       </body>
     </html>
   );

@@ -902,11 +902,11 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               together, which is the point — a day's three cells must always
               line up. */}
                 {/* The pile and the grid are exactly one screen tall under the
-                    site's navbar. At 78vh, with the header above them, they
+                    planner bar. At 78vh, with the header above them, they
                     ran past the bottom of any laptop screen: the page and the
                     board both scrolled, and there was no position where the
                     pile's foot and the day headers were on screen together. */}
-                <div className="mt-4 flex scroll-mt-24 items-start gap-3">
+                <div className="mt-4 flex scroll-mt-[calc(var(--spacing-planner-bar)+0.5rem)] items-start gap-3">
                   {viewMeta.pile && (
                     <IdeaPanel
                       lane={pileLane}
@@ -924,7 +924,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                   )}
                   <div
                     ref={scroller}
-                    className="rail-scroll h-[calc(100dvh-7rem)] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
+                    className="rail-scroll h-[calc(100dvh-var(--spacing-planner-bar)-1.5rem)] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
                   >
                     <div
                       className="grid min-h-full"
