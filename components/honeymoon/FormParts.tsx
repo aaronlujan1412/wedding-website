@@ -3,7 +3,9 @@
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -89,15 +91,24 @@ export function TextArea(props: React.ComponentProps<"textarea">) {
   );
 }
 
+export type Option<T extends string> = { value: T; label: string };
+
+/**
+ * A select, optionally in labelled groups. The item list is what turns a long
+ * enum back into a short decision — fourteen card types read as three choices
+ * once they are sorted into unsorted, things to do, and blocked out.
+ */
 export function SelectField<T extends string>({
   value,
   onChange,
   options,
+  groups,
   placeholder,
 }: {
   value: T;
   onChange: (value: T) => void;
-  options: { value: T; label: string }[];
+  options?: Option<T>[];
+  groups?: { label: string; options: Option<T>[] }[];
   placeholder?: string;
 }) {
   return (
@@ -108,11 +119,24 @@ export function SelectField<T extends string>({
       {/* Tailwind v4 doesn't resolve the popover background variable for Radix
           primitives on its own, so bg-card is explicit here as everywhere. */}
       <SelectContent className="bg-card">
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
-            {o.label}
-          </SelectItem>
-        ))}
+        {groups
+          ? groups.map((g) => (
+              <SelectGroup key={g.label}>
+                <SelectLabel className="font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground">
+                  {g.label}
+                </SelectLabel>
+                {g.options.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectGroup>
+            ))
+          : options?.map((o) => (
+              <SelectItem key={o.value} value={o.value}>
+                {o.label}
+              </SelectItem>
+            ))}
       </SelectContent>
     </Select>
   );

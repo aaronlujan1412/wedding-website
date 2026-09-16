@@ -190,7 +190,7 @@ export function DayHeader({
               key={`${w.text}-${i}`}
               className={cn(
                 "flex items-start gap-1 font-raleway text-[0.65rem] leading-snug",
-                w.tone === "warn" ? "text-kind-food" : "text-muted-foreground",
+                w.tone === "warn" ? "text-warn" : "text-muted-foreground",
               )}
             >
               <TriangleAlert
@@ -211,9 +211,9 @@ function PaceBar({ minutes }: { minutes: number }) {
   const fill = Math.min(minutes / PACE_CEILING, 1) * 100;
   const tone =
     minutes > PACE_CEILING
-      ? "bg-kind-food"
+      ? "bg-warn"
       : minutes > PACE_TARGET
-        ? "bg-kind-workshop"
+        ? "bg-caution"
         : "bg-primary";
 
   return (

@@ -35,7 +35,7 @@ import { LanePile } from "./LanePile";
 import { LegBand } from "./LegBand";
 import { LegDialog, type LegDraft } from "./LegDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
-import { RateProvider } from "./RateContext";
+import { BoardProvider } from "./BoardContext";
 import { flightsOnDay } from "./flights";
 import { staysIn } from "./stays";
 import { useLiveRefresh } from "./useLiveRefresh";
@@ -466,7 +466,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const cellRow = (laneIndex: number) => 3 + laneIndex * 2;
 
   return (
-    <RateProvider rate={rate}>
+    <BoardProvider rate={rate} stays={stays} items={items}>
       <main className="mx-auto mt-6 max-w-[110rem]">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2 max-lg:mb-4">
           <p className="font-garamond text-xl italic text-muted-foreground max-lg:text-lg max-lg:leading-snug">
@@ -760,7 +760,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         />
         <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       </main>
-    </RateProvider>
+    </BoardProvider>
   );
 }
 

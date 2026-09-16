@@ -10,7 +10,6 @@ import type {
   TripLeg,
 } from "./types";
 
-
 /** A lane's pile: cards in that lane with no day yet. */
 export const POOL = "pool";
 
@@ -82,18 +81,168 @@ const GAP_THRESHOLD = 45;
 export const PACE_TARGET = 9 * 60;
 export const PACE_CEILING = 11 * 60;
 
-export const KINDS: Record<
-  ItemKind,
-  { label: string; color: string; glyph: string }
-> = {
-  sight: { label: "Sight", color: "var(--color-kind-sight)", glyph: "⛩" },
-  food: { label: "Food", color: "var(--color-kind-food)", glyph: "🍜" },
-  workshop: { label: "Workshop", color: "var(--color-kind-workshop)", glyph: "✎" },
-  transit: { label: "Transit", color: "var(--color-kind-transit)", glyph: "🚄" },
-  lodging: { label: "Lodging", color: "var(--color-kind-lodging)", glyph: "🛏" },
-  shop: { label: "Shop", color: "var(--color-kind-shop)", glyph: "🛍" },
-  rest: { label: "Rest", color: "var(--color-kind-rest)", glyph: "☕" },
+/**
+ * What a card is, and how it behaves.
+ *
+ * `blockout` is the one that matters: those cards claim time without being an
+ * activity. They are in this same enum rather than a parallel column so that
+ * one dropdown turns "we'll rest here" into "actually, the aquarium" -- and so
+ * that everything downstream branches off this map instead of off the schema.
+ *
+ * `links` says what a blockout points at. `stay` and `transit` resolve to a
+ * record on another tab; `city` is not a record at all -- a wander blockout
+ * names a place and the ideas worth seeing there are looked up live from the
+ * pile, so the list stays current on its own and no join table exists.
+ */
+export type KindMeta = {
+  label: string;
+  color: string;
+  /** Blockouts have none: the band shape is the identity. */
+  glyph: string | null;
+  blockout: boolean;
+  links: "stay" | "city" | "transit" | null;
 };
+
+export const KINDS: Record<ItemKind, KindMeta> = {
+  unsorted: {
+    label: "Unsorted",
+    color: "var(--color-kind-unsorted)",
+    glyph: null,
+    blockout: false,
+    links: null,
+  },
+
+  shrine: {
+    label: "Shrine",
+    color: "var(--color-kind-shrine)",
+    glyph: "⛩",
+    blockout: false,
+    links: null,
+  },
+  food: {
+    label: "Food",
+    color: "var(--color-kind-food)",
+    glyph: "🍜",
+    blockout: false,
+    links: null,
+  },
+  workshop: {
+    label: "Workshop",
+    color: "var(--color-kind-workshop)",
+    glyph: "✎",
+    blockout: false,
+    links: null,
+  },
+  shop: {
+    label: "Shop",
+    color: "var(--color-kind-shop)",
+    glyph: "🛍",
+    blockout: false,
+    links: null,
+  },
+  outdoors: {
+    label: "Outdoors",
+    color: "var(--color-kind-outdoors)",
+    glyph: "⛰",
+    blockout: false,
+    links: null,
+  },
+  culture: {
+    label: "Culture",
+    color: "var(--color-kind-culture)",
+    glyph: "🏛",
+    blockout: false,
+    links: null,
+  },
+  event: {
+    label: "Event",
+    color: "var(--color-kind-event)",
+    glyph: "✺",
+    blockout: false,
+    links: null,
+  },
+  play: {
+    label: "Play",
+    color: "var(--color-kind-play)",
+    glyph: "✦",
+    blockout: false,
+    links: null,
+  },
+  animals: {
+    label: "Animals",
+    color: "var(--color-kind-animals)",
+    glyph: "🐧",
+    blockout: false,
+    links: null,
+  },
+  onsen: {
+    label: "Onsen & ryokan",
+    color: "var(--color-kind-onsen)",
+    glyph: "♨",
+    blockout: false,
+    links: null,
+  },
+
+  rest: {
+    label: "Resting",
+    color: "var(--color-kind-rest)",
+    glyph: null,
+    blockout: true,
+    links: "stay",
+  },
+  wander: {
+    label: "Wandering",
+    color: "var(--color-kind-wander)",
+    glyph: null,
+    blockout: true,
+    links: "city",
+  },
+  travel: {
+    label: "Travelling",
+    color: "var(--color-kind-travel)",
+    glyph: null,
+    blockout: true,
+    links: "transit",
+  },
+};
+
+/** The dropdown, grouped so fourteen values still read as three decisions. */
+export const KIND_GROUPS: { label: string; kinds: ItemKind[] }[] = [
+  { label: "Not sorted yet", kinds: ["unsorted"] },
+  {
+    label: "Things to do",
+    kinds: [
+      "shrine",
+      "food",
+      "workshop",
+      "shop",
+      "outdoors",
+      "culture",
+      "event",
+      "play",
+      "animals",
+      "onsen",
+    ],
+  },
+  { label: "Blocked out", kinds: ["rest", "wander", "travel"] },
+];
+
+/**
+ * A card's type metadata, tolerating a value this build has never heard of.
+ *
+ * The enum and the deployed bundle can disagree for as long as it takes a push
+ * and a deploy to both land, and a bare `KINDS[kind]` in that window returns
+ * undefined and takes the whole board down on the first `.color`. Falling back
+ * to unsorted costs one `??` and turns a white screen into a few cards that
+ * look untriaged until the deploy catches up.
+ */
+export function kindOf(kind: ItemKind): KindMeta {
+  return KINDS[kind] ?? KINDS.unsorted;
+}
+
+export function isBlockout(item: { kind: ItemKind }): boolean {
+  return kindOf(item.kind).blockout;
+}
 
 export const BOOKING_STATUSES: Record<
   BookingStatus,
@@ -103,7 +252,11 @@ export const BOOKING_STATUSES: Record<
   to_book: { label: "Need to book", seal: null, sealLabel: "" },
   // The seals read as a goshuin would: reserved, then ticket issued.
   booked: { label: "Booked", seal: "予約済", sealLabel: "Booked" },
-  in_hand: { label: "Ticket in hand", seal: "発券済", sealLabel: "Ticket in hand" },
+  in_hand: {
+    label: "Ticket in hand",
+    seal: "発券済",
+    sealLabel: "Ticket in hand",
+  },
 };
 
 export const PLANNERS: Record<Planner, { label: string; initial: string }> = {
@@ -200,7 +353,9 @@ export function formatDayLong(iso: string): string {
 
 export function legForDay(legs: TripLeg[], iso: string): TripLeg | undefined {
   return legs.find(
-    (leg) => daysBetween(leg.starts_on, iso) >= 0 && daysBetween(iso, leg.ends_on) >= 0,
+    (leg) =>
+      daysBetween(leg.starts_on, iso) >= 0 &&
+      daysBetween(iso, leg.ends_on) >= 0,
   );
 }
 
@@ -256,7 +411,13 @@ export function legSegments(
     out.push(
       leg
         ? { kind: "leg", leg, column: i, span: j - i + 1 }
-        : { kind: "gap", from: days[i], to: days[j], column: i, span: j - i + 1 },
+        : {
+            kind: "gap",
+            from: days[i],
+            to: days[j],
+            column: i,
+            span: j - i + 1,
+          },
     );
     i = j + 1;
   }
@@ -291,11 +452,15 @@ export function adoptEffect(leg: TripLeg, legs: TripLeg[]): AdoptEffect {
   };
 }
 
-export function formatLegDates(leg: { starts_on: string; ends_on: string }): string {
+export function formatLegDates(leg: {
+  starts_on: string;
+  ends_on: string;
+}): string {
   const start = parseDay(leg.starts_on);
   const end = parseDay(leg.ends_on);
   const month = (d: Date) => d.toLocaleDateString("en-US", { month: "short" });
-  if (leg.starts_on === leg.ends_on) return `${month(start)} ${start.getDate()}`;
+  if (leg.starts_on === leg.ends_on)
+    return `${month(start)} ${start.getDate()}`;
   return start.getMonth() === end.getMonth()
     ? `${month(start)} ${start.getDate()}–${end.getDate()}`
     : `${month(start)} ${start.getDate()} – ${month(end)} ${end.getDate()}`;
@@ -304,7 +469,8 @@ export function formatLegDates(leg: { starts_on: string; ends_on: string }): str
 /** Every day the trip covers, across all legs, in order. */
 export function tripDays(legs: TripLeg[]): string[] {
   const seen = new Set<string>();
-  for (const leg of legs) for (const d of eachDay(leg.starts_on, leg.ends_on)) seen.add(d);
+  for (const leg of legs)
+    for (const d of eachDay(leg.starts_on, leg.ends_on)) seen.add(d);
   return [...seen].sort();
 }
 
@@ -383,10 +549,15 @@ export function layoutDay(items: TripItem[]): RailRow[] {
   return rows;
 }
 
-/** Minutes of activity in a day. Sleeping somewhere is not an activity. */
+/**
+ * Minutes of actual activity in a day. Blockouts are time you claimed on
+ * purpose, so they are not in this number -- a day with a long rest block
+ * should read as restful, not as a full day. They still fill the rail, because
+ * layoutDay works off start times and knows nothing about kinds.
+ */
 export function paceMinutes(items: TripItem[]): number {
   return items
-    .filter((i) => i.kind !== "lodging")
+    .filter((i) => !isBlockout(i))
     .reduce((sum, i) => sum + itemLength(i), 0);
 }
 
@@ -462,7 +633,7 @@ export function cashYen(items: TripItem[], rate: Rate): number {
     items.filter(
       (i) =>
         i.booking_status !== "in_hand" &&
-        i.kind !== "lodging" &&
+        !isBlockout(i) &&
         i.cost_currency === "JPY",
     ),
     rate,
@@ -573,22 +744,27 @@ export function dayWarnings(
     out.push({ tone: "info", text: "Times are out of order" });
   }
 
-  // Two cities in a day with nothing booked to get between them. Only the
-  // items' own cities count — comparing free text against the leg's name just
-  // fires on "Tokyo" vs "Tokyo again" and trains you to ignore the warning.
+  // Two cities in a day with nothing on the board to get between them. Only
+  // the items' own cities count — comparing free text against the leg's name
+  // just fires on "Tokyo" vs "Tokyo again" and trains you to ignore it.
+  // A travel blockout is what answers this: it is the card that says the
+  // afternoon is spent moving.
   const cities = new Set(
     items.map((i) => i.city?.trim()).filter((c): c is string => !!c),
   );
-  if (cities.size > 1 && !items.some((i) => i.kind === "transit")) {
+  if (cities.size > 1 && !items.some((i) => i.kind === "travel")) {
     out.push({
       tone: "warn",
-      text: `${[...cities].join(" and ")} in one day, no train on the board`,
+      text: `${[...cities].join(" and ")} in one day, nothing blocked out to travel`,
     });
   }
 
   const pace = paceMinutes(items);
   if (pace > PACE_CEILING) {
-    out.push({ tone: "warn", text: `${formatDuration(pace)} booked — that's a march` });
+    out.push({
+      tone: "warn",
+      text: `${formatDuration(pace)} booked — that's a march`,
+    });
   }
 
   return out;
@@ -615,7 +791,9 @@ export function cellId(lane: Lane, date: string | null): string {
   return `${lane}|${date ?? POOL}`;
 }
 
-export function parseCell(id: string): { lane: Lane; date: string | null } | null {
+export function parseCell(
+  id: string,
+): { lane: Lane; date: string | null } | null {
   const [lane, rest] = id.split("|");
   if (!rest || !LANE_ORDER.includes(lane as Lane)) return null;
   return { lane: lane as Lane, date: rest === POOL ? null : rest };

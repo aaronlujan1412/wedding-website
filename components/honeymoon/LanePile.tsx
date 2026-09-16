@@ -42,6 +42,7 @@ export function LanePile({
   const meta = LANES[lane];
   const rate = useRate();
   const loose = sumYen(items, rate);
+  const unsorted = items.filter((i) => i.kind === "unsorted").length;
 
   const needle = query.trim().toLowerCase();
   const visible = needle
@@ -90,6 +91,10 @@ export function LanePile({
       <p className="mt-2 border-t border-border/70 pt-2 font-mono text-[0.6rem] uppercase tracking-wider text-muted-foreground tabular-nums slashed-zero">
         {meta.pile}
         {loose > 0 && ` · ${formatYen(loose)}`}
+        {/* A count, not a warning. Nothing is wrong with an unsorted card —
+            it just hasn't been looked at yet, and the hollow tabs in the pile
+            are already saying so. This only puts a number on them. */}
+        {unsorted > 0 && ` · ${unsorted} unsorted`}
       </p>
 
       <div className="mt-2 flex-1 space-y-2">

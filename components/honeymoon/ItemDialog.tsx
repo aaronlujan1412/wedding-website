@@ -27,6 +27,7 @@ import {
 import {
   BOOKING_STATUSES,
   KINDS,
+  KIND_GROUPS,
   LANES,
   LANE_ORDER,
   PLANNERS,
@@ -34,6 +35,7 @@ import {
   costToInput,
   formatDayLong,
   parseCostInput,
+  kindOf,
 } from "./trip";
 import { CostField } from "./CostField";
 import type {
@@ -85,7 +87,7 @@ function toForm(draft: ItemDraft): FormState {
     title: item?.title ?? "",
     lane: item?.lane ?? draft.lane,
     title_ja: item?.title_ja ?? "",
-    kind: item?.kind ?? "sight",
+    kind: item?.kind ?? "unsorted",
     on_date: item ? (item.on_date ?? "") : (draft.onDate ?? ""),
     // Postgres hands back "09:00:00"; <input type="time"> wants "09:00".
     start_time: item?.start_time?.slice(0, 5) ?? "",
@@ -169,6 +171,8 @@ function ItemForm({
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const existing = draft.item;
+  const meta = kindOf(form.kind);
+  const blockout = meta.blockout;
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -239,13 +243,23 @@ function ItemForm({
             />
           </Field>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Type">
+            <Field
+              label="Type"
+              hint={
+                blockout
+                  ? "Blocked-out time draws as a band, and doesn't count toward how full the day looks."
+                  : undefined
+              }
+            >
               <SelectField
                 value={form.kind}
                 onChange={(v) => set("kind", v)}
-                options={(Object.keys(KINDS) as ItemKind[]).map((k) => ({
-                  value: k,
-                  label: KINDS[k].label,
+                groups={KIND_GROUPS.map((g) => ({
+                  label: g.label,
+                  options: g.kinds.map((k) => ({
+                    value: k,
+                    label: KINDS[k].label,
+                  })),
                 }))}
               />
             </Field>
@@ -303,89 +317,106 @@ function ItemForm({
           />
         </Fieldset>
 
-        <Fieldset legend="Booking">
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Status">
-              <SelectField
-                value={form.booking_status}
-                onChange={(v) => set("booking_status", v)}
-                options={(Object.keys(BOOKING_STATUSES) as BookingStatus[]).map(
-                  (s) => ({ value: s, label: BOOKING_STATUSES[s].label }),
-                )}
-              />
-            </Field>
-            <Field label="Tickets go on sale">
-              <TextInput
-                type="date"
-                value={form.booking_opens_on}
-                onChange={(e) => set("booking_opens_on", e.target.value)}
-              />
-            </Field>
-            <Field label="Booking link">
-              <TextInput
-                type="url"
-                value={form.booking_url}
-                onChange={(e) => set("booking_url", e.target.value)}
-                placeholder="https://"
-              />
-            </Field>
-            <Field label="Confirmation number">
-              <TextInput
-                value={form.booking_ref}
-                onChange={(e) => set("booking_ref", e.target.value)}
-              />
-            </Field>
-          </div>
-          <Field
-            label="Closed on"
-            hint="Half the museums in Japan shut on Mondays. Tick the days and the card goes red if it lands on one."
-          >
-            <div className="flex flex-wrap gap-1">
-              {WEEKDAYS.map((name, index) => {
-                const on = form.closed_days.includes(index);
-                return (
-                  <button
-                    key={name}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      set(
-                        "closed_days",
-                        on
-                          ? form.closed_days.filter((d) => d !== index)
-                          : [...form.closed_days, index],
-                      )
-                    }
-                    className={
-                      on
-                        ? "rounded-full border border-kind-food px-2.5 py-0.5 font-raleway text-[0.65rem] text-kind-food"
-                        : "rounded-full border border-border px-2.5 py-0.5 font-raleway text-[0.65rem] text-muted-foreground hover:border-primary/50"
-                    }
-                  >
-                    {name.slice(0, 3)}
-                  </button>
-                );
-              })}
+        {/* None of this means anything for an hour you've decided not to
+            fill, and a form that asks anyway is a form people stop reading. */}
+        {!blockout && (
+          <Fieldset legend="Booking">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field label="Status">
+                <SelectField
+                  value={form.booking_status}
+                  onChange={(v) => set("booking_status", v)}
+                  options={(
+                    Object.keys(BOOKING_STATUSES) as BookingStatus[]
+                  ).map((s) => ({
+                    value: s,
+                    label: BOOKING_STATUSES[s].label,
+                  }))}
+                />
+              </Field>
+              <Field label="Tickets go on sale">
+                <TextInput
+                  type="date"
+                  value={form.booking_opens_on}
+                  onChange={(e) => set("booking_opens_on", e.target.value)}
+                />
+              </Field>
+              <Field label="Booking link">
+                <TextInput
+                  type="url"
+                  value={form.booking_url}
+                  onChange={(e) => set("booking_url", e.target.value)}
+                  placeholder="https://"
+                />
+              </Field>
+              <Field label="Confirmation number">
+                <TextInput
+                  value={form.booking_ref}
+                  onChange={(e) => set("booking_ref", e.target.value)}
+                />
+              </Field>
             </div>
-          </Field>
-        </Fieldset>
+            <Field
+              label="Closed on"
+              hint="Half the museums in Japan shut on Mondays. Tick the days and the card goes red if it lands on one."
+            >
+              <div className="flex flex-wrap gap-1">
+                {WEEKDAYS.map((name, index) => {
+                  const on = form.closed_days.includes(index);
+                  return (
+                    <button
+                      key={name}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        set(
+                          "closed_days",
+                          on
+                            ? form.closed_days.filter((d) => d !== index)
+                            : [...form.closed_days, index],
+                        )
+                      }
+                      className={
+                        on
+                          ? "rounded-full border border-warn px-2.5 py-0.5 font-raleway text-[0.65rem] text-warn"
+                          : "rounded-full border border-border px-2.5 py-0.5 font-raleway text-[0.65rem] text-muted-foreground hover:border-primary/50"
+                      }
+                    >
+                      {name.slice(0, 3)}
+                    </button>
+                  );
+                })}
+              </div>
+            </Field>
+          </Fieldset>
+        )}
 
-        <Fieldset legend="Where and how much">
+        <Fieldset legend={blockout ? "Where" : "Where and how much"}>
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="City">
+            <Field
+              label="City"
+              className={blockout ? "sm:col-span-2" : undefined}
+              hint={
+                meta.links === "city"
+                  ? "Name the place and the card lists what's still in the pile nearby. Nothing to keep in sync — it reads the pile as it is."
+                  : undefined
+              }
+            >
               <TextInput
                 value={form.city}
                 onChange={(e) => set("city", e.target.value)}
               />
             </Field>
-            <Field label="Cost" group>
-              <CostField
-                value={form.cost_input}
-                currency={form.cost_currency}
-                onValueChange={(v) => set("cost_input", v)}
-                onCurrencyChange={(c) => set("cost_currency", c)}
-              />
-            </Field>
+            {!blockout && (
+              <Field label="Cost" group>
+                <CostField
+                  value={form.cost_input}
+                  currency={form.cost_currency}
+                  onValueChange={(v) => set("cost_input", v)}
+                  onCurrencyChange={(c) => set("cost_currency", c)}
+                />
+              </Field>
+            )}
           </div>
           <Field label="Address">
             <TextInput

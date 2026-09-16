@@ -452,6 +452,8 @@ export type Database = {
           id: string
           kind: Database["public"]["Enums"]["trip_item_kind"]
           lane: Database["public"]["Enums"]["trip_lane"]
+          linked_stay_id: string | null
+          linked_transit_id: string | null
           map_url: string | null
           must_do: boolean
           notes: string | null
@@ -480,6 +482,8 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
           lane?: Database["public"]["Enums"]["trip_lane"]
+          linked_stay_id?: string | null
+          linked_transit_id?: string | null
           map_url?: string | null
           must_do?: boolean
           notes?: string | null
@@ -508,6 +512,8 @@ export type Database = {
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
           lane?: Database["public"]["Enums"]["trip_lane"]
+          linked_stay_id?: string | null
+          linked_transit_id?: string | null
           map_url?: string | null
           must_do?: boolean
           notes?: string | null
@@ -520,7 +526,15 @@ export type Database = {
           updated_at?: string
           url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "trip_items_linked_stay_id_fkey"
+            columns: ["linked_stay_id"]
+            isOneToOne: false
+            referencedRelation: "trip_stays"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       trip_legs: {
         Row: {
@@ -703,13 +717,20 @@ export type Database = {
         | "money"
         | "other"
       trip_item_kind:
-        | "sight"
+        | "unsorted"
+        | "shrine"
         | "food"
         | "workshop"
-        | "transit"
-        | "lodging"
         | "shop"
+        | "outdoors"
+        | "culture"
+        | "event"
+        | "play"
+        | "animals"
+        | "onsen"
         | "rest"
+        | "wander"
+        | "travel"
       trip_lane: "decided" | "savea" | "aaron"
       trip_planner: "aaron" | "savea"
       trip_stay_payment: "prepaid" | "at_desk"
@@ -858,13 +879,20 @@ export const Constants = {
         "other",
       ],
       trip_item_kind: [
-        "sight",
+        "unsorted",
+        "shrine",
         "food",
         "workshop",
-        "transit",
-        "lodging",
         "shop",
+        "outdoors",
+        "culture",
+        "event",
+        "play",
+        "animals",
+        "onsen",
         "rest",
+        "wander",
+        "travel",
       ],
       trip_lane: ["decided", "savea", "aaron"],
       trip_planner: ["aaron", "savea"],

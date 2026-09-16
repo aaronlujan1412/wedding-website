@@ -33,14 +33,38 @@
   /* Honeymoon planner --------------------------------------------------- */
 
   /* One hue per card type, all pulled toward the wedding palette so the board
-     still reads as the same site rather than a pasted-in project tracker. */
-  --color-kind-sight: #00563f;
-  --color-kind-food: #b22323;
-  --color-kind-workshop: #8a6d0b;
-  --color-kind-transit: #3d4b5c;
-  --color-kind-lodging: #6b5e4e;
+     still reads as the same site rather than a pasted-in project tracker.
+     Every one of these clears AA on paper, on a card, and on both lane tints,
+     because the type name renders in its own hue at 0.65rem. Food sits at
+     #a33b1f rather than a true red: nearer the seal and the two of them read
+     as a mistake instead of a pair. */
+  --color-kind-shrine: #00563f;
+  --color-kind-food: #a33b1f;
+  --color-kind-workshop: #7d6209;
   --color-kind-shop: #6b4570;
-  --color-kind-rest: #8a8175;
+  --color-kind-outdoors: #4c6b2c;
+  --color-kind-culture: #6b5e4e;
+  --color-kind-event: #3b3a8f;
+  --color-kind-play: #a8326d;
+  --color-kind-animals: #2f6d8c;
+  --color-kind-onsen: #55707a;
+
+  /* Unsorted is the default, so it is deliberately not a colour: a hollow
+     dashed tab and a muted label. A board full of unsorted cards should look
+     unfinished, which is the whole nudge -- the form never blocks a bulk add. */
+  --color-kind-unsorted: #8c8377;
+
+  /* Blockouts claim time without being an activity, so they are drawn as bands
+     rather than cards and these hues only ever tint the band. Their labels use
+     muted-foreground: the point of a blockout is to recede. */
+  --color-kind-rest: #6d6058;
+  --color-kind-wander: #5f6d53;
+  --color-kind-travel: #4a5661;
+
+  /* Warnings had been borrowing the food and workshop hues, which put "that's
+     a march" in the same ink as a ramen card. They get their own pair. */
+  --color-warn: #a32820;
+  --color-caution: #8a6a12;
 
   /* Goshuin ink. Sits a touch brighter than --color-pop2 so the seal reads as
      stamped on top of the card rather than printed as part of it. */

@@ -3,6 +3,7 @@ import { ExternalLink, MapPin } from "lucide-react";
 import { TimelineConnector } from "@/components/schedule/TimelineConnector";
 import { Seal } from "@/components/honeymoon/Seal";
 import { getTripBoard } from "@/lib/honeymoon-queries";
+import { blockoutDetail } from "@/components/honeymoon/blockouts";
 import {
   formatNights,
   formatStayDates,
@@ -10,7 +11,7 @@ import {
   staysIn,
 } from "@/components/honeymoon/stays";
 import {
-  KINDS,
+  kindOf,
   eachDay,
   formatClock,
   formatDuration,
@@ -93,6 +94,7 @@ export default async function ItineraryPage() {
             )}
             items={decided}
             notes={days}
+            board={{ stays: board.stays, items }}
             rate={rate}
           />
         ))}
@@ -122,12 +124,15 @@ function LegSection({
   stays,
   items,
   notes,
+  board,
 }: {
   rate: Rate;
   leg: TripLeg;
   stays: TripStay[];
   items: TripItem[];
   notes: TripDay[];
+  /** The whole board, for the blockouts that look past their own day. */
+  board: { stays: TripStay[]; items: TripItem[] };
 }) {
   const dates = eachDay(leg.starts_on, leg.ends_on);
 
@@ -172,6 +177,7 @@ function LegSection({
             note={notes.find((n) => n.on_date === date)}
             items={decidedOn(items, date)}
             rate={rate}
+            board={board}
           />
         ))}
       </div>
@@ -184,11 +190,13 @@ function DaySection({
   date,
   note,
   items,
+  board,
 }: {
   date: string;
   note?: TripDay;
   items: TripItem[];
   rate: Rate;
+  board: { stays: TripStay[]; items: TripItem[] };
 }) {
   const day = parseDay(date);
   const spend = sumYen(items, rate);
@@ -226,72 +234,163 @@ function DaySection({
           Nothing planned. Leave it that way.
         </p>
       ) : (
-        items.map((item, i) => (
-          <article
-            key={item.id}
-            className="grid grid-cols-[3rem_1fr] gap-x-4 md:grid-cols-[4rem_1fr] md:gap-x-8"
-          >
-            <div className="flex flex-col items-center" aria-hidden="true">
-              <span
-                className="z-10 flex h-11 w-11 items-center justify-center rounded-full bg-card text-lg md:h-14 md:w-14 md:text-2xl"
-                style={{ boxShadow: `0 0 0 2px ${KINDS[item.kind].color}` }}
-              >
-                {KINDS[item.kind].glyph}
-              </span>
-              {i !== items.length - 1 && <TimelineConnector />}
-            </div>
-
-            <div className="pb-10">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary tabular-nums slashed-zero">
-                    {item.start_time
-                      ? `${formatClock(item.start_time)} · ${formatDuration(itemLength(item))}`
-                      : KINDS[item.kind].label}
-                  </p>
-                  <h4 className="mt-1.5 font-garamond text-2xl leading-tight text-foreground">
-                    {item.title}
-                  </h4>
-                  {item.title_ja && (
-                    <p className="font-jp text-sm text-muted-foreground">
-                      {item.title_ja}
-                    </p>
-                  )}
-                </div>
-                <Seal status={item.booking_status} />
+        items.map((item, i) =>
+          kindOf(item.kind).blockout ? (
+            <BlockoutEntry
+              key={item.id}
+              item={item}
+              board={board}
+              last={i === items.length - 1}
+            />
+          ) : (
+            <article
+              key={item.id}
+              className="grid grid-cols-[3rem_1fr] gap-x-4 md:grid-cols-[4rem_1fr] md:gap-x-8"
+            >
+              <div className="flex flex-col items-center" aria-hidden="true">
+                <span
+                  className="z-10 flex h-11 w-11 items-center justify-center rounded-full bg-card text-lg md:h-14 md:w-14 md:text-2xl"
+                  style={{ boxShadow: `0 0 0 2px ${kindOf(item.kind).color}` }}
+                >
+                  {kindOf(item.kind).glyph}
+                </span>
+                {i !== items.length - 1 && <TimelineConnector />}
               </div>
 
-              {item.notes && (
-                <p className="mt-3 font-garamond text-lg leading-relaxed text-foreground/90">
-                  {item.notes}
-                </p>
-              )}
+              <div className="pb-10">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs uppercase tracking-[0.2em] text-primary tabular-nums slashed-zero">
+                      {item.start_time
+                        ? `${formatClock(item.start_time)} · ${formatDuration(itemLength(item))}`
+                        : kindOf(item.kind).label}
+                    </p>
+                    <h4 className="mt-1.5 font-garamond text-2xl leading-tight text-foreground">
+                      {item.title}
+                    </h4>
+                    {item.title_ja && (
+                      <p className="font-jp text-sm text-muted-foreground">
+                        {item.title_ja}
+                      </p>
+                    )}
+                  </div>
+                  <Seal status={item.booking_status} />
+                </div>
 
-              <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
-                {item.cost_amount !== null && <span>{formatCost(item)}</span>}
-                {item.booking_ref && <span>#{item.booking_ref}</span>}
-                {item.address && (
-                  <span className="flex items-center gap-1">
-                    <MapPin className="h-3 w-3" strokeWidth={1.5} />
-                    {item.address}
-                  </span>
+                {item.notes && (
+                  <p className="mt-3 font-garamond text-lg leading-relaxed text-foreground/90">
+                    {item.notes}
+                  </p>
                 )}
-                {item.map_url && (
-                  <a
-                    href={item.map_url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-1 text-primary underline-offset-4 hover:underline"
-                  >
-                    Map
-                    <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-                  </a>
-                )}
-              </p>
-            </div>
-          </article>
-        ))
+
+                <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
+                  {item.cost_amount !== null && <span>{formatCost(item)}</span>}
+                  {item.booking_ref && <span>#{item.booking_ref}</span>}
+                  {item.address && (
+                    <span className="flex items-center gap-1">
+                      <MapPin className="h-3 w-3" strokeWidth={1.5} />
+                      {item.address}
+                    </span>
+                  )}
+                  {item.map_url && (
+                    <a
+                      href={item.map_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-primary underline-offset-4 hover:underline"
+                    >
+                      Map
+                      <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                    </a>
+                  )}
+                </p>
+              </div>
+            </article>
+          ),
+        )
       )}
     </div>
+  );
+}
+
+/**
+ * A blockout on the timeline.
+ *
+ * The medallion goes hollow and the type loses its weight, because this is the
+ * part of the day where the itinerary stops telling you what to do. A wander
+ * block is the exception worth reading: it prints the ideas still sitting in
+ * the pile for that city, which is the one moment that list is actually useful
+ * — standing in the city with an afternoon free.
+ */
+function BlockoutEntry({
+  item,
+  board,
+  last,
+}: {
+  item: TripItem;
+  board: { stays: TripStay[]; items: TripItem[] };
+  last: boolean;
+}) {
+  const kind = kindOf(item.kind);
+  const detail = blockoutDetail(item, board);
+
+  return (
+    <article className="grid grid-cols-[3rem_1fr] gap-x-4 md:grid-cols-[4rem_1fr] md:gap-x-8">
+      <div className="flex flex-col items-center" aria-hidden="true">
+        <span
+          className="z-10 h-11 w-11 rounded-full md:h-14 md:w-14"
+          style={{
+            backgroundColor: `color-mix(in srgb, ${kind.color} 8%, var(--color-background))`,
+            boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${kind.color} 35%, transparent)`,
+          }}
+        />
+        {!last && <TimelineConnector />}
+      </div>
+
+      <div className="pb-10">
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground tabular-nums slashed-zero">
+          {item.start_time
+            ? `${formatClock(item.start_time)} · ${formatDuration(itemLength(item))}`
+            : formatDuration(itemLength(item))}
+          {" · "}
+          {kind.label}
+        </p>
+        <h4 className="mt-1.5 font-garamond text-2xl leading-tight text-foreground/80">
+          {item.title}
+        </h4>
+        {detail.text && (
+          <p className="mt-1 font-garamond text-lg text-muted-foreground">
+            {detail.text}
+          </p>
+        )}
+
+        {item.notes && (
+          <p className="mt-3 font-garamond text-lg leading-relaxed text-foreground/90">
+            {item.notes}
+          </p>
+        )}
+
+        {detail.ideas.length > 0 && (
+          <ul className="mt-4 space-y-1 border-l border-border pl-4">
+            {detail.ideas.map((idea) => (
+              <li
+                key={idea.id}
+                className="font-garamond text-base leading-snug text-muted-foreground"
+              >
+                {idea.must_do && (
+                  <span className="mr-1 text-accent" aria-label="Must do">
+                    ★
+                  </span>
+                )}
+                {idea.title}
+                {idea.title_ja && (
+                  <span className="ml-2 font-jp text-sm">{idea.title_ja}</span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </article>
   );
 }

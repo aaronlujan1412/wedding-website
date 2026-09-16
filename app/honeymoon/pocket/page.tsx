@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getFlightsPage, getTripBoard } from "@/lib/honeymoon-queries";
+import { blockoutDetail } from "@/components/honeymoon/blockouts";
 import {
   JOURNEY_LABELS,
   dayShift,
@@ -20,7 +21,7 @@ import {
 } from "@/components/honeymoon/stays";
 import {
   DOC_CATEGORIES,
-  KINDS,
+  kindOf,
   cashYen,
   formatClock,
   formatDuration,
@@ -106,6 +107,7 @@ export default async function PocketPage() {
               note={days.find((d) => d.on_date === date)}
               items={decidedOn(items, date)}
               docs={docs.filter((d) => d.starts_at?.slice(0, 10) === date)}
+              board={{ stays: board.stays, items }}
             />
           ))}
         </>
@@ -318,6 +320,7 @@ function DaySheet({
   items,
   docs,
   rate,
+  board,
 }: {
   rate: Rate;
   date: string;
@@ -327,6 +330,7 @@ function DaySheet({
   note?: TripDay;
   items: TripItem[];
   docs: TripDoc[];
+  board: { stays: TripStay[]; items: TripItem[] };
 }) {
   const day = parseDay(date);
   // A stay paid at the desk is cash on the day you check in.
@@ -373,7 +377,7 @@ function DaySheet({
       )}
 
       {docs.length > 0 && (
-        <ul className="mt-4 space-y-1 border-l-2 border-kind-transit pl-3">
+        <ul className="mt-4 space-y-1 border-l-2 border-kind-travel pl-3">
           {docs.map((doc) => (
             <li
               key={doc.id}
@@ -399,7 +403,13 @@ function DaySheet({
                 {item.start_time ? formatClock(item.start_time) : "—"}
               </span>
               <div>
-                <p className="font-garamond text-lg leading-tight text-foreground">
+                <p
+                  className={
+                    kindOf(item.kind).blockout
+                      ? "font-garamond text-lg leading-tight text-foreground/70 italic"
+                      : "font-garamond text-lg leading-tight text-foreground"
+                  }
+                >
                   {item.title}
                   {item.title_ja && (
                     <span className="ml-2 font-jp text-sm text-muted-foreground">
@@ -408,11 +418,14 @@ function DaySheet({
                   )}
                 </p>
                 <p className="font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
-                  {KINDS[item.kind].label.toLowerCase()} ·{" "}
+                  {kindOf(item.kind).label.toLowerCase()} ·{" "}
                   {formatDuration(itemLength(item))}
                   {item.cost_amount !== null && ` · ${formatCost(item)}`}
                   {item.booking_ref && ` · ${item.booking_ref}`}
                 </p>
+                {/* The one thing a wander block is for: the ideas you'd
+                    flagged near here, on the paper you're already holding. */}
+                <BlockoutLines item={item} board={board} />
                 {item.address && (
                   <p className="font-garamond text-sm leading-snug text-muted-foreground">
                     {item.address}
@@ -429,5 +442,36 @@ function DaySheet({
         </ol>
       )}
     </section>
+  );
+}
+
+function BlockoutLines({
+  item,
+  board,
+}: {
+  item: TripItem;
+  board: { stays: TripStay[]; items: TripItem[] };
+}) {
+  if (!kindOf(item.kind).blockout) return null;
+  const detail = blockoutDetail(item, board);
+
+  return (
+    <>
+      {detail.text && (
+        <p className="font-garamond text-sm leading-snug text-muted-foreground">
+          {detail.text}
+        </p>
+      )}
+      {detail.ideas.length > 0 && (
+        <ul className="mt-1 font-garamond text-sm leading-snug text-muted-foreground">
+          {detail.ideas.map((idea) => (
+            <li key={idea.id}>
+              {idea.must_do ? "★ " : "· "}
+              {idea.title}
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
   );
 }
