@@ -55,7 +55,10 @@ export function LaneCell({
         items={items.map((i) => i.id)}
         strategy={verticalListSortingStrategy}
       >
-        <ol className="flex-1">
+        {/* Not flex-1: the last lane stretches to the foot of the board, and
+            a list that filled it pushed "Add" hundreds of pixels below the
+            cards it adds to. */}
+        <ol>
           {rows.map((row) =>
             row.kind === "gap" ? (
               showGaps ? (

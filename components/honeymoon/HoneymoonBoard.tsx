@@ -638,7 +638,14 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const gridRows = [
     "auto",
     ...(showSpine ? ["min-content"] : []),
-    ...shownLanes.map(() => "min-content min-content"),
+    ...shownLanes.map((_, i) =>
+      // The last lane's cells take whatever height is left, so a sparse
+      // board's tint reaches the foot of the frame instead of stopping
+      // halfway down beside a full-height pile. Only that one track: an fr
+      // track never shrinks below its content, and spreading the slack over
+      // every row is the bug the explicit tracks above exist to prevent.
+      i === shownLanes.length - 1 ? "min-content 1fr" : "min-content min-content",
+    ),
   ].join(" ");
 
   /**
@@ -894,7 +901,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                 {/* One grid, three rows. Horizontal scroll moves all three lanes
               together, which is the point — a day's three cells must always
               line up. */}
-                <div className="mt-4 flex items-start gap-3">
+                {/* The pile and the grid are exactly one screen tall under the
+                    site's navbar. At 78vh, with the header above them, they
+                    ran past the bottom of any laptop screen: the page and the
+                    board both scrolled, and there was no position where the
+                    pile's foot and the day headers were on screen together. */}
+                <div className="mt-4 flex scroll-mt-24 items-start gap-3">
                   {viewMeta.pile && (
                     <IdeaPanel
                       lane={pileLane}
@@ -912,10 +924,10 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                   )}
                   <div
                     ref={scroller}
-                    className="rail-scroll max-h-[78vh] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
+                    className="rail-scroll h-[calc(100dvh-7rem)] min-w-0 flex-1 overflow-auto rounded-lg border border-border"
                   >
                     <div
-                      className="grid"
+                      className="grid min-h-full"
                       style={{
                         gridTemplateColumns: gridColumns,
                         gridTemplateRows: gridRows,
