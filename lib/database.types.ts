@@ -489,6 +489,7 @@ export type Database = {
           booking_url: string | null
           city: string | null
           closed_days: number[]
+          closes_at: string | null
           cost_amount: number | null
           cost_currency: Database["public"]["Enums"]["trip_currency"]
           created_at: string
@@ -502,6 +503,7 @@ export type Database = {
           must_do: boolean
           notes: string | null
           on_date: string | null
+          opens_at: string | null
           pinned: boolean
           position: number
           start_time: string | null
@@ -521,6 +523,7 @@ export type Database = {
           booking_url?: string | null
           city?: string | null
           closed_days?: number[]
+          closes_at?: string | null
           cost_amount?: number | null
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
@@ -534,6 +537,7 @@ export type Database = {
           must_do?: boolean
           notes?: string | null
           on_date?: string | null
+          opens_at?: string | null
           pinned?: boolean
           position?: number
           start_time?: string | null
@@ -553,6 +557,7 @@ export type Database = {
           booking_url?: string | null
           city?: string | null
           closed_days?: number[]
+          closes_at?: string | null
           cost_amount?: number | null
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
@@ -566,6 +571,7 @@ export type Database = {
           must_do?: boolean
           notes?: string | null
           on_date?: string | null
+          opens_at?: string | null
           pinned?: boolean
           position?: number
           start_time?: string | null

@@ -74,6 +74,8 @@ type FormState = {
   booking_opens_on: string;
   booking_ref: string;
   closed_days: number[];
+  opens_at: string;
+  closes_at: string;
   cost_input: string;
   cost_currency: Currency;
   city: string;
@@ -107,6 +109,8 @@ function toForm(draft: ItemDraft): FormState {
     booking_opens_on: item?.booking_opens_on ?? "",
     booking_ref: item?.booking_ref ?? "",
     closed_days: item?.closed_days ?? [],
+    opens_at: item?.opens_at?.slice(0, 5) ?? "",
+    closes_at: item?.closes_at?.slice(0, 5) ?? "",
     cost_input: costToInput(
       item?.cost_amount ?? null,
       item?.cost_currency ?? "JPY",
@@ -377,6 +381,28 @@ function ItemForm({
                 <TextInput
                   value={form.booking_ref}
                   onChange={(e) => set("booking_ref", e.target.value)}
+                />
+              </Field>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field
+                label="Opens"
+                hint="The same hours every open day. Fill in either one you know."
+              >
+                <TextInput
+                  type="time"
+                  value={form.opens_at}
+                  onChange={(e) => set("opens_at", e.target.value)}
+                />
+              </Field>
+              <Field
+                label="Closes"
+                hint="Earlier than it opens means after midnight: a bar until 02:00."
+              >
+                <TextInput
+                  type="time"
+                  value={form.closes_at}
+                  onChange={(e) => set("closes_at", e.target.value)}
                 />
               </Field>
             </div>

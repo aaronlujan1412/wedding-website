@@ -569,6 +569,56 @@ export function itemEnd(item: TripItem): number | null {
   return start === null ? null : start + itemLength(item);
 }
 
+/**
+ * When a place is open, in minutes after midnight, or null if nobody has said.
+ * One window for every open day — the days it's shut are `closed_days` — and
+ * either end can be missing, since "closes at 2pm" is the half that bites.
+ *
+ * A close at or before the open runs past midnight, so a bar open 18:00–02:00
+ * closes at 26:00 and a card at 23:00 is inside it. With no open time to
+ * compare against, a close by 04:00 is read the same way: nothing opens then.
+ */
+export function openHours(
+  item: TripItem,
+): { opens: number | null; closes: number | null } | null {
+  if (!item.opens_at && !item.closes_at) return null;
+  const opens = item.opens_at ? minutesOf(item.opens_at) : null;
+  let closes = item.closes_at ? minutesOf(item.closes_at) : null;
+  if (closes !== null && closes <= (opens ?? 4 * 60)) closes += 24 * 60;
+  return { opens, closes };
+}
+
+/**
+ * What a stretch of a day runs into at a place that isn't open all of it, as
+ * lowercase fragments: "opens 10:00", "closes 14:00". A card inside a window
+ * that runs past midnight is read on that side of it, so a 23:00 drink at a
+ * bar open until 02:00 is fine.
+ */
+export function hoursProblems(
+  item: TripItem,
+  start: number,
+  end: number,
+): string[] {
+  const hours = openHours(item);
+  if (!hours) return [];
+  const { opens, closes } = hours;
+  // Past midnight: a card in the small hours belongs to the night before.
+  const shift = closes !== null && closes > 24 * 60 && start < closes - 24 * 60;
+  const from = shift ? start + 24 * 60 : start;
+  const to = shift ? end + 24 * 60 : end;
+
+  const out: string[] = [];
+  if (opens !== null && from < opens) out.push(`opens ${toClock(opens)}`);
+  if (closes !== null && to > closes) out.push(`closes ${toClock(closes)}`);
+  return out;
+}
+
+/** Minutes after midnight as a clock, past midnight included: 26:00 is 02:00. */
+function toClock(minutes: number): string {
+  const total = minutes % (24 * 60);
+  return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
 /* ------------------------------------------------------------- the rail -- */
 
 export type RailRow =
@@ -778,6 +828,23 @@ export function itemWarnings(item: TripItem, today = todayISO()): Warning[] {
       tone: "warn",
       text: `Closed ${WEEKDAYS[weekdayOf(item.on_date)]}s`,
     });
+  } else {
+    // Only once it has an hour: a loose card is "the market on Sunday,
+    // whenever", and whenever is not yet outside the opening hours. Shut that
+    // day is said above instead, since the hours don't apply at all.
+    const start = itemStart(item);
+    if (start !== null) {
+      for (const problem of hoursProblems(
+        item,
+        start,
+        start + itemLength(item),
+      )) {
+        out.push({
+          tone: "warn",
+          text: `${problem.charAt(0).toUpperCase()}${problem.slice(1)}`,
+        });
+      }
+    }
   }
 
   if (item.booking_status === "idea" || item.booking_status === "to_book") {

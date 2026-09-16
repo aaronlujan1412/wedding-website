@@ -70,6 +70,9 @@ export type ItemInput = {
   booking_opens_on?: string | null;
   booking_ref?: string | null;
   closed_days?: number[];
+  /** When the place is open, the same on every day it isn't shut. */
+  opens_at?: string | null;
+  closes_at?: string | null;
   /** Smallest unit of `cost_currency`: whole yen, or US cents. */
   cost_amount?: number | null;
   cost_currency?: Currency;
@@ -105,6 +108,8 @@ function normalise(input: ItemInput) {
     booking_opens_on: blankToNull(input.booking_opens_on),
     booking_ref: blankToNull(input.booking_ref),
     closed_days: input.closed_days ?? [],
+    opens_at: blankToNull(input.opens_at),
+    closes_at: blankToNull(input.closes_at),
     ...cleanCost(input.cost_amount, input.cost_currency),
     city: blankToNull(input.city),
     // Only a blockout of the matching sort can carry a link, so switching a

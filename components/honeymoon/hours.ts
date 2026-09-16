@@ -6,6 +6,7 @@ import {
   addDays,
   cellId,
   compare,
+  hoursProblems,
   itemLength,
   itemStart,
   minutesOf,
@@ -395,7 +396,11 @@ export function slotProblems(
   const out: string[] = [];
   if (clashes.length > 0) out.push(`overlaps ${clashes.join(", ")}`);
   const weekday = weekdayOf(date);
-  if (item.closed_days.includes(weekday))
+  if (item.closed_days.includes(weekday)) {
     out.push(`closed ${WEEKDAYS[weekday]}s`);
+  } else {
+    // Shut that day already covers it; the hours are the next question down.
+    out.push(...hoursProblems(item, start, end));
+  }
   return out;
 }

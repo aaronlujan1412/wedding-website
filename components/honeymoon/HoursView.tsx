@@ -51,6 +51,7 @@ import {
   itemStart,
   itemWarnings,
   kindOf,
+  openHours,
   overlaps,
   type Warning,
 } from "./trip";
@@ -645,6 +646,8 @@ function HoursTrack({
           </button>
         )}
 
+        {slot && <Shut item={slot.item} range={range} />}
+
         {placed.map((span) =>
           "anchor" in span ? (
             <AnchorBlock
@@ -769,6 +772,38 @@ function across(column: number, columns: number): React.CSSProperties {
     left: `calc(${column} * (100% - 0.75rem) / ${columns} + 0.375rem)`,
     width: `calc((100% - 0.75rem) / ${columns} - ${columns > 1 ? 2 : 0}px)`,
   };
+}
+
+/**
+ * When the place on the card being dragged is shut: before it opens and after
+ * it closes, hatched, on the track the card is over. Only while it's being
+ * dragged — a board that drew every card's hours all the time would be
+ * stripes — and it's the same answer the badge gives in words.
+ */
+function Shut({ item, range }: { item: TripItem; range: Range }) {
+  const hours = openHours(item);
+  if (!hours) return null;
+  const bands: [number, number][] = [];
+  if (hours.opens !== null && hours.opens > range.start) {
+    bands.push([range.start, Math.min(hours.opens, range.end)]);
+  }
+  // A close past midnight is beyond the bottom of the ruler, so nothing to draw.
+  if (hours.closes !== null && hours.closes < range.end) {
+    bands.push([Math.max(hours.closes, range.start), range.end]);
+  }
+
+  return bands.map(([from, to]) => (
+    <div
+      key={from}
+      aria-hidden="true"
+      style={{
+        top: `${percentAt(from, range)}%`,
+        height: `${percentAt(to, range) - percentAt(from, range)}%`,
+        backgroundImage: `repeating-linear-gradient(135deg, transparent 0 4px, color-mix(in srgb, var(--color-warn) 12%, transparent) 4px 5px)`,
+      }}
+      className="pointer-events-none absolute inset-x-0 z-1"
+    />
+  ));
 }
 
 /** After sunset, or before sunrise when the ruler starts that early. */
