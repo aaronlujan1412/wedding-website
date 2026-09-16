@@ -38,6 +38,7 @@ import {
   type Mark,
   type Range,
 } from "./hours";
+import { StatusLabel, StatusMark, TONE_INK } from "./Seal";
 import type { Sun } from "./sun";
 import {
   LANES,
@@ -48,6 +49,7 @@ import {
   itemWarnings,
   kindOf,
   overlaps,
+  type Warning,
 } from "./trip";
 import type { Lane, TripItem } from "./types";
 
@@ -316,7 +318,7 @@ export function ShelfChipFace({
   const kind = kindOf(item.kind);
   // Only the ones worth stopping for: "closed Sundays" matters most at exactly
   // the moment you're about to give a card a time.
-  const warnings = itemWarnings(item).filter((w) => w.tone === "warn");
+  const warnings = itemWarnings(item).filter((w) => w.tone !== "info");
 
   return (
     <article
@@ -346,7 +348,7 @@ export function ShelfChipFace({
         </span>
       </button>
       <WarnMark warnings={warnings} />
-      {isBooked(item) && <BookedDot className="self-center" />}
+      <StatusMark status={item.booking_status} className="ml-1" />
       <span className="flex-none self-center px-1.5 font-mono text-[0.6rem] text-muted-foreground tabular-nums slashed-zero">
         {formatDuration(itemLength(item))}
       </span>
@@ -702,7 +704,8 @@ export function HoursBlockFace({
     kind.blockout && size === "long" ? blockoutDetail(item, board).text : null;
   // The card's own trouble, on the card: the day header lists it too, but a
   // "closed Tuesdays" there doesn't point at the block it's about.
-  const warnings = itemWarnings(item).filter((w) => w.tone === "warn");
+  const warnings = itemWarnings(item).filter((w) => w.tone !== "info");
+  const status = kind.blockout ? null : item.booking_status;
 
   return (
     <article
@@ -748,8 +751,9 @@ export function HoursBlockFace({
               {formatDuration(length)}
               {kind.blockout && ` ${kind.label}`}
             </span>
-            {/* A long block says it in words under the title instead. */}
+            {/* A long block says both in words further down instead. */}
             {size === "medium" && <WarnMark warnings={warnings} />}
+            {size === "medium" && status && <StatusMark status={status} />}
           </p>
         )}
         <button
@@ -765,8 +769,14 @@ export function HoursBlockFace({
           {item.must_do && <MustDo />}
           {item.title}
         </button>
+        {size === "short" && status && <StatusMark status={status} />}
         {size === "long" && warnings.length > 0 && (
-          <p className="flex min-w-0 items-center gap-1 font-raleway text-[0.65rem] leading-snug text-warn">
+          <p
+            className={cn(
+              "flex min-w-0 items-center gap-1 font-raleway text-[0.65rem] leading-snug",
+              TONE_INK[worstTone(warnings)],
+            )}
+          >
             <TriangleAlert
               className="h-2.5 w-2.5 flex-none"
               strokeWidth={2}
@@ -777,19 +787,17 @@ export function HoursBlockFace({
             </span>
           </p>
         )}
+        {size === "long" &&
+          status &&
+          (item.cost_amount !== null || status !== "idea") && (
+            <p className="flex min-w-0 gap-1.5 truncate font-mono text-[0.55rem] text-muted-foreground tabular-nums slashed-zero">
+              {item.cost_amount !== null && <span>{formatCost(item)}</span>}
+              <StatusLabel status={status} />
+            </p>
+          )}
         {size === "long" && item.title_ja && (
           <p className="truncate font-jp text-[0.65rem] leading-snug text-muted-foreground">
             {item.title_ja}
-          </p>
-        )}
-        {size === "long" && !kind.blockout && item.cost_amount !== null && (
-          <p className="truncate font-mono text-[0.55rem] text-muted-foreground tabular-nums slashed-zero">
-            {formatCost(item)}
-            {item.booking_status === "to_book" && (
-              <span className="ml-1.5 tracking-[0.15em] text-warn uppercase">
-                Need to book
-              </span>
-            )}
           </p>
         )}
         {detail && (
@@ -801,8 +809,6 @@ export function HoursBlockFace({
           </p>
         )}
       </div>
-
-      {isBooked(item) && <BookedDot className="mt-1.5 mr-1.5" />}
 
       {actions && !overlay && (
         <span className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 transition-opacity group-focus-within/block:opacity-100 group-hover/block:opacity-100">
@@ -963,30 +969,25 @@ function bandStyle(color: string, ground = "transparent"): React.CSSProperties {
   };
 }
 
+/** Red if anything is wrong, amber if it's only still to do. */
+function worstTone(warnings: Warning[]): "warn" | "pending" {
+  return warnings.some((w) => w.tone === "warn") ? "warn" : "pending";
+}
+
 /** A card's warnings as one triangle, for where there's no room for words. */
-function WarnMark({ warnings }: { warnings: { text: string }[] }) {
+function WarnMark({ warnings }: { warnings: Warning[] }) {
   if (warnings.length === 0) return null;
   const text = warnings.map((w) => w.text).join(". ");
   return (
-    <span title={text} className="flex flex-none items-center text-warn">
+    <span
+      title={text}
+      className={cn(
+        "flex flex-none items-center",
+        TONE_INK[worstTone(warnings)],
+      )}
+    >
       <TriangleAlert className="h-3 w-3" strokeWidth={2} aria-hidden="true" />
       <span className="sr-only">{text}</span>
-    </span>
-  );
-}
-
-function isBooked(item: TripItem) {
-  return item.booking_status === "booked" || item.booking_status === "in_hand";
-}
-
-/** The seal, shrunk to a dot: at this size the stamp would be the whole card. */
-function BookedDot({ className }: { className?: string }) {
-  return (
-    <span
-      title="Booked"
-      className={cn("h-1.5 w-1.5 flex-none rounded-full bg-seal", className)}
-    >
-      <span className="sr-only">Booked</span>
     </span>
   );
 }

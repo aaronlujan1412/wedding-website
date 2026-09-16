@@ -77,7 +77,7 @@ export function FinderView({
       {problem && (
         <p
           role="alert"
-          className="mt-4 flex items-start gap-2 rounded-md border border-seal/40 bg-seal/5 px-3 py-2 text-sm text-seal"
+          className="mt-4 flex items-start gap-2 rounded-md border border-warn/40 bg-warn/5 px-3 py-2 text-sm text-warn"
         >
           <TriangleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
           {problem}

@@ -221,10 +221,15 @@ export function LodgingView({
                     {nights.length === 0 ? (
                       "No agreed route yet"
                     ) : open === 0 ? (
-                      `All ${nights.length} nights have a bed`
+                      <>
+                        <span className="text-ready">
+                          All {nights.length} nights
+                        </span>{" "}
+                        have a bed
+                      </>
                     ) : (
                       <>
-                        <span className="text-seal">
+                        <span className="text-pending">
                           {open} of {nights.length} nights
                         </span>{" "}
                         still need a bed
@@ -422,7 +427,7 @@ function CurrentStay({
       </div>
 
       {cancelIsClose(stay, now) && deadline && (
-        <p className="flex items-center gap-2 border-b border-seal/30 bg-seal/5 px-5 py-2.5 font-raleway text-sm text-seal sm:px-8">
+        <p className="flex items-center gap-2 border-b border-pending/30 bg-pending/5 px-5 py-2.5 font-raleway text-sm text-pending sm:px-8">
           <TriangleAlert className="h-4 w-4 flex-none" strokeWidth={1.75} />
           Free cancellation ends {countdown(deadline, now)}, on{" "}
           {formatDateIn(deadline, STAY_TZ)}.
@@ -546,7 +551,7 @@ function CurrentStay({
               <span
                 className={cn(
                   "font-garamond text-lg",
-                  cancelIsClose(stay, now) && "text-seal",
+                  cancelIsClose(stay, now) && "text-pending",
                 )}
               >
                 Until {formatDateIn(deadline, STAY_TZ)} ·{" "}
@@ -690,7 +695,7 @@ function BagsNote({ bags }: { bags: ReturnType<typeof bagsFor> }) {
               : "They'll be there before you."}
           </span>
         ) : (
-          <span className="block text-seal">
+          <span className="block text-pending">
             Bags go ahead, but there&apos;s no next stay to send them to yet.
           </span>
         ))}
@@ -736,7 +741,7 @@ function Question({
         <p
           className={cn(
             "font-raleway text-xs",
-            agreed.length ? "text-primary" : "text-seal",
+            agreed.length ? "text-primary" : "text-pending",
           )}
         >
           {agreed.length
@@ -984,7 +989,7 @@ function StayRow({
             <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 font-garamond text-sm">
               {stay.cancel_by && (
                 <span
-                  className={closing ? "text-seal" : "text-muted-foreground"}
+                  className={closing ? "text-pending" : "text-muted-foreground"}
                 >
                   {closing && (
                     <TriangleAlert

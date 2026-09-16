@@ -22,9 +22,9 @@ const NIGHT_WIDTH = "2.75rem";
  * Every night of the trip, left to right, with where each lane sleeps.
  *
  * The one loud thing on the tab: a night in the agreed trip with no bed and no
- * flight is drawn in seal red. Everything else — the stays, the route, the
- * suggestions stacked under their lane — stays quiet around it, so a hole is
- * the first thing you see.
+ * flight is drawn in amber — still to book, on the planner's traffic light.
+ * Everything else — the stays, the route, the suggestions stacked under their
+ * lane — stays quiet around it, so a hole is the first thing you see.
  *
  * Suggestions in a planner's lane can overlap, so each lane stacks into as
  * many rows as its most contested night needs. Bars link down to the stay's
@@ -207,7 +207,7 @@ export function NightsStrip({
                     onCreate("decided", run.from, addDays(run.to, 1))
                   }
                   aria-label={`No bed for ${formatNights(run.span)} from ${run.from}. Add a stay.`}
-                  className="flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-seal bg-seal/5 font-raleway text-[0.6rem] font-semibold uppercase tracking-[0.15em] text-seal transition-colors hover:bg-seal/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+                  className="flex h-8 w-full items-center justify-center gap-1 rounded-md border border-dashed border-pending bg-pending/5 font-raleway text-[0.6rem] font-semibold uppercase tracking-[0.15em] text-pending transition-colors hover:bg-pending/10 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
                 >
                   {run.span > 1 ? (
                     "No bed"

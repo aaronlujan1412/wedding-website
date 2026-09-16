@@ -295,19 +295,27 @@ export function isBlockout(item: { kind: ItemKind }): boolean {
   return kindOf(item.kind).blockout;
 }
 
+/**
+ * Where a booking stands on the traffic light. An idea has no colour at all:
+ * nobody has decided it needs booking yet, so there is nothing to chase.
+ */
+export type BookingLight = "none" | "pending" | "ready";
+
+/** Ready first, then still to book, then plain plans. */
+export const LIGHT_ORDER: Record<BookingLight, number> = {
+  ready: 0,
+  pending: 1,
+  none: 2,
+};
+
 export const BOOKING_STATUSES: Record<
   BookingStatus,
-  { label: string; seal: string | null; sealLabel: string }
+  { label: string; light: BookingLight }
 > = {
-  idea: { label: "Idea", seal: null, sealLabel: "" },
-  to_book: { label: "Need to book", seal: null, sealLabel: "" },
-  // The seals read as a goshuin would: reserved, then ticket issued.
-  booked: { label: "Booked", seal: "予約済", sealLabel: "Booked" },
-  in_hand: {
-    label: "Ticket in hand",
-    seal: "発券済",
-    sealLabel: "Ticket in hand",
-  },
+  idea: { label: "Idea", light: "none" },
+  to_book: { label: "Need to book", light: "pending" },
+  booked: { label: "Booked", light: "ready" },
+  in_hand: { label: "Ticket in hand", light: "ready" },
 };
 
 export const PLANNERS: Record<Planner, { label: string; initial: string }> = {
@@ -755,7 +763,11 @@ export function describeRate(rate: Rate): string {
 
 /* ------------------------------------------------------------- warnings -- */
 
-export type Warning = { tone: "warn" | "info"; text: string };
+/**
+ * `warn` is wrong (red), `pending` is still to do (amber), `info` is worth
+ * knowing and is drawn muted.
+ */
+export type Warning = { tone: "warn" | "pending" | "info"; text: string };
 
 /** Things wrong with one card, given where it has landed. */
 export function itemWarnings(item: TripItem, today = todayISO()): Warning[] {
@@ -774,12 +786,12 @@ export function itemWarnings(item: TripItem, today = todayISO()): Warning[] {
       if (days > 0) {
         out.push({ tone: "info", text: `Books open in ${days}d` });
       } else {
-        out.push({ tone: "warn", text: "Booking is open — go" });
+        out.push({ tone: "pending", text: "Booking is open — go" });
       }
     } else if (item.booking_status === "to_book" && item.on_date) {
       const days = daysBetween(today, item.on_date);
       if (days >= 0 && days <= 30) {
-        out.push({ tone: "warn", text: `Unbooked, ${days}d out` });
+        out.push({ tone: "pending", text: `Unbooked, ${days}d out` });
       }
     }
   }
@@ -820,9 +832,9 @@ export function dayWarnings(
   // "Closed Tuesdays" over four cards is a puzzle, not a warning.
   for (const item of items) {
     for (const w of itemWarnings(item, today)) {
-      if (w.tone !== "warn") continue;
+      if (w.tone === "info") continue;
       out.push({
-        tone: "warn",
+        tone: w.tone,
         text: `${item.title}: ${w.text.charAt(0).toLowerCase()}${w.text.slice(1)}`,
       });
     }

@@ -18,12 +18,11 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Seal } from "./Seal";
+import { Seal, StatusLabel, TONE_INK } from "./Seal";
 import { useRate } from "./RateContext";
 import { useBoardData } from "./BoardContext";
 import { blockoutDetail } from "./blockouts";
 import {
-  BOOKING_STATUSES,
   LANES,
   PLANNERS,
   formatClock,
@@ -185,11 +184,9 @@ export function ItemCardFace({
               {formatCost(item)}
             </span>
           )}
-          {item.booking_status === "to_book" && (
-            <span className="uppercase tracking-[0.15em] text-warn">
-              {BOOKING_STATUSES.to_book.label}
-            </span>
-          )}
+          {/* In words as well as the stamp: a ticket icon alone could as
+              easily mean "tickets needed". */}
+          <StatusLabel status={item.booking_status} />
           {item.city && (
             <span className="flex items-center gap-0.5">
               <MapPin className="h-2.5 w-2.5" strokeWidth={2} />
@@ -205,7 +202,7 @@ export function ItemCardFace({
                 key={w.text}
                 className={cn(
                   "flex items-start gap-1 font-raleway text-[0.65rem] leading-snug",
-                  w.tone === "warn" ? "text-warn" : "text-muted-foreground",
+                  TONE_INK[w.tone],
                 )}
               >
                 <TriangleAlert

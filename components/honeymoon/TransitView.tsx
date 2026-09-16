@@ -4,6 +4,8 @@ import { useState, useTransition } from "react";
 import {
   ArrowRight,
   ArrowUp,
+  Check,
+  Clock,
   ExternalLink,
   Plus,
   TriangleAlert,
@@ -11,6 +13,7 @@ import {
 import { cn } from "@/lib/utils";
 import { adoptTransit } from "@/app/actions/transit";
 import { Checklist } from "./Checklist";
+import { TONE_INK } from "./Seal";
 import { RateProvider } from "./RateContext";
 import { TransitDialog, type TransitDraft } from "./TransitDialog";
 import { useLiveRefresh } from "./useLiveRefresh";
@@ -173,7 +176,7 @@ function RouteHops({
               "flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border px-4 py-3",
               hop.covered
                 ? "border-border bg-card"
-                : "border-seal/40 bg-seal/[0.04]",
+                : "border-pending/40 bg-pending/[0.04]",
             )}
           >
             <span className="font-mono text-[0.7rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
@@ -194,16 +197,17 @@ function RouteHops({
             </span>
 
             {hop.covered ? (
-              <span className="font-mono text-[0.65rem] tracking-wide text-muted-foreground">
+              <span className="flex items-center gap-1 font-mono text-[0.65rem] tracking-wide text-ready">
+                <Check className="h-3 w-3" strokeWidth={2.25} />
                 booked
               </span>
             ) : (
               <button
                 type="button"
                 onClick={() => onAdd(hop.on)}
-                className="flex items-center gap-1 rounded-sm font-mono text-[0.65rem] tracking-wide text-seal underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                className="flex items-center gap-1 rounded-sm font-mono text-[0.65rem] tracking-wide text-pending underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
               >
-                <TriangleAlert className="h-3 w-3" strokeWidth={2} />
+                <Clock className="h-3 w-3" strokeWidth={2.25} />
                 nothing booked
               </button>
             )}
@@ -311,6 +315,12 @@ function RideCard({
             {ride.covered_by_pass && (
               <span className="text-primary">on the pass</span>
             )}
+            {ride.reserved && (
+              <span className="flex items-center gap-0.5 text-ready">
+                <Check className="h-2.5 w-2.5" strokeWidth={2.5} />
+                seat reserved
+              </span>
+            )}
           </p>
 
           <button
@@ -394,7 +404,7 @@ function RideCard({
               key={w.text}
               className={cn(
                 "flex items-start gap-1 font-raleway text-[0.65rem] leading-snug",
-                w.tone === "warn" ? "text-warn" : "text-muted-foreground",
+                TONE_INK[w.tone],
               )}
             >
               <TriangleAlert

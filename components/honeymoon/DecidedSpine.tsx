@@ -2,6 +2,7 @@
 
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
+import { StatusMark } from "./Seal";
 import {
   LANES,
   cellId,
@@ -76,8 +77,6 @@ function SpineRow({
   onEdit: (item: TripItem) => void;
 }) {
   const kind = kindOf(item.kind);
-  const booked =
-    item.booking_status === "booked" || item.booking_status === "in_hand";
 
   return (
     <button
@@ -115,13 +114,8 @@ function SpineRow({
       >
         {item.title}
       </span>
-      {booked && (
-        <span
-          className="mt-1 h-1.5 w-1.5 flex-none rounded-full bg-seal"
-          title="Booked"
-        >
-          <span className="sr-only">Booked</span>
-        </span>
+      {!kind.blockout && (
+        <StatusMark status={item.booking_status} className="self-start pt-px" />
       )}
     </button>
   );

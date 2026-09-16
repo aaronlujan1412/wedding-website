@@ -26,6 +26,7 @@ import {
   yenAsUsd,
 } from "./trip";
 import { useRate } from "./RateContext";
+import { TONE_INK } from "./Seal";
 import { toTime, type BoardLayout } from "./hours";
 import type { Sun } from "./sun";
 import type { TripDay, TripItem, TripLeg } from "./types";
@@ -270,7 +271,7 @@ export function DayHeader({
               key={`${w.text}-${i}`}
               className={cn(
                 "flex items-start gap-1 font-raleway text-[0.65rem] leading-snug",
-                w.tone === "warn" ? "text-warn" : "text-muted-foreground",
+                TONE_INK[w.tone],
               )}
             >
               <TriangleAlert

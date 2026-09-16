@@ -68,8 +68,7 @@
      0.65rem type, anything under about 10 is the same ink.
 
      Warn is ebicha 海老茶, a dark wine: at least ΔE 29 from every kind, lane
-     and the seal, and 4.8:1 on every surface a warning lands on. Bright
-     vermilion means stamped; dark wine means a problem.
+     and the seal, and 4.8:1 on every surface a warning lands on.
 
      Caution is kohaku 琥珀, amber. It is only ever the pace bar's fill, so it
      is held to the 3:1 of a graphic rather than the 4.5:1 of text — do not
@@ -77,8 +76,24 @@
   --color-warn: #7a333a;
   --color-caution: #ca7a2c;
 
-  /* Goshuin ink. Sits a touch brighter than --color-pop2 so the seal reads as
-     stamped on top of the card rather than printed as part of it. */
+  /* Status is a traffic light, and each colour means one thing on every tab:
+     ready (booked, a ticket in hand, a seat reserved), pending (need to book,
+     a night with no bed, a free cancellation running out) and warn (wrong:
+     closed that day, two things at once, an error). Booked used to be a
+     vermilion goshuin while the same red marked a missing bed on Lodging, so
+     the loudest thing on a card was the one thing that needed nothing doing —
+     and it said so in kanji neither of us reads.
+
+     Ready is tokiwa 常磐, evergreen: 4.56:1 on every surface, and ΔE 25 from
+     the pine the site uses for buttons and routes, so "booked" doesn't read
+     as "a link". Pending is kohaku darkened until words in it clear 4.5:1
+     (4.6), ΔE 20 from workshop and 25 from food. True yellow can't carry
+     words on cream; caution above is its fill. */
+  --color-ready: #007b43;
+  --color-pending: #9c5a00;
+
+  /* The date line on the Flights tab, and nothing else. It was goshuin ink
+     for "booked" until the traffic light above replaced it. */
   --color-seal: #c0342b;
 
   /* Day columns are pages of the book: one step warmer than a card. */

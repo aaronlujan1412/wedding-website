@@ -1,5 +1,5 @@
 import { formatClockIn, utcToZoned } from "./flights";
-import { compare } from "./trip";
+import { compare, type Warning } from "./trip";
 import type { Lane, TripLeg, TripTransit, TransitMode } from "./types";
 
 /**
@@ -208,24 +208,23 @@ export function journeyMinutes(journey: TransitJourney): number {
 
 /* -------------------------------------------------------------- warnings -- */
 
-export type TransitWarning = { tone: "warn" | "note"; text: string };
-
-export function rideWarnings(ride: TripTransit): TransitWarning[] {
-  const out: TransitWarning[] = [];
+/** The board's warning shape: red is wrong, amber is still to do. */
+export function rideWarnings(ride: TripTransit): Warning[] {
+  const out: Warning[] = [];
 
   // The one that actually ruins a day. Reserved seats on the shinkansen over
   // New Year sell out weeks ahead, and an unreserved car on the 30th of
   // December means standing to Kyoto with the luggage.
   if (ride.mode === "train" && !ride.reserved) {
-    out.push({ tone: "note", text: "No seat reserved" });
+    out.push({ tone: "pending", text: "No seat reserved" });
   }
 
   if (ride.reserved && !ride.seat_aaron && !ride.seat_savea) {
-    out.push({ tone: "note", text: "Reserved, but no seat numbers yet" });
+    out.push({ tone: "pending", text: "Reserved, but no seat numbers yet" });
   }
 
   if (isOvernight(ride)) {
-    out.push({ tone: "note", text: "Arrives the next day" });
+    out.push({ tone: "info", text: "Arrives the next day" });
   }
 
   return out;

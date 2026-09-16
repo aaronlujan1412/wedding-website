@@ -10,9 +10,19 @@ import {
   formatLegDates,
   legSegments,
   parseDay,
+  BOOKING_STATUSES,
+  LIGHT_ORDER,
+  type BookingLight,
   type LegSegment,
 } from "./trip";
 import type { Lane, TripItem, TripLeg, TripStay } from "./types";
+
+const PIP_FILL: Record<BookingLight, string> = {
+  ready: "bg-ready",
+  // A pip is a graphic, so it takes the pace bar's brighter amber.
+  pending: "bg-caution",
+  none: "bg-border",
+};
 
 /** A day cell is a drop target, so a card can be flung eight days away. */
 export const DAY_DROP_PREFIX = "route-day:";
@@ -259,9 +269,12 @@ function Day({
     id: `${DAY_DROP_PREFIX}${date}`,
   });
   const day = parseDay(date);
-  const booked = items.filter(
-    (i) => i.booking_status === "booked" || i.booking_status === "in_hand",
-  ).length;
+  // Ready first, then still to book, then plain plans: the day reads as a
+  // traffic light from the left.
+  const pips = items
+    .map((i) => BOOKING_STATUSES[i.booking_status].light)
+    .sort((a, b) => LIGHT_ORDER[a] - LIGHT_ORDER[b])
+    .slice(0, 5);
   const label = day.toLocaleDateString("en-US", {
     weekday: "long",
     month: "short",
@@ -292,15 +305,12 @@ function Day({
       <span className="font-mono text-sm leading-none text-foreground tabular-nums slashed-zero">
         {day.getDate()}
       </span>
-      {/* Filled marks are booked, hollow ones are still just plans. */}
+      {/* Green is booked, amber still needs booking, grey is just a plan. */}
       <span className="mt-1 flex h-1 items-center gap-px" aria-hidden="true">
-        {Array.from({ length: Math.min(items.length, 5) }).map((_, i) => (
+        {pips.map((light, i) => (
           <span
             key={i}
-            className={cn(
-              "h-1 w-1 rounded-full",
-              i < booked ? "bg-seal" : "bg-border",
-            )}
+            className={cn("h-1 w-1 rounded-full", PIP_FILL[light])}
           />
         ))}
       </span>

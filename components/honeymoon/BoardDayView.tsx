@@ -18,8 +18,10 @@ import { flightsOnDay } from "./flights";
 import { transitOnDay } from "./transit";
 import { sleepsOn, staysIn } from "./stays";
 import {
+  BOOKING_STATUSES,
   LANES,
   LANE_ORDER,
+  LIGHT_ORDER,
   formatDuration,
   isAdopted,
   itemsInCell,
@@ -279,9 +281,11 @@ function DayChip({
 }) {
   const day = parseDay(date);
   const decided = items.filter((i) => i.lane === "decided");
-  const booked = decided.filter(
-    (i) => i.booking_status === "booked" || i.booking_status === "in_hand",
-  ).length;
+  // Ready first, then still to book, then plain plans.
+  const lights = decided
+    .map((i) => BOOKING_STATUSES[i.booking_status].light)
+    .sort((a, b) => LIGHT_ORDER[a] - LIGHT_ORDER[b])
+    .slice(0, 5);
   const ideas = (["savea", "aaron"] as const).filter((lane) =>
     items.some((i) => i.lane === lane),
   );
@@ -318,19 +322,24 @@ function DayChip({
       <span className="font-mono text-sm leading-none tabular-nums slashed-zero">
         {day.getDate()}
       </span>
-      {/* Decided cards as pips (red once booked), then a dot for each of you
-          with an idea on this day. */}
+      {/* Decided cards as pips — green booked, amber to book, grey a plan —
+          then a dot for each of you with an idea on this day. On the chosen
+          day the chip itself is green, so booked turns white instead. */}
       <span className="mt-1 flex h-1 items-center gap-px" aria-hidden="true">
-        {decided.slice(0, 5).map((item, i) => (
+        {lights.map((light, i) => (
           <span
-            key={item.id}
+            key={i}
             className={cn(
               "h-1 w-1 rounded-full",
-              i < booked
-                ? "bg-seal"
-                : active
-                  ? "bg-primary-foreground/60"
-                  : "bg-border",
+              light === "pending"
+                ? "bg-caution"
+                : light === "ready"
+                  ? active
+                    ? "bg-primary-foreground"
+                    : "bg-ready"
+                  : active
+                    ? "bg-primary-foreground/40"
+                    : "bg-border",
             )}
           />
         ))}
