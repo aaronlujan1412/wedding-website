@@ -641,3 +641,144 @@ export async function restoreItem(row: TripItem) {
   refresh();
   return { data: true, error: null };
 }
+
+/* ---------------------------------------------------------------- notes -- */
+
+/**
+ * Notebooks and the notes in them.
+ *
+ * A note saves while it is still being written, so `saveNote` is called far
+ * more often than any other write here: it returns the row rather than
+ * revalidating every planner page, and only a note tied to a day refreshes the
+ * pages that draw it.
+ */
+export async function saveNotebook(
+  id: string | null,
+  name: string,
+  owner: Planner | null,
+) {
+  if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+  const title = name.trim();
+  if (!title) return { data: null, error: "A notebook needs a name." };
+
+  const now = new Date().toISOString();
+  const { data, error } = id
+    ? await supabase
+        .from("trip_notebooks")
+        .update({ name: title, owner, updated_at: now })
+        .eq("id", id)
+        .select()
+        .single()
+    : await supabase
+        .from("trip_notebooks")
+        .insert({ trip_id: trip, name: title, owner, position: Date.now() })
+        .select()
+        .single();
+
+  if (error) return { data: null, error: error.message };
+  revalidatePath("/honeymoon/notes");
+  return { data, error: null };
+}
+
+/**
+ * Deleting a notebook takes its notes with it (`on delete cascade`), so the
+ * caller has to have said so. An empty one goes without ceremony.
+ */
+export async function deleteNotebook(id: string) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase.from("trip_notebooks").delete().eq("id", id);
+  if (error) return { data: null, error: error.message };
+
+  revalidatePath("/honeymoon/notes");
+  return { data: true, error: null };
+}
+
+export type NoteInput = {
+  title?: string;
+  body?: string;
+  /** A day this note is about, or null to set it loose again. */
+  on_date?: string | null;
+};
+
+export async function saveNote(
+  id: string | null,
+  notebookId: string,
+  input: NoteInput,
+  /**
+   * The note's `updated_at` as the writer last saw it. Both of them share one
+   * login and the tab refreshes itself, so the same note can be open twice.
+   * When it has moved on since, the other version is kept below a rule rather
+   * than overwritten — the save that loses a paragraph is the one nobody
+   * forgives.
+   */
+  expected?: string | null,
+) {
+  if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
+  let body = input.body ?? "";
+  if (id && expected) {
+    const { data: current } = await supabase
+      .from("trip_notes")
+      .select("body, updated_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (
+      current &&
+      current.updated_at !== expected &&
+      current.body.trim() &&
+      current.body !== body
+    ) {
+      const at = new Date(current.updated_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      body = `${body}\n\n---\n\n_Written in another window at ${at}:_\n\n${current.body}`;
+    }
+  }
+
+  const fields = {
+    title: input.title?.trim() ?? "",
+    body,
+    on_date: blankToNull(input.on_date),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = id
+    ? await supabase
+        .from("trip_notes")
+        .update(fields)
+        .eq("id", id)
+        .select()
+        .single()
+    : await supabase
+        .from("trip_notes")
+        .insert({ ...fields, trip_id: trip, notebook_id: notebookId })
+        .select()
+        .single();
+
+  if (error) return { data: null, error: error.message };
+
+  // Only a note pinned to a day shows up anywhere else.
+  if (fields.on_date) revalidatePath("/honeymoon/itinerary");
+  return { data, error: null };
+}
+
+export async function deleteNote(id: string) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase.from("trip_notes").delete().eq("id", id);
+  if (error) return { data: null, error: error.message };
+
+  revalidatePath("/honeymoon/notes");
+  revalidatePath("/honeymoon/itinerary");
+  return { data: true, error: null };
+}

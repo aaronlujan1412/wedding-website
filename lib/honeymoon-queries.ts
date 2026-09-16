@@ -240,6 +240,60 @@ export async function getLodgingPage() {
 }
 
 /**
+ * The Notes tab: the notebooks, everything written in them, and the notes
+ * already left elsewhere on the trip.
+ *
+ * That last part is the reason the tab exists in this shape. Notes were
+ * already being written in five places — a day, a card, a stay, a ride, a
+ * flight — and a sixth box to type in would have made that worse rather than
+ * better. Only rows that actually carry a note are read.
+ */
+export async function getNotesPage() {
+  const trip = await getCurrentTrip();
+  const of = <T>(q: T) =>
+    trip
+      ? (q as { eq: (c: string, v: string) => T }).eq("trip_id", trip.id)
+      : q;
+
+  const [notebooks, notes, days, items, stays, transit, flights] =
+    await Promise.all([
+      of(supabase.from("trip_notebooks").select().order("position")),
+      of(
+        supabase
+          .from("trip_notes")
+          .select()
+          .order("updated_at", { ascending: false }),
+      ),
+      of(supabase.from("trip_days").select().not("note", "is", null)).order(
+        "on_date",
+      ),
+      of(
+        supabase.from("trip_items").select().not("notes", "is", null),
+      ).order("title"),
+      of(
+        supabase.from("trip_stays").select().not("notes", "is", null),
+      ).order("check_in_on"),
+      of(
+        supabase.from("trip_transit").select().not("notes", "is", null),
+      ).order("departs_at"),
+      of(
+        supabase.from("trip_flights").select().not("notes", "is", null),
+      ).order("departs_at"),
+    ]);
+
+  return {
+    trip,
+    notebooks: notebooks.data ?? [],
+    notes: notes.data ?? [],
+    days: days.data ?? [],
+    items: items.data ?? [],
+    stays: stays.data ?? [],
+    transit: transit.data ?? [],
+    flights: flights.data ?? [],
+  };
+}
+
+/**
  * The trip a write belongs to.
  *
  * Deliberately resolved on the server rather than taken from the client: a
