@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { DayHeader } from "./DayHeader";
 import { ItemCardFace, type CardActions } from "./ItemCard";
 import { flightsOnDay } from "./flights";
+import { transitOnDay } from "./transit";
 import { sleepsOn, staysIn } from "./stays";
 import {
   LANES,
@@ -31,6 +32,7 @@ import type {
   Lane,
   TripDay,
   TripFlight,
+  TripTransit,
   TripItem,
   TripLeg,
   TripStay,
@@ -57,6 +59,7 @@ export function BoardDayView({
   items,
   dayNotes,
   flights,
+  transit,
   today,
   actions,
   onAdd,
@@ -75,6 +78,7 @@ export function BoardDayView({
   items: TripItem[];
   dayNotes: TripDay[];
   flights: TripFlight[];
+  transit: TripTransit[];
   today: string;
   actions: CardActions;
   onAdd: (lane: Lane, date: string | null) => void;
@@ -224,6 +228,7 @@ export function BoardDayView({
               items={items}
               note={dayNotes.find((d) => d.on_date === selected)}
               flights={flights}
+              transit={transit}
               isToday={selected === today}
               actions={actions}
               onAdd={onAdd}
@@ -352,6 +357,7 @@ function DayPage({
   items,
   note,
   flights,
+  transit,
   isToday,
   actions,
   onAdd,
@@ -367,6 +373,7 @@ function DayPage({
   items: TripItem[];
   note?: TripDay;
   flights: TripFlight[];
+  transit: TripTransit[];
   isToday: boolean;
   actions: CardActions;
   onAdd: (lane: Lane, date: string | null) => void;
@@ -385,6 +392,7 @@ function DayPage({
         legs={legs}
         decided={itemsInCell(items, "decided", date)}
         flights={flightsOnDay(flights, date)}
+        transit={transitOnDay(transit, date)}
         isToday={isToday}
         onEditNote={onEditNote}
         onSortByTime={onSortByTime}

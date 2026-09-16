@@ -712,6 +712,8 @@ export function dayWarnings(
   iso: string,
   items: TripItem[],
   today = todayISO(),
+  /** True when a booked ride already covers this day, from `transitOnDay`. */
+  hasRide = false,
 ): Warning[] {
   const out: Warning[] = [];
   const date = parseDay(iso);
@@ -747,12 +749,13 @@ export function dayWarnings(
   // Two cities in a day with nothing on the board to get between them. Only
   // the items' own cities count — comparing free text against the leg's name
   // just fires on "Tokyo" vs "Tokyo again" and trains you to ignore it.
-  // A travel blockout is what answers this: it is the card that says the
-  // afternoon is spent moving.
+  // Either a booked ride on the transit tab or a travel blockout answers this.
+  // The blockout still counts on its own: "we'll move that afternoon" is a
+  // decision worth recording before anyone has bought a ticket.
   const cities = new Set(
     items.map((i) => i.city?.trim()).filter((c): c is string => !!c),
   );
-  if (cities.size > 1 && !items.some((i) => i.kind === "travel")) {
+  if (cities.size > 1 && !hasRide && !items.some((i) => i.kind === "travel")) {
     out.push({
       tone: "warn",
       text: `${[...cities].join(" and ")} in one day, nothing blocked out to travel`,

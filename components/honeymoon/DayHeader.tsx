@@ -5,9 +5,11 @@ import {
   ArrowDownWideNarrow,
   NotebookPen,
   Plane,
+  TramFront,
   TriangleAlert,
 } from "lucide-react";
 import { flightsOnDay, formatClockIn } from "./flights";
+import { arrivesClock, departsClock, transitOnDay } from "./transit";
 import { cn } from "@/lib/utils";
 import {
   PACE_CEILING,
@@ -42,6 +44,7 @@ export function DayHeader({
   onEditNote,
   onSortByTime,
   flights = [],
+  transit = [],
   style,
   variant = "cell",
 }: {
@@ -50,6 +53,8 @@ export function DayHeader({
   variant?: "cell" | "page";
   /** Flights leaving or landing on this date, from `flightsOnDay`. */
   flights?: ReturnType<typeof flightsOnDay>;
+  /** Trains and buses touching this date, from `transitOnDay`. */
+  transit?: ReturnType<typeof transitOnDay>;
   date: string;
   note?: TripDay;
   legs: TripLeg[];
@@ -62,7 +67,7 @@ export function DayHeader({
   // The header names where the agreed route has you. Drafts show in their own
   // lane's leg band, not here.
   const leg = legForDay(legsIn(legs, "decided"), date);
-  const warnings = dayWarnings(date, decided);
+  const warnings = dayWarnings(date, decided, undefined, transit.length > 0);
   const pace = paceMinutes(decided);
   const spend = sumYen(decided, rate);
   const cash = cashYen(decided, rate);
@@ -134,6 +139,28 @@ export function DayHeader({
           </span>
         )}
       </p>
+
+      {transit.length > 0 && (
+        <ul className="mt-1 space-y-0.5">
+          {transit.map(({ ride, leaves, lands }) => (
+            <li key={ride.id}>
+              <Link
+                href="/honeymoon/transit"
+                className="flex items-center gap-1 rounded-sm font-mono text-[0.6rem] text-primary tabular-nums slashed-zero hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+              >
+                <TramFront
+                  className="h-2.5 w-2.5 flex-none"
+                  strokeWidth={2}
+                  aria-hidden="true"
+                />
+                {leaves
+                  ? `${ride.from_place} ${departsClock(ride)} → ${ride.to_place}${lands ? ` ${arrivesClock(ride)}` : ""}`
+                  : `Arrives ${ride.to_place} ${arrivesClock(ride)}`}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
 
       {flights.length > 0 && (
         <ul className="mt-1 space-y-0.5">

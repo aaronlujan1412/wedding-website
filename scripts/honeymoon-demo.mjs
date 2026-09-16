@@ -40,6 +40,7 @@ const TABLES = [
   "trip_docs",
   "trip_flights",
   "trip_stays",
+  "trip_transit",
   "trip_checklist_items",
 ];
 /** PostgREST refuses an unfiltered delete; "key is not null" matches every
@@ -51,6 +52,7 @@ const KEYS = {
   trip_docs: "id",
   trip_flights: "id",
   trip_stays: "id",
+  trip_transit: "id",
   trip_checklist_items: "id",
 };
 const BACKUP_DIR = "supabase/.backups";
@@ -59,12 +61,23 @@ const args = process.argv.slice(2);
 const has = (flag) => args.includes(flag);
 const force = has("--force");
 
+/**
+ * PostgREST's code for "no such table". The local stack runs ahead of
+ * production between a migration landing here and `db push` reaching there,
+ * so every one of these loops has to treat a table this environment has never
+ * heard of as empty rather than as a failure — otherwise the snapshot you take
+ * *before* pushing a new table is the one that refuses to run.
+ */
+const NO_SUCH_TABLE = "PGRST205";
+
 async function counts() {
   const out = {};
   for (const table of TABLES) {
-    const { count } = await db
+    const { count, error } = await db
       .from(table)
       .select("*", { count: "exact", head: true });
+    if (error?.code === NO_SUCH_TABLE) continue;
+    if (error) throw error;
     out[table] = count ?? 0;
   }
   return out;
@@ -77,10 +90,18 @@ function total(c) {
 /** Always run before anything destructive. Cheap, and the only safety net. */
 async function snapshot(label = "snapshot") {
   const data = {};
+  const skipped = [];
   for (const table of TABLES) {
     const { data: rows, error } = await db.from(table).select();
+    if (error?.code === NO_SUCH_TABLE) {
+      skipped.push(table);
+      continue;
+    }
     if (error) throw error;
     data[table] = rows ?? [];
+  }
+  if (skipped.length) {
+    console.warn(`Not in this database yet, skipped: ${skipped.join(", ")}`);
   }
 
   await mkdir(BACKUP_DIR, { recursive: true });
@@ -97,6 +118,7 @@ async function wipe() {
       .from(table)
       .delete()
       .not(KEYS[table], "is", null);
+    if (error?.code === NO_SUCH_TABLE) continue;
     if (error) throw error;
   }
 }
@@ -296,7 +318,7 @@ const items = [
   {
     title: "SLC → HND",
     title_ja: "羽田空港",
-    kind: "transit",
+    kind: "travel",
     on_date: "2026-12-05",
     position: 1,
     start_time: "14:20",
@@ -309,7 +331,7 @@ const items = [
   },
   {
     title: "Check in, then collapse",
-    kind: "lodging",
+    kind: "rest",
     on_date: "2026-12-05",
     position: 2,
     start_time: "17:00",
@@ -322,7 +344,7 @@ const items = [
   {
     title: "teamLab Borderless",
     title_ja: "チームラボボーダレス",
-    kind: "sight",
+    kind: "culture",
     on_date: "2026-12-06",
     position: 1,
     start_time: "10:00",
@@ -360,7 +382,7 @@ const items = [
   {
     title: "Ghibli Museum",
     title_ja: "三鷹の森ジブリ美術館",
-    kind: "sight",
+    kind: "culture",
     on_date: "2026-12-08",
     position: 1,
     start_time: "10:00",
@@ -383,7 +405,7 @@ const items = [
     "Karaoke until 2am",
   ].map((t, i) => ({
     title: t,
-    kind: i > 3 ? "food" : "sight",
+    kind: i > 3 ? "food" : "shrine",
     on_date: "2026-12-09",
     position: i + 1,
     duration_min: 120,
@@ -394,7 +416,7 @@ const items = [
   {
     title: "Fushimi Inari at dawn",
     title_ja: "伏見稲荷大社",
-    kind: "sight",
+    kind: "shrine",
     on_date: "2026-12-13",
     position: 1,
     start_time: "06:30",
@@ -433,7 +455,7 @@ const items = [
   {
     title: "Nezu Museum garden",
     title_ja: "根津美術館",
-    kind: "sight",
+    kind: "culture",
     lane: "savea",
     on_date: "2026-12-07",
     position: 1,
@@ -535,7 +557,7 @@ const DEFAULTS = {
   pinned: false,
   must_do: false,
   booking_status: "idea",
-  kind: "sight",
+  kind: "shrine",
   added_by: "aaron",
   lane: "decided",
   cost_amount: null,

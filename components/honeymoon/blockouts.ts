@@ -1,6 +1,7 @@
 import { compare, isBlockout, kindOf } from "./trip";
 import { sleepsOn } from "./stays";
-import type { TripItem, TripStay } from "./types";
+import { arrivesClock, departsClock } from "./transit";
+import type { TripItem, TripStay, TripTransit } from "./types";
 
 /**
  * What a blockout points at.
@@ -76,7 +77,11 @@ export function wanderIdeas(item: TripItem, all: TripItem[]): TripItem[] {
 
 export function blockoutDetail(
   item: TripItem,
-  { stays, items }: { stays: TripStay[]; items: TripItem[] },
+  {
+    stays,
+    items,
+    transit = [],
+  }: { stays: TripStay[]; items: TripItem[]; transit?: TripTransit[] },
 ): BlockoutDetail {
   const links = kindOf(item.kind).links;
 
@@ -96,7 +101,16 @@ export function blockoutDetail(
     };
   }
 
-  // Travel. The transit tab does not exist yet, so the card carries its own
-  // route in the title and this stays empty rather than inventing a link.
-  return { text: null, ideas: [] };
+  // Travel. Linked to a ride on the transit tab when one has been picked;
+  // until then the card carries its own route in its title, which is why the
+  // link is optional rather than required.
+  const ride = item.linked_transit_id
+    ? (transit.find((r) => r.id === item.linked_transit_id) ?? null)
+    : null;
+  if (!ride) return { text: null, ideas: [] };
+
+  return {
+    text: `${ride.service ? `${ride.service} · ` : ""}${departsClock(ride)} ${ride.from_place} → ${arrivesClock(ride)} ${ride.to_place}`,
+    ideas: [],
+  };
 }

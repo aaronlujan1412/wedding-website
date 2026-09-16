@@ -37,6 +37,7 @@ import { LegDialog, type LegDraft } from "./LegDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { BoardProvider } from "./BoardContext";
 import { flightsOnDay } from "./flights";
+import { payableRides, transitIn, transitOnDay } from "./transit";
 import { staysIn } from "./stays";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { TripDocsPanel } from "./TripDocsPanel";
@@ -144,6 +145,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     : allDays;
 
   const decided = items.filter((i) => i.lane === "decided");
+  // The header names the agreed day, so only the agreed route's rides belong
+  // in it. A suggested night bus lives on the Transit tab until it's adopted.
+  const decidedTransit = transitIn(board.transit, "decided");
   const suggested = items.filter(
     (i) => i.lane !== "decided" && i.on_date !== null,
   );
@@ -152,6 +156,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     sumYen(decided, rate) +
     sumYen(docs, rate) +
     sumYen(board.flights, rate) +
+    // Rides the rail pass covers cost nothing on the day — the pass itself is
+    // a trip_docs row and its price is counted there instead.
+    sumYen(payableRides(decidedTransit), rate) +
     sumYen(staysIn(stays, "decided"), rate);
 
   /**
@@ -466,7 +473,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const cellRow = (laneIndex: number) => 3 + laneIndex * 2;
 
   return (
-    <BoardProvider rate={rate} stays={stays} items={items}>
+    <BoardProvider
+      rate={rate}
+      stays={stays}
+      items={items}
+      transit={board.transit}
+    >
       <main className="mx-auto mt-6 max-w-[110rem]">
         <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2 max-lg:mb-4">
           <p className="font-garamond text-xl italic text-muted-foreground max-lg:text-lg max-lg:leading-snug">
@@ -601,6 +613,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               items={items}
               dayNotes={dayNotes}
               flights={board.flights}
+              transit={decidedTransit}
               today={today}
               actions={actions}
               onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
@@ -668,6 +681,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         legs={legs}
                         decided={itemsInCell(items, "decided", date)}
                         flights={flightsOnDay(board.flights, date)}
+                        transit={transitOnDay(decidedTransit, date)}
                         isToday={date === today}
                         onEditNote={setNoteDate}
                         onSortByTime={(d) =>

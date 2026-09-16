@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { getFlightsPage, getTripBoard } from "@/lib/honeymoon-queries";
 import { blockoutDetail } from "@/components/honeymoon/blockouts";
 import {
+  arrivesClock,
+  departsClock,
+  transitIn,
+  transitOnDay,
+} from "@/components/honeymoon/transit";
+import {
   JOURNEY_LABELS,
   dayShift,
   flightMinutes,
@@ -43,6 +49,7 @@ import type {
   TripItem,
   TripLeg,
   TripStay,
+  TripTransit,
 } from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
@@ -71,6 +78,7 @@ export default async function PocketPage() {
   // arguing with yourself at a train station.
   const legs = legsIn(board.legs, "decided");
   const stays = staysIn(board.stays, "decided");
+  const decidedTransit = transitIn(board.transit, "decided");
   const dates = tripDays(legs);
 
   return (
@@ -107,7 +115,8 @@ export default async function PocketPage() {
               note={days.find((d) => d.on_date === date)}
               items={decidedOn(items, date)}
               docs={docs.filter((d) => d.starts_at?.slice(0, 10) === date)}
-              board={{ stays: board.stays, items }}
+              rides={transitOnDay(decidedTransit, date)}
+              board={{ stays: board.stays, items, transit: board.transit }}
             />
           ))}
         </>
@@ -320,6 +329,7 @@ function DaySheet({
   items,
   docs,
   rate,
+  rides,
   board,
 }: {
   rate: Rate;
@@ -330,7 +340,8 @@ function DaySheet({
   note?: TripDay;
   items: TripItem[];
   docs: TripDoc[];
-  board: { stays: TripStay[]; items: TripItem[] };
+  rides: ReturnType<typeof transitOnDay>;
+  board: { stays: TripStay[]; items: TripItem[]; transit: TripTransit[] };
 }) {
   const day = parseDay(date);
   // A stay paid at the desk is cash on the day you check in.
@@ -386,6 +397,58 @@ function DaySheet({
               {doc.starts_at && `${doc.starts_at.slice(11, 16)} · `}
               {doc.title}
               {doc.confirmation && ` · ${doc.confirmation}`}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {rides.length > 0 && (
+        <ul className="mt-4 space-y-2 border-l-2 border-kind-travel pl-3">
+          {rides.map(({ ride, leaves, lands }) => (
+            <li key={ride.id}>
+              <p className="font-garamond text-base leading-tight text-foreground">
+                {leaves ? (
+                  <>
+                    <span className="font-mono text-sm tabular-nums slashed-zero">
+                      {departsClock(ride)}
+                    </span>{" "}
+                    {ride.from_place} → {ride.to_place}{" "}
+                    <span className="font-mono text-sm tabular-nums slashed-zero">
+                      {arrivesClock(ride)}
+                    </span>
+                    {!lands && " (next day)"}
+                  </>
+                ) : (
+                  <>
+                    Arrives {ride.to_place}{" "}
+                    <span className="font-mono text-sm tabular-nums slashed-zero">
+                      {arrivesClock(ride)}
+                    </span>
+                  </>
+                )}
+              </p>
+              {/* The whole reason this sheet exists: on the platform with no
+                  signal, this is the line you actually read. */}
+              <p className="font-mono text-[0.65rem] tracking-wide text-muted-foreground tabular-nums slashed-zero">
+                {[
+                  ride.service,
+                  ride.departs_platform && `Plat. ${ride.departs_platform}`,
+                  ride.car && `Car ${ride.car}`,
+                  ride.seat_aaron && `A ${ride.seat_aaron}`,
+                  ride.seat_savea && `S ${ride.seat_savea}`,
+                  ride.covered_by_pass ? "on the pass" : null,
+                  ride.confirmation && `#${ride.confirmation}`,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+              {(ride.from_place_ja || ride.to_place_ja) && (
+                <p className="font-jp text-xs text-muted-foreground">
+                  {ride.from_place_ja}
+                  {ride.from_place_ja && ride.to_place_ja && " → "}
+                  {ride.to_place_ja}
+                </p>
+              )}
             </li>
           ))}
         </ul>
@@ -450,7 +513,7 @@ function BlockoutLines({
   board,
 }: {
   item: TripItem;
-  board: { stays: TripStay[]; items: TripItem[] };
+  board: { stays: TripStay[]; items: TripItem[]; transit: TripTransit[] };
 }) {
   if (!kindOf(item.kind).blockout) return null;
   const detail = blockoutDetail(item, board);

@@ -5,6 +5,12 @@ import { Seal } from "@/components/honeymoon/Seal";
 import { getTripBoard } from "@/lib/honeymoon-queries";
 import { blockoutDetail } from "@/components/honeymoon/blockouts";
 import {
+  arrivesClock,
+  departsClock,
+  transitIn,
+  transitOnDay,
+} from "@/components/honeymoon/transit";
+import {
   formatNights,
   formatStayDates,
   nightCount,
@@ -30,6 +36,7 @@ import type {
   TripItem,
   TripLeg,
   TripStay,
+  TripTransit,
 } from "@/components/honeymoon/types";
 
 /** Host-only and always live — never prerender it with build-time rows. */
@@ -54,6 +61,7 @@ export default async function ItineraryPage() {
   const legs = legsIn(board.legs, "decided");
   const decided = items.filter((i) => i.lane === "decided");
   const stays = staysIn(board.stays, "decided");
+  const decidedTransit = transitIn(board.transit, "decided");
   const spend =
     sumYen(decided, rate) + sumYen(docs, rate) + sumYen(stays, rate);
 
@@ -94,7 +102,8 @@ export default async function ItineraryPage() {
             )}
             items={decided}
             notes={days}
-            board={{ stays: board.stays, items }}
+            board={{ stays: board.stays, items, transit: board.transit }}
+            transit={decidedTransit}
             rate={rate}
           />
         ))}
@@ -125,6 +134,7 @@ function LegSection({
   items,
   notes,
   board,
+  transit,
 }: {
   rate: Rate;
   leg: TripLeg;
@@ -132,7 +142,9 @@ function LegSection({
   items: TripItem[];
   notes: TripDay[];
   /** The whole board, for the blockouts that look past their own day. */
-  board: { stays: TripStay[]; items: TripItem[] };
+  board: { stays: TripStay[]; items: TripItem[]; transit: TripTransit[] };
+  /** The agreed route's rides, for the days that are spent moving. */
+  transit: TripTransit[];
 }) {
   const dates = eachDay(leg.starts_on, leg.ends_on);
 
@@ -178,6 +190,7 @@ function LegSection({
             items={decidedOn(items, date)}
             rate={rate}
             board={board}
+            rides={transitOnDay(transit, date)}
           />
         ))}
       </div>
@@ -191,12 +204,14 @@ function DaySection({
   note,
   items,
   board,
+  rides,
 }: {
   date: string;
   note?: TripDay;
   items: TripItem[];
   rate: Rate;
-  board: { stays: TripStay[]; items: TripItem[] };
+  board: { stays: TripStay[]; items: TripItem[]; transit: TripTransit[] };
+  rides: ReturnType<typeof transitOnDay>;
 }) {
   const day = parseDay(date);
   const spend = sumYen(items, rate);
@@ -227,6 +242,36 @@ function DaySection({
         <p className="mb-6 font-garamond text-lg leading-relaxed text-foreground/90">
           {note.note}
         </p>
+      )}
+
+      {rides.length > 0 && (
+        <ul className="mb-8 space-y-2 border-l-2 border-kind-travel pl-4">
+          {rides.map(({ ride, leaves, lands }) => (
+            <li key={ride.id}>
+              <p className="font-garamond text-xl leading-tight text-foreground">
+                {leaves ? (
+                  <>
+                    {ride.from_place} → {ride.to_place}
+                  </>
+                ) : (
+                  <>Arrives {ride.to_place}</>
+                )}
+              </p>
+              <p className="font-mono text-xs tracking-wide text-muted-foreground tabular-nums slashed-zero">
+                {[
+                  leaves
+                    ? `${departsClock(ride)} – ${arrivesClock(ride)}${lands ? "" : " next day"}`
+                    : arrivesClock(ride),
+                  ride.service,
+                  ride.car && `Car ${ride.car}`,
+                  ride.covered_by_pass ? "on the pass" : null,
+                ]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            </li>
+          ))}
+        </ul>
       )}
 
       {items.length === 0 ? (
@@ -328,7 +373,7 @@ function BlockoutEntry({
   last,
 }: {
   item: TripItem;
-  board: { stays: TripStay[]; items: TripItem[] };
+  board: { stays: TripStay[]; items: TripItem[]; transit: TripTransit[] };
   last: boolean;
 }) {
   const kind = kindOf(item.kind);

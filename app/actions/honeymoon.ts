@@ -37,8 +37,12 @@ function refresh() {
  * checks for a number rather than truthiness, which would save "free" as
  * "unknown".
  */
-function cleanCost(amount: number | null | undefined, currency: Currency | undefined) {
-  const valid = typeof amount === "number" && Number.isInteger(amount) && amount >= 0;
+function cleanCost(
+  amount: number | null | undefined,
+  currency: Currency | undefined,
+) {
+  const valid =
+    typeof amount === "number" && Number.isInteger(amount) && amount >= 0;
   return {
     cost_amount: valid ? amount : null,
     cost_currency: currency === "USD" ? ("USD" as const) : ("JPY" as const),
@@ -75,6 +79,13 @@ export type ItemInput = {
   notes?: string | null;
   added_by?: Planner;
   must_do?: boolean;
+  /**
+   * What a blockout points at. Both are overrides rather than requirements: a
+   * rest card normally infers the stay covering its night, and a travel card
+   * reads fine with just its own title until a ride is actually booked.
+   */
+  linked_stay_id?: string | null;
+  linked_transit_id?: string | null;
 };
 
 function normalise(input: ItemInput) {
@@ -95,6 +106,12 @@ function normalise(input: ItemInput) {
     closed_days: input.closed_days ?? [],
     ...cleanCost(input.cost_amount, input.cost_currency),
     city: blankToNull(input.city),
+    // Only a blockout of the matching sort can carry a link, so switching a
+    // card back to an activity drops it rather than leaving a dangling row.
+    linked_stay_id:
+      input.kind === "rest" ? (input.linked_stay_id ?? null) : null,
+    linked_transit_id:
+      input.kind === "travel" ? (input.linked_transit_id ?? null) : null,
     address: blankToNull(input.address),
     map_url: blankToNull(input.map_url),
     url: blankToNull(input.url),
@@ -273,7 +290,10 @@ export async function sortDayByTime(onDate: string, lane: Lane = "decided") {
   const ordered = [...timed, ...loose];
   await Promise.all(
     ordered.map((row, i) =>
-      supabase.from("trip_items").update({ position: i + 1 }).eq("id", row.id),
+      supabase
+        .from("trip_items")
+        .update({ position: i + 1 })
+        .eq("id", row.id),
     ),
   );
 
@@ -313,7 +333,12 @@ export async function saveLeg(id: string | null, input: LegInput) {
   }
 
   const { data, error } = id
-    ? await supabase.from("trip_legs").update(row).eq("id", id).select().single()
+    ? await supabase
+        .from("trip_legs")
+        .update(row)
+        .eq("id", id)
+        .select()
+        .single()
     : await supabase
         .from("trip_legs")
         .insert({ ...row, position: await nextLegPosition() })
@@ -397,7 +422,9 @@ export async function adoptRoute(lane: Lane) {
     return { data: null, error: "Decided is already the decided route." };
   }
 
-  const { data, error } = await supabase.rpc("adopt_trip_route", { p_lane: lane });
+  const { data, error } = await supabase.rpc("adopt_trip_route", {
+    p_lane: lane,
+  });
   if (error) return { data: null, error: error.message };
 
   refresh();
@@ -456,7 +483,12 @@ export async function saveDoc(id: string | null, input: DocInput) {
   if (!row.title) return { data: null, error: "Give it a name first." };
 
   const { data, error } = id
-    ? await supabase.from("trip_docs").update(row).eq("id", id).select().single()
+    ? await supabase
+        .from("trip_docs")
+        .update(row)
+        .eq("id", id)
+        .select()
+        .single()
     : await supabase.from("trip_docs").insert(row).select().single();
 
   if (error) return { data: null, error: error.message };

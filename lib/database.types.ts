@@ -534,6 +534,13 @@ export type Database = {
             referencedRelation: "trip_stays"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "trip_items_linked_transit_fkey"
+            columns: ["linked_transit_id"]
+            isOneToOne: false
+            referencedRelation: "trip_transit"
+            referencedColumns: ["id"]
+          },
         ]
       }
       trip_legs: {
@@ -674,6 +681,93 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_transit: {
+        Row: {
+          added_by: Database["public"]["Enums"]["trip_planner"]
+          arrives_at: string
+          arrives_platform: string | null
+          booking_url: string | null
+          car: string | null
+          confirmation: string | null
+          cost_amount: number | null
+          cost_currency: Database["public"]["Enums"]["trip_currency"]
+          covered_by_pass: boolean
+          created_at: string
+          departs_at: string
+          departs_platform: string | null
+          from_place: string
+          from_place_ja: string | null
+          id: string
+          lane: Database["public"]["Enums"]["trip_lane"]
+          mode: Database["public"]["Enums"]["trip_transit_mode"]
+          notes: string | null
+          operator: string | null
+          reserved: boolean
+          seat_aaron: string | null
+          seat_savea: string | null
+          service: string | null
+          to_place: string
+          to_place_ja: string | null
+          updated_at: string
+        }
+        Insert: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          arrives_at: string
+          arrives_platform?: string | null
+          booking_url?: string | null
+          car?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          covered_by_pass?: boolean
+          created_at?: string
+          departs_at: string
+          departs_platform?: string | null
+          from_place: string
+          from_place_ja?: string | null
+          id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
+          mode?: Database["public"]["Enums"]["trip_transit_mode"]
+          notes?: string | null
+          operator?: string | null
+          reserved?: boolean
+          seat_aaron?: string | null
+          seat_savea?: string | null
+          service?: string | null
+          to_place: string
+          to_place_ja?: string | null
+          updated_at?: string
+        }
+        Update: {
+          added_by?: Database["public"]["Enums"]["trip_planner"]
+          arrives_at?: string
+          arrives_platform?: string | null
+          booking_url?: string | null
+          car?: string | null
+          confirmation?: string | null
+          cost_amount?: number | null
+          cost_currency?: Database["public"]["Enums"]["trip_currency"]
+          covered_by_pass?: boolean
+          created_at?: string
+          departs_at?: string
+          departs_platform?: string | null
+          from_place?: string
+          from_place_ja?: string | null
+          id?: string
+          lane?: Database["public"]["Enums"]["trip_lane"]
+          mode?: Database["public"]["Enums"]["trip_transit_mode"]
+          notes?: string | null
+          operator?: string | null
+          reserved?: boolean
+          seat_aaron?: string | null
+          seat_savea?: string | null
+          service?: string | null
+          to_place?: string
+          to_place_ja?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       verification_attempts: {
         Row: {
           created_at: string
@@ -734,6 +828,7 @@ export type Database = {
       trip_lane: "decided" | "savea" | "aaron"
       trip_planner: "aaron" | "savea"
       trip_stay_payment: "prepaid" | "at_desk"
+      trip_transit_mode: "train" | "bus" | "ferry" | "taxi" | "car"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -897,6 +992,7 @@ export const Constants = {
       trip_lane: ["decided", "savea", "aaron"],
       trip_planner: ["aaron", "savea"],
       trip_stay_payment: ["prepaid", "at_desk"],
+      trip_transit_mode: ["train", "bus", "ferry", "taxi", "car"],
     },
   },
 } as const

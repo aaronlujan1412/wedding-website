@@ -38,6 +38,9 @@ import {
   kindOf,
 } from "./trip";
 import { CostField } from "./CostField";
+import { useBoardData } from "./BoardContext";
+import { byDeparture, departsClock, departsOn } from "./transit";
+import { sleepsOn } from "./stays";
 import type {
   BookingStatus,
   Currency,
@@ -77,9 +80,12 @@ type FormState = {
   notes: string;
   added_by: Planner;
   must_do: boolean;
+  linked_stay_id: string;
+  linked_transit_id: string;
 };
 
 const POOL_VALUE = "__pool__";
+const NO_LINK = "__none__";
 
 function toForm(draft: ItemDraft): FormState {
   const item = draft.item;
@@ -111,6 +117,8 @@ function toForm(draft: ItemDraft): FormState {
     // A card thrown into someone's own row is theirs by default.
     added_by: item?.added_by ?? LANES[draft.lane].planner ?? "aaron",
     must_do: item?.must_do ?? false,
+    linked_stay_id: item?.linked_stay_id ?? "",
+    linked_transit_id: item?.linked_transit_id ?? "",
   };
 }
 
@@ -122,6 +130,8 @@ function toInput({ cost_input, ...form }: FormState): ItemInput {
     start_time: form.start_time || null,
     duration_min: Number.isFinite(duration) ? duration : null,
     cost_amount: parseCostInput(cost_input, form.cost_currency),
+    linked_stay_id: form.linked_stay_id || null,
+    linked_transit_id: form.linked_transit_id || null,
   };
 }
 
@@ -274,6 +284,8 @@ function ItemForm({
               />
             </Field>
           </div>
+
+          <BlockoutLink form={form} set={set} />
         </Fieldset>
 
         <Fieldset legend="When">
@@ -500,4 +512,79 @@ function ItemForm({
       </form>
     </>
   );
+}
+
+/**
+ * What a blockout points at, when it points at anything.
+ *
+ * A travel card gets a ride to link to as soon as one is on the board — until
+ * then it says so and carries its own route in the title. A rest card normally
+ * works out its own stay from the night it sits on, so the picker only appears
+ * on a day with more than one: the control shows up exactly when inference
+ * cannot decide, and stays out of the way the rest of the time.
+ */
+function BlockoutLink({
+  form,
+  set,
+}: {
+  form: FormState;
+  set: <K extends keyof FormState>(key: K, value: FormState[K]) => void;
+}) {
+  const { transit, stays } = useBoardData();
+  const links = kindOf(form.kind).links;
+
+  if (links === "transit") {
+    const rides = transit
+      .filter((r) => r.lane === form.lane || r.lane === "decided")
+      .filter((r) => !form.on_date || departsOn(r) === form.on_date)
+      .sort(byDeparture);
+
+    return (
+      <Field
+        label="Which ride"
+        hint={
+          rides.length === 0
+            ? "Nothing on the Transit tab for this day yet. Add the train there and it'll show up here."
+            : "Links to the Transit tab, so the card shows the platform and seats."
+        }
+      >
+        <SelectField
+          value={form.linked_transit_id || NO_LINK}
+          onChange={(v) => set("linked_transit_id", v === NO_LINK ? "" : v)}
+          options={[
+            { value: NO_LINK, label: "Not linked yet" },
+            ...rides.map((r) => ({
+              value: r.id,
+              label: `${departsClock(r)} ${r.from_place} → ${r.to_place}${r.service ? ` · ${r.service}` : ""}`,
+            })),
+          ]}
+        />
+      </Field>
+    );
+  }
+
+  if (links === "stay" && form.on_date) {
+    const covering = stays.filter(
+      (s) => s.lane === form.lane && sleepsOn(s, form.on_date),
+    );
+    if (covering.length < 2) return null;
+
+    return (
+      <Field
+        label="Which room"
+        hint="Two stays cover this night, so it can't be worked out from the date alone."
+      >
+        <SelectField
+          value={form.linked_stay_id || NO_LINK}
+          onChange={(v) => set("linked_stay_id", v === NO_LINK ? "" : v)}
+          options={[
+            { value: NO_LINK, label: "Not set" },
+            ...covering.map((s) => ({ value: s.id, label: s.name })),
+          ]}
+        />
+      </Field>
+    );
+  }
+
+  return null;
 }

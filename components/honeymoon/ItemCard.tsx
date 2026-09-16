@@ -13,6 +13,7 @@ import {
   MapPin,
   Pin,
   Star,
+  TramFront,
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -299,6 +300,11 @@ function BlockoutBand({
               <p className="mt-0.5 flex items-center gap-1 font-mono text-[0.6rem] tracking-wide text-muted-foreground">
                 {kind.links === "stay" ? (
                   <BedDouble
+                    className="h-2.5 w-2.5 flex-none"
+                    strokeWidth={2}
+                  />
+                ) : kind.links === "transit" ? (
+                  <TramFront
                     className="h-2.5 w-2.5 flex-none"
                     strokeWidth={2}
                   />

@@ -12,15 +12,17 @@ import type { TripBoard } from "@/components/honeymoon/types";
  * the action manifest entirely.
  */
 export async function getTripBoard(): Promise<TripBoard> {
-  const [legs, days, items, docs, flights, stays, rate] = await Promise.all([
-    supabase.from("trip_legs").select().order("starts_on"),
-    supabase.from("trip_days").select().order("on_date"),
-    supabase.from("trip_items").select().order("position"),
-    supabase.from("trip_docs").select().order("category").order("position"),
-    supabase.from("trip_flights").select().order("departs_at"),
-    supabase.from("trip_stays").select().order("check_in_on"),
-    getRate(),
-  ]);
+  const [legs, days, items, docs, flights, stays, transit, rate] =
+    await Promise.all([
+      supabase.from("trip_legs").select().order("starts_on"),
+      supabase.from("trip_days").select().order("on_date"),
+      supabase.from("trip_items").select().order("position"),
+      supabase.from("trip_docs").select().order("category").order("position"),
+      supabase.from("trip_flights").select().order("departs_at"),
+      supabase.from("trip_stays").select().order("check_in_on"),
+      supabase.from("trip_transit").select().order("departs_at"),
+      getRate(),
+    ]);
 
   return {
     legs: legs.data ?? [],
@@ -29,6 +31,31 @@ export async function getTripBoard(): Promise<TripBoard> {
     docs: docs.data ?? [],
     flights: flights.data ?? [],
     stays: stays.data ?? [],
+    transit: transit.data ?? [],
+    rate,
+  };
+}
+
+/**
+ * The Transit tab: every ride in every lane, the legs that say which days need
+ * getting between places, and the rides' checklists ("transit:<id>").
+ */
+export async function getTransitPage() {
+  const [transit, legs, checklist, rate] = await Promise.all([
+    supabase.from("trip_transit").select().order("departs_at"),
+    supabase.from("trip_legs").select().order("starts_on"),
+    supabase
+      .from("trip_checklist_items")
+      .select()
+      .like("list", "transit:%")
+      .order("position"),
+    getRate(),
+  ]);
+
+  return {
+    transit: transit.data ?? [],
+    legs: legs.data ?? [],
+    checklist: checklist.data ?? [],
     rate,
   };
 }
