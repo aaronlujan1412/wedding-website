@@ -22,7 +22,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { MapPinned, Plus, X } from "lucide-react";
+import { ArrowUp, MapPinned, Plus, X } from "lucide-react";
 import {
   adoptLeg,
   adoptRoute,
@@ -143,7 +143,11 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     setPileLane(BOARD_VIEWS[next].lanes[0]);
     window.history.replaceState(null, "", `?view=${next}`);
   }
-  const [pileLane, setPileLane] = useState<Lane>("decided");
+  // The pile opens on the view's own lane. It used to start on Decided no
+  // matter what, so a bookmarked ?view=aaron opened on the wrong pile.
+  const [pileLane, setPileLane] = useState<Lane>(
+    () => BOARD_VIEWS[view].lanes[0],
+  );
   const [pileOpen, setPileOpen] = useState(true);
   const [, startTransition] = useTransition();
 
@@ -652,20 +656,14 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       transit={board.transit}
     >
       <main className="mx-auto mt-6 max-w-[110rem]">
-        <div className="mb-6 flex flex-wrap items-end justify-between gap-x-8 gap-y-2 max-lg:mb-4">
-          <p className="font-garamond text-xl italic text-muted-foreground max-lg:text-lg max-lg:leading-snug">
-            <span className="max-lg:hidden">
-              Argue in your own row. Agree by dragging it up.
-            </span>
-            <span className="lg:hidden">
-              Argue in your own lane. Agree with the arrow.
-            </span>
+        {/* Phones only. On a desktop the trip bar carries the summary and the
+            view's own name heads the board. */}
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-x-8 gap-y-2 lg:hidden">
+          <p className="font-garamond text-lg leading-snug text-muted-foreground italic">
+            Argue in your own lane. Agree with the arrow.
           </p>
-          {/* Phones have no trip bar, so the summary sits here instead. */}
           {trip && (
-            <div className="lg:hidden">
-              <TripSummary days={allDays} items={items} spend={spend} />
-            </div>
+            <TripSummary days={allDays} items={items} spend={spend} />
           )}
         </div>
 
@@ -786,14 +784,61 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                   today={today}
                 />
 
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  {/* Whose board this is right now. Three working views — one row and
-                      the pile you're pulling from — and Compare, where you're choosing
-                      between two drafts rather than adding to either. */}
+                {/* Whose board this is. The view's name heads the board and its
+                    blurb is the line under it, so the one sentence of
+                    instruction on screen is the one true of this view. It
+                    replaced a fixed tagline about dragging a card up into
+                    Decided — which no single-lane view puts on screen. */}
+                <div className="mt-6 flex flex-wrap items-end gap-x-5 gap-y-3">
+                  <div className="min-w-0">
+                    <h2
+                      className="font-garamond text-3xl leading-none"
+                      style={{
+                        color:
+                          shownLanes.length === 1
+                            ? LANES[shownLanes[0]].accent
+                            : undefined,
+                      }}
+                    >
+                      {shownLanes.length === 1
+                        ? LANES[shownLanes[0]].label
+                        : viewMeta.label}
+                    </h2>
+                    <p className="mt-1.5 font-garamond text-lg leading-snug text-muted-foreground italic">
+                      {viewMeta.blurb}
+                    </p>
+                  </div>
+
+                  {/* Adopting a whole route is a lane-level act, so it sits
+                      with the lane's name — not in its pile of cards, under
+                      the search box, where it used to be. */}
+                  {shownLanes
+                    .filter(
+                      (lane) =>
+                        lane !== "decided" && legsIn(legs, lane).length > 0,
+                    )
+                    .map((lane) => (
+                      <button
+                        key={lane}
+                        type="button"
+                        onClick={() => requestAdoptRoute(lane)}
+                        style={{ color: LANES[lane].accent }}
+                        className="mb-1 flex items-center gap-1.5 rounded-sm border border-current/40 px-2.5 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                      >
+                        <ArrowUp
+                          className="h-3 w-3"
+                          strokeWidth={2}
+                          aria-hidden="true"
+                        />
+                        Use {PLANNERS[LANES[lane].planner ?? "aaron"].label}
+                        &apos;s route
+                      </button>
+                    ))}
+
                   <div
                     role="radiogroup"
                     aria-label="View"
-                    className="ml-auto flex gap-1 rounded-full border border-border p-0.5"
+                    className="mb-1 ml-auto flex gap-1 rounded-full border border-border p-0.5"
                   >
                     {VIEW_ORDER.map((v) => {
                       const on = v === view;
@@ -848,8 +893,6 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                       onAdd={(l) =>
                         setDraft({ item: null, lane: l, onDate: null })
                       }
-                      onAdoptRoute={requestAdoptRoute}
-                      legCount={legsIn(legs, pileLane).length}
                       open={pileOpen}
                       onOpen={setPileOpen}
                     />

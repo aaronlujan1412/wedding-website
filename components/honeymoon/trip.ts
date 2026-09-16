@@ -82,19 +82,19 @@ export const BOARD_VIEWS: Record<
   aaron: {
     label: "Aaron",
     lanes: ["aaron"],
-    blurb: "His row and his pile.",
+    blurb: "His route and his ideas. The arrow on a card agrees to it.",
     pile: true,
   },
   savea: {
     label: "Savea",
     lanes: ["savea"],
-    blurb: "Her row and her pile.",
+    blurb: "Her route and her ideas. The arrow on a card agrees to it.",
     pile: true,
   },
   decided: {
     label: "Decided",
     lanes: ["decided"],
-    blurb: "What prints. Everything here is agreed.",
+    blurb: "What prints. The arrow on a card sends it back.",
     pile: true,
   },
   compare: {

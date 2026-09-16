@@ -33,8 +33,6 @@ export function IdeaPanel({
   onQuery,
   actions,
   onAdd,
-  onAdoptRoute,
-  legCount,
   open,
   onOpen,
 }: {
@@ -47,8 +45,6 @@ export function IdeaPanel({
   onQuery: (next: string) => void;
   actions: CardActions;
   onAdd: (lane: Lane) => void;
-  onAdoptRoute: (lane: Lane) => void;
-  legCount: number;
   open: boolean;
   onOpen: (next: boolean) => void;
 }) {
@@ -173,17 +169,6 @@ export function IdeaPanel({
           <Plus className="h-3.5 w-3.5" strokeWidth={2} />
         </button>
       </div>
-
-      {lane !== "decided" && legCount > 0 && (
-        <button
-          type="button"
-          onClick={() => onAdoptRoute(lane)}
-          className="mt-2 self-start rounded-sm px-3 font-raleway text-[0.6rem] tracking-[0.2em] uppercase underline-offset-4 transition-colors hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          style={{ color: meta.accent }}
-        >
-          Use this whole route
-        </button>
-      )}
 
       <div className="mt-2 min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain px-3 pb-3">
         <SortableContext
