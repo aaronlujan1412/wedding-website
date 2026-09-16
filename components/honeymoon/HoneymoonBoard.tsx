@@ -183,7 +183,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   function setView(next: BoardView) {
     setViewState(next);
     setPileLane(BOARD_VIEWS[next].lanes[0]);
-    writeBoardParams(next, layout);
+    writeBoardParams({ view: next });
   }
   // List or Hours, in the URL beside the view for the same reason.
   const [layout, setLayoutState] = useState<BoardLayout>(() => {
@@ -192,7 +192,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   });
   function setLayout(next: BoardLayout) {
     setLayoutState(next);
-    writeBoardParams(view, next);
+    writeBoardParams({ layout: next });
   }
   // Every day's Sometime shelf shares one grid row, so they open together.
   const [shelvesOpen, setShelvesOpen] = useState(false);
@@ -233,7 +233,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         : (allDays[0] ?? PILES);
   function showDay(day: string) {
     setMobileDay(day);
-    window.history.replaceState(null, "", `?day=${day}`);
+    writeBoardParams({ day });
   }
   const dayLookup = useMemo(() => new Set(allDays), [allDays]);
 
@@ -1769,9 +1769,21 @@ function NoTrip({ onMake }: { onMake: () => void }) {
   );
 }
 
-/** The view and layout, as the query string. List is the default and goes unsaid. */
-function writeBoardParams(view: BoardView, layout: BoardLayout) {
-  const params = new URLSearchParams({ view });
-  if (layout === "hours") params.set("layout", layout);
+/**
+ * Where the board is, as the query string. Each write keeps the others' keys:
+ * the phone's day and the view and layout used to replace each other, and now
+ * that a phone has Hours too, turning a page would lose it on a refresh.
+ * List is the default and goes unsaid.
+ */
+function writeBoardParams(next: {
+  view?: BoardView;
+  layout?: BoardLayout;
+  day?: string;
+}) {
+  const params = new URLSearchParams(window.location.search);
+  if (next.view) params.set("view", next.view);
+  if (next.layout === "hours") params.set("layout", "hours");
+  if (next.layout === "list") params.delete("layout");
+  if (next.day) params.set("day", next.day);
   window.history.replaceState(null, "", `?${params}`);
 }
