@@ -56,6 +56,8 @@ export type ItemDraft = {
   item: TripItem | null;
   lane: Lane;
   onDate: string | null;
+  /** A new card started from an empty spot on the hours. */
+  startTime?: string;
 };
 
 type FormState = {
@@ -97,7 +99,7 @@ function toForm(draft: ItemDraft): FormState {
     kind: item?.kind ?? "unsorted",
     on_date: item ? (item.on_date ?? "") : (draft.onDate ?? ""),
     // Postgres hands back "09:00:00"; <input type="time"> wants "09:00".
-    start_time: item?.start_time?.slice(0, 5) ?? "",
+    start_time: item?.start_time?.slice(0, 5) ?? draft.startTime ?? "",
     duration_min: item?.duration_min ? String(item.duration_min) : "",
     pinned: item?.pinned ?? false,
     booking_status: item?.booking_status ?? "idea",
@@ -153,7 +155,8 @@ export function ItemDialog({
         {draft && (
           <ItemForm
             key={
-              draft.item?.id ?? `new-${draft.lane}-${draft.onDate ?? "pool"}`
+              draft.item?.id ??
+              `new-${draft.lane}-${draft.onDate ?? "pool"}-${draft.startTime ?? "loose"}`
             }
             draft={draft}
             days={days}

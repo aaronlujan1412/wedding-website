@@ -17,9 +17,12 @@ import {
   closestCorners,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragMoveEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { ArrowUp, MapPinned, Plus, X } from "lucide-react";
@@ -30,6 +33,8 @@ import {
   deleteItem,
   moveItem,
   restoreItem,
+  scheduleItem,
+  setItemDuration,
   sortDayByTime,
 } from "@/app/actions/honeymoon";
 import { cn } from "@/lib/utils";
@@ -41,6 +46,35 @@ import { ItemCardFace, type CardActions } from "./ItemCard";
 import { ItemDialog, type ItemDraft } from "./ItemDialog";
 import { LaneCell } from "./LaneCell";
 import { IdeaPanel } from "./IdeaPanel";
+import {
+  HoursBlockFace,
+  HoursCell,
+  HoursLines,
+  HoursRuler,
+  ShelfChipFace,
+  SometimeShelf,
+  type Slot,
+} from "./HoursView";
+import {
+  HALF_HOUR_REM,
+  SNAP,
+  anchorsOnDay,
+  hoursId,
+  hoursRange,
+  isBoardLayout,
+  isHoursId,
+  marksOnDay,
+  minuteAt,
+  parseHoursId,
+  parseShelfId,
+  positionForTime,
+  slotProblems,
+  toTime,
+  type Anchor,
+  type BoardLayout,
+  type Mark,
+} from "./hours";
+import { sunOn, type Sun } from "./sun";
 import { LegBand } from "./LegBand";
 import { LegDialog, type LegDraft } from "./LegDialog";
 import { DAY_DROP_PREFIX } from "./RouteStrip";
@@ -75,11 +109,15 @@ import {
   todayISO,
   tripDays,
   isBoardView,
+  itemLength,
+  itemStart,
+  minutesOf,
 } from "./trip";
 import type { BoardView } from "./trip";
 import type { Lane, TripBoard, TripItem, TripLeg } from "./types";
 
 const COLUMN = "19rem";
+const RULER = "3rem";
 
 export function HoneymoonBoard({ board }: { board: TripBoard }) {
   const { trip, legs, days: dayNotes, docs, stays, rate } = board;
@@ -142,8 +180,23 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   function setView(next: BoardView) {
     setViewState(next);
     setPileLane(BOARD_VIEWS[next].lanes[0]);
-    window.history.replaceState(null, "", `?view=${next}`);
+    writeBoardParams(next, layout);
   }
+  // List or Hours, in the URL beside the view for the same reason.
+  const [layout, setLayoutState] = useState<BoardLayout>(() => {
+    const value = searchParams.get("layout");
+    return isBoardLayout(value) ? value : "list";
+  });
+  function setLayout(next: BoardLayout) {
+    setLayoutState(next);
+    writeBoardParams(view, next);
+  }
+  // Every day's Sometime shelf shares one grid row, so they open together.
+  const [shelvesOpen, setShelvesOpen] = useState(false);
+  // Where the card being dragged would land on the hours, while it's over them.
+  const [slot, setSlot] = useState<(Slot & { cell: string }) | null>(null);
+  // The shape under the pointer is the shape that was picked up.
+  const [dragFace, setDragFace] = useState<"card" | "chip" | "block">("card");
   // The pile opens on the view's own lane. It used to start on Decided no
   // matter what, so a bookmarked ?view=aaron opened on the wrong pile.
   const [pileLane, setPileLane] = useState<Lane>(
@@ -185,9 +238,11 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   // has somewhere to sit. The leg filter only offers the agreed route's legs.
   const decidedLegs = legsIn(legs, "decided");
   const activeLeg = decidedLegs.find((l) => l.id === activeLegId) ?? null;
-  const visibleDays = activeLeg
-    ? eachDay(activeLeg.starts_on, activeLeg.ends_on)
-    : allDays;
+  const visibleDays = useMemo(
+    () =>
+      activeLeg ? eachDay(activeLeg.starts_on, activeLeg.ends_on) : allDays,
+    [activeLeg, allDays],
+  );
 
   // The board's scroller, so the route strip can mark which days are on
   // screen, and a click on a strip day can bring that column into view.
@@ -232,7 +287,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       observer.disconnect();
       el.removeEventListener("scroll", measure);
     };
-  }, [firstShown, shownCount, view]);
+  }, [firstShown, shownCount, view, layout]);
 
   // A strip click outside the leg the board is scoped to has to widen the
   // board first; the scroll then waits for those columns to exist.
@@ -275,6 +330,69 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     // a trip_docs row and its price is counted there instead.
     sumYen(payableRides(decidedTransit), rate) +
     sumYen(staysIn(stays, "decided"), rate);
+
+  // Hours is one lane at a time. In Compare the choice is kept but the list is
+  // drawn, and going back to a single lane picks Hours back up.
+  const hoursLane: Lane | null =
+    layout === "hours" && BOARD_VIEWS[view].lanes.length === 1
+      ? BOARD_VIEWS[view].lanes[0]
+      : null;
+  const hours = hoursLane !== null;
+
+  /**
+   * What's already on the clock each day: the agreed trains, flights and hotel
+   * times, and when the sun goes down where that day's route has you.
+   */
+  const clock = useMemo(() => {
+    const byDay = new Map<
+      string,
+      { anchors: Anchor[]; marks: Mark[]; sun: Sun }
+    >();
+    if (!hoursLane) return byDay;
+    const rides = transitIn(board.transit, "decided");
+    const beds = staysIn(stays, "decided");
+    const laneRoute = legsIn(legs, hoursLane);
+    const agreedRoute = legsIn(legs, "decided");
+    for (const date of visibleDays) {
+      byDay.set(date, {
+        anchors: anchorsOnDay(date, board.flights, rides),
+        marks: marksOnDay(date, beds),
+        sun: sunOn(
+          date,
+          legForDay(laneRoute, date)?.name,
+          legForDay(agreedRoute, date)?.name,
+        ),
+      });
+    }
+    return byDay;
+  }, [hoursLane, visibleDays, board.transit, board.flights, stays, legs]);
+
+  /** The hours every day column shares, from everything in scope. */
+  const range = useMemo(() => {
+    if (!hoursLane) return null;
+    const inScope = new Set(visibleDays);
+    const minutes: number[] = [];
+    for (const item of items) {
+      const start = itemStart(item);
+      if (
+        start === null ||
+        item.lane !== hoursLane ||
+        !item.on_date ||
+        !inScope.has(item.on_date)
+      ) {
+        continue;
+      }
+      minutes.push(start, Math.min(start + itemLength(item), 24 * 60));
+    }
+    for (const { anchors, marks } of clock.values()) {
+      for (const a of anchors) {
+        if (a.start !== null) minutes.push(a.start);
+        if (a.end !== null) minutes.push(a.end);
+      }
+      for (const m of marks) minutes.push(m.at);
+    }
+    return hoursRange(minutes);
+  }, [hoursLane, visibleDays, items, clock]);
 
   /**
    * Adopting a leg into Decided. If nothing in Decided is on those dates it just
@@ -395,13 +513,73 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     });
   }
 
+  /**
+   * On the hours, the arrow keys move a card by one snap up and down and a day
+   * left and right. Everywhere else they hop between cards, as in the list.
+   */
+  const coordinateGetter: KeyboardCoordinateGetter = (event, args) => {
+    const over = args.context.over;
+    const column =
+      range && over && isHoursId(String(over.id))
+        ? document.querySelector<HTMLElement>(`[data-hours="${over.id}"]`)
+        : null;
+    if (column && range) {
+      const box = column.getBoundingClientRect();
+      const step = (SNAP / (range.end - range.start)) * box.height;
+      const { x, y } = args.currentCoordinates;
+      const moves: Record<string, { x: number; y: number }> = {
+        ArrowDown: { x, y: y + step },
+        ArrowUp: { x, y: y - step },
+        ArrowRight: { x: x + box.width, y },
+        ArrowLeft: { x: x - box.width, y },
+      };
+      if (event.code in moves) {
+        event.preventDefault();
+        return moves[event.code];
+      }
+    }
+    return sortableKeyboardCoordinates(event, args);
+  };
+
   const sensors = useSensors(
     // A small threshold so a tap still reaches the buttons on the card.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    useSensor(KeyboardSensor, { coordinateGetter }),
   );
+
+  /**
+   * In Hours a day's column is one tall drop target, and the list's rule —
+   * nearest corners — let a short card in the next day's shelf win from the
+   * middle of an afternoon. So on the hours, whatever column is under the
+   * pointer is the target, read from the page as it is right now. Everything
+   * else keeps the list's rule.
+   */
+  const collisionDetection: CollisionDetection = (args) => {
+    if (!hours) return closestCorners(args);
+    const rect = args.collisionRect;
+    const point = args.pointerCoordinates ?? {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
+    };
+    const id = document
+      .elementsFromPoint(point.x, point.y)
+      .map((el) => el.closest<HTMLElement>("[data-hours-cell]"))
+      .find(Boolean)?.dataset.hoursCell;
+    const column = id
+      ? args.droppableContainers.find((c) => c.id === id)
+      : undefined;
+    if (column) {
+      return [
+        { id: column.id, data: { droppableContainer: column, value: 0 } },
+      ];
+    }
+    return closestCorners({
+      ...args,
+      droppableContainers: args.droppableContainers.filter(
+        (c) => !isHoursId(String(c.id)),
+      ),
+    });
+  };
 
   /** Which cell an arbitrary drop target belongs to. */
   function resolveCell(id: string): { lane: Lane; date: string | null } | null {
@@ -414,23 +592,58 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
         : null;
     }
 
-    const cell = parseCell(id);
+    const cell = parseCell(id) ?? parseShelfId(id);
     if (cell) return cell;
 
     const item = items.find((i) => i.id === id);
     return item ? { lane: item.lane, date: item.on_date } : null;
   }
 
+  type Drop = {
+    id: string;
+    lane: Lane;
+    onDate: string | null;
+    position: number;
+    /** Undefined leaves the time alone; null takes it away. */
+    startTime?: string | null;
+  };
+
   /**
    * Where the dragged card would land: which cell, and the fractional position
-   * between whichever two neighbours it is hovering between.
+   * between whichever two neighbours it is hovering between. On the hours, also
+   * when it starts — `startTime` is left undefined by every drop that doesn't
+   * decide a time, and is null for a drop onto a Sometime shelf.
    */
-  function computeDrop(event: DragOverEvent | DragEndEvent) {
+  function computeDrop(
+    event: DragOverEvent | DragMoveEvent | DragEndEvent,
+  ): Drop | null {
     const { active, over } = event;
     if (!over) return null;
 
     const activeItem = items.find((i) => i.id === active.id);
     if (!activeItem) return null;
+
+    // Onto the hours: the card's top edge is when it starts, measured against
+    // the column as it is on the page now, not as it was when the drag began.
+    const column = parseHoursId(String(over.id));
+    if (column?.date) {
+      const box = document
+        .querySelector<HTMLElement>(`[data-hours="${over.id}"]`)
+        ?.getBoundingClientRect();
+      const dragged = active.rect.current.translated;
+      if (!box || !dragged || !range) return null;
+      const start = minuteAt(dragged.top - box.top, box.height, range);
+      const siblings = itemsInCell(items, column.lane, column.date).filter(
+        (i) => i.id !== activeItem.id,
+      );
+      return {
+        id: activeItem.id,
+        lane: column.lane,
+        onDate: column.date,
+        position: positionForTime(siblings, start),
+        startTime: toTime(start),
+      };
+    }
 
     const target = resolveCell(String(over.id));
     if (!target) return null;
@@ -459,15 +672,21 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       position = positionBetween(siblings.at(-1)?.position, undefined);
     }
 
+    // Onto a shelf, or among its cards, takes the time away.
+    const toShelf =
+      hours &&
+      (parseShelfId(String(over.id)) !== null ||
+        (overItem?.on_date != null && overItem.start_time === null));
+
     return {
       id: activeItem.id,
       lane: target.lane,
       onDate: target.date,
       position,
+      startTime: toShelf ? null : undefined,
     };
   }
 
-  type Drop = NonNullable<ReturnType<typeof computeDrop>>;
   const lastDrop = useRef<Drop | null>(null);
 
   function applyLocally(drop: Drop) {
@@ -479,6 +698,9 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               lane: drop.lane,
               on_date: drop.onDate,
               position: drop.position,
+              ...(drop.startTime !== undefined && {
+                start_time: drop.startTime,
+              }),
             }
           : i,
       ),
@@ -488,18 +710,87 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   function persist(drop: Drop) {
     applyLocally(drop);
     startTransition(async () => {
-      await moveItem(drop.id, drop.lane, drop.onDate, drop.position);
+      const result =
+        drop.startTime === undefined
+          ? await moveItem(drop.id, drop.lane, drop.onDate, drop.position)
+          : await scheduleItem(
+              drop.id,
+              drop.lane,
+              drop.onDate,
+              drop.startTime,
+              drop.position,
+            );
+      if (result.error) setNotice({ tone: "error", text: result.error });
     });
   }
 
+  // The board as it was when a drag began, so letting go with Escape puts
+  // back the cards it had already shuffled on the way.
+  const beforeDrag = useRef<TripItem[] | null>(null);
+
   function handleDragStart(event: DragStartEvent) {
-    setActiveId(String(event.active.id));
+    const id = String(event.active.id);
+    const item = items.find((i) => i.id === id);
+    setActiveId(id);
+    setDragFace(
+      !hours || !item?.on_date
+        ? "card"
+        : item.start_time === null
+          ? "chip"
+          : "block",
+    );
     lastDrop.current = null;
+    beforeDrag.current = items;
+  }
+
+  function handleDragMove(event: DragMoveEvent) {
+    if (!hours) return;
+    const over = event.over ? String(event.over.id) : null;
+    const drop = over && isHoursId(over) ? computeDrop(event) : null;
+    const item = drop && items.find((i) => i.id === drop.id);
+    // Updaters rather than reading `slot`: this fires on every pointer move,
+    // and only a change of snapped time or column should render anything.
+    if (!drop?.startTime || !drop.onDate || !item) {
+      setSlot((prev) => (prev === null ? prev : null));
+      return;
+    }
+
+    const onDate = drop.onDate;
+    const cell = hoursId(drop.lane, onDate);
+    const start = minutesOf(drop.startTime);
+    setSlot((prev) =>
+      prev?.cell === cell && prev.start === start && prev.item.id === item.id
+        ? prev
+        : {
+            cell,
+            item,
+            start,
+            problems: slotProblems(
+              item,
+              start,
+              onDate,
+              itemsInCell(items, drop.lane, onDate),
+              clock.get(onDate)?.anchors ?? [],
+            ),
+          },
+    );
   }
 
   function handleDragOver(event: DragOverEvent) {
+    // Over the hours nothing moves until it's let go: the preview shows where.
+    if (hours && event.over && isHoursId(String(event.over.id))) return;
+
     const drop = computeDrop(event);
     if (!drop) return;
+
+    // Onto a shelf, the move waits for the drop too. A shelf shows its first
+    // few cards, so moving the card mid-drag could push it past them — its
+    // drop target unmounts, the pointer is over the card that took its place,
+    // the move reverses, and React gives up on the loop.
+    if (drop.startTime === null) {
+      lastDrop.current = drop;
+      return;
+    }
 
     const current = items.find((i) => i.id === drop.id);
     if (
@@ -516,9 +807,36 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
   function handleDragEnd(event: DragEndEvent) {
     setActiveId(null);
+    setSlot(null);
+    beforeDrag.current = null;
     const drop = computeDrop(event) ?? lastDrop.current;
     lastDrop.current = null;
     if (drop) persist(drop);
+  }
+
+  function handleDragCancel() {
+    setActiveId(null);
+    setSlot(null);
+    lastDrop.current = null;
+    if (beforeDrag.current) setItems(beforeDrag.current);
+    beforeDrag.current = null;
+  }
+
+  /** A block's bottom edge, let go. Saved straight away, put back if it fails. */
+  function resize(item: TripItem, minutes: number) {
+    const before = item.duration_min;
+    const set = (value: number | null) =>
+      setItems((prev) =>
+        prev.map((i) => (i.id === item.id ? { ...i, duration_min: value } : i)),
+      );
+    set(minutes);
+    startTransition(async () => {
+      const result = await setItemDuration(item.id, minutes);
+      if (result.error) {
+        set(before);
+        setNotice({ tone: "error", text: result.error });
+      }
+    });
   }
 
   /** Append a card to the end of a cell, wherever it is coming from. */
@@ -610,10 +928,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
   // gets no lane column at all: the heading already names it, and the column
   // was 1.5rem of tint whose only job was opening the pile beside it.
   const laneColumn = shownLanes.length > 1 ? "2.75rem" : null;
-  const gridColumns = laneColumn
-    ? `${laneColumn} repeat(${visibleDays.length}, ${COLUMN})`
+  // Hours puts its ruler where Compare puts the turned lane names.
+  const leadColumn = laneColumn ?? (hours ? RULER : null);
+  const gridColumns = leadColumn
+    ? `${leadColumn} repeat(${visibleDays.length}, ${COLUMN})`
     : `repeat(${visibleDays.length}, ${COLUMN})`;
-  const dayColumn = (index: number) => index + (laneColumn ? 2 : 1);
+  const dayColumn = (index: number) => index + (leadColumn ? 2 : 1);
 
   /**
    * Whose day the header is describing.
@@ -625,6 +945,8 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
    * are weighing the two against, drawn as a spine directly under the header.
    */
   const headerLane: Lane = shownLanes.length === 1 ? shownLanes[0] : "decided";
+  // Hours draws its one lane as a shelf over a column of hours instead.
+  const gridLanes = hours ? [] : shownLanes;
   // Compare shows two drafts, so Decided comes along as their baseline.
   const showSpine = shownLanes.length > 1;
 
@@ -635,7 +957,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
    * came from — the pile spanned both of its lane's rows and half its overflow
    * landed in the leg band.
    */
-  const gridRows = [
+  const listRows = [
     "auto",
     ...(showSpine ? ["min-content"] : []),
     ...shownLanes.map((_, i) =>
@@ -647,6 +969,20 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
       i === shownLanes.length - 1 ? "min-content 1fr" : "min-content min-content",
     ),
   ].join(" ");
+
+  // Hours: the day headers, a draft lane's route, the Sometime shelves, then
+  // the hours — which take the rest of the frame, and never less than a
+  // readable height per half hour.
+  const shelfRow = hoursLane && hoursLane !== "decided" ? 3 : 2;
+  const hoursRow = shelfRow + 1;
+  const gridRows = range
+    ? [
+        "auto",
+        ...(shelfRow === 3 ? ["min-content"] : []),
+        "min-content",
+        `minmax(${((range.end - range.start) / 30) * HALF_HOUR_REM}rem, 1fr)`,
+      ].join(" ")
+    : listRows;
 
   /**
    * The columns where the agreed route changes. Everything between two of them
@@ -774,11 +1110,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                 // the client disagree and hydration complains.
                 id="honeymoon-board"
                 sensors={sensors}
-                collisionDetection={closestCorners}
+                collisionDetection={collisionDetection}
                 onDragStart={handleDragStart}
+                onDragMove={handleDragMove}
                 onDragOver={handleDragOver}
                 onDragEnd={handleDragEnd}
-                onDragCancel={() => setActiveId(null)}
+                onDragCancel={handleDragCancel}
               >
                 {/* The trip, and the shape of it: its dates, how much of it is
                     still undecided, and the route across every day. */}
@@ -855,10 +1192,50 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                       </button>
                     ))}
 
+                  {/* List is for moving things between days; Hours is for
+                    fitting things into one. Hours draws a single lane, so
+                    Compare keeps the choice without drawing it. */}
+                  <div
+                    role="radiogroup"
+                    aria-label="Layout"
+                    className="mb-1 ml-auto flex gap-1 rounded-full border border-border p-0.5"
+                  >
+                    {(["list", "hours"] as const).map((l) => {
+                      const on = (hours ? "hours" : "list") === l;
+                      const blocked = l === "hours" && shownLanes.length > 1;
+                      return (
+                        <button
+                          key={l}
+                          type="button"
+                          role="radio"
+                          aria-checked={on}
+                          aria-disabled={blocked || undefined}
+                          title={
+                            blocked
+                              ? "Hours shows one lane at a time. Pick Aaron, Savea or Decided."
+                              : l === "list"
+                                ? "Each day as a list, for moving things between days"
+                                : "Each day by the hour, for fitting things into it"
+                          }
+                          onClick={() => !blocked && setLayout(l)}
+                          className={cn(
+                            "rounded-full px-3 py-1 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                            on
+                              ? "bg-secondary text-primary"
+                              : "text-muted-foreground hover:text-foreground",
+                            blocked &&
+                              "cursor-not-allowed opacity-50 hover:text-muted-foreground",
+                          )}
+                        >
+                          {l === "list" ? "List" : "Hours"}
+                        </button>
+                      );
+                    })}
+                  </div>
                   <div
                     role="radiogroup"
                     aria-label="View"
-                    className="mb-1 ml-auto flex gap-1 rounded-full border border-border p-0.5"
+                    className="mb-1 flex gap-1 rounded-full border border-border p-0.5"
                   >
                     {VIEW_ORDER.map((v) => {
                       const on = v === view;
@@ -937,7 +1314,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         gridTemplateRows: gridRows,
                       }}
                     >
-                      {laneColumn && (
+                      {leadColumn && (
                         <div
                           style={{ gridRow: 1, gridColumn: 1 }}
                           className="sticky top-0 left-0 z-40 border-r-2 border-b border-border bg-background"
@@ -954,6 +1331,8 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                           marksChange={marksChange.get(date) ?? true}
                           flights={flightsOnDay(board.flights, date)}
                           transit={transitOnDay(decidedTransit, date)}
+                          layout={hours ? "hours" : "list"}
+                          sun={clock.get(date)?.sun}
                           isToday={date === today}
                           onEditNote={setNoteDate}
                           onSortByTime={(d) =>
@@ -963,6 +1342,113 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                           }
                         />
                       ))}
+
+                      {hoursLane && range && (
+                        <>
+                          {hoursLane !== "decided" && (
+                            <LegBand
+                              lane={hoursLane}
+                              legs={legs}
+                              stays={stays}
+                              days={visibleDays}
+                              row={2}
+                              firstColumn={dayColumn(0)}
+                              stickyLeft={`calc(${RULER} + 0.75rem)`}
+                              onEdit={(leg) =>
+                                setLegDraft({ leg, lane: leg.lane })
+                              }
+                              onCreate={(l, from, to) =>
+                                setLegDraft({ leg: null, lane: l, from, to })
+                              }
+                              onAdopt={requestAdoptLeg}
+                            />
+                          )}
+                          <div
+                            aria-hidden="true"
+                            style={{
+                              gridRow: `2 / ${hoursRow}`,
+                              gridColumn: 1,
+                            }}
+                            className="sticky left-0 z-20 border-r border-b border-border bg-background"
+                          />
+                          {visibleDays.map((date, column) => {
+                            const cell = itemsInCell(items, hoursLane, date);
+                            return (
+                              <SometimeShelf
+                                key={date}
+                                style={{
+                                  gridRow: shelfRow,
+                                  gridColumn: dayColumn(column),
+                                }}
+                                lane={hoursLane}
+                                date={date}
+                                items={cell.filter(
+                                  (i) => i.start_time === null,
+                                )}
+                                timed={cell.filter(
+                                  (i) => i.start_time !== null,
+                                )}
+                                anchors={clock.get(date)?.anchors ?? []}
+                                expanded={shelvesOpen}
+                                onExpand={setShelvesOpen}
+                                actions={actions}
+                                onAdd={(l, d) =>
+                                  setDraft({ item: null, lane: l, onDate: d })
+                                }
+                                isToday={date === today}
+                              />
+                            );
+                          })}
+                          <HoursRuler
+                            range={range}
+                            style={{ gridRow: hoursRow, gridColumn: 1 }}
+                          />
+                          {visibleDays.map((date, column) => {
+                            const day = clock.get(date);
+                            return (
+                              <HoursCell
+                                key={date}
+                                style={{
+                                  gridRow: hoursRow,
+                                  gridColumn: dayColumn(column),
+                                }}
+                                lane={hoursLane}
+                                date={date}
+                                range={range}
+                                items={itemsInCell(
+                                  items,
+                                  hoursLane,
+                                  date,
+                                ).filter((i) => i.start_time !== null)}
+                                anchors={day?.anchors ?? []}
+                                marks={day?.marks ?? []}
+                                sun={day?.sun ?? sunOn(date)}
+                                slot={
+                                  slot?.cell === hoursId(hoursLane, date)
+                                    ? slot
+                                    : null
+                                }
+                                dragging={activeId !== null}
+                                isToday={date === today}
+                                actions={actions}
+                                onAddAt={(l, d, time) =>
+                                  setDraft({
+                                    item: null,
+                                    lane: l,
+                                    onDate: d,
+                                    startTime: time,
+                                  })
+                                }
+                                onResize={resize}
+                              />
+                            );
+                          })}
+                          <HoursLines
+                            range={range}
+                            style={{ gridRow: hoursRow, gridColumn: "2 / -1" }}
+                          />
+                        </>
+                      )}
 
                       {showSpine && (
                         <>
@@ -995,7 +1481,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                         </>
                       )}
 
-                      {shownLanes.map((lane, laneIndex) => (
+                      {gridLanes.map((lane, laneIndex) => (
                         <Fragment key={lane}>
                           {/* The turned name, Compare only. Clicking it opens
                               that person's own view: Compare has no pile to
@@ -1070,8 +1556,34 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
 
                 <DragOverlay>
                   {dragging ? (
-                    <div className="w-[15rem]">
-                      <ItemCardFace item={dragging} overlay />
+                    <div className="relative h-full">
+                      {dragFace === "block" ? (
+                        <HoursBlockFace
+                          item={dragging}
+                          start={slot?.start ?? itemStart(dragging) ?? 0}
+                          length={itemLength(dragging)}
+                          overlay
+                        />
+                      ) : dragFace === "chip" ? (
+                        <ShelfChipFace item={dragging} overlay />
+                      ) : (
+                        <div className="w-[15rem]">
+                          <ItemCardFace item={dragging} overlay />
+                        </div>
+                      )}
+                      {/* When it would start, said where the eye already is. */}
+                      {slot && (
+                        <span
+                          className={cn(
+                            "absolute bottom-full left-0 mb-1 rounded-sm px-1.5 py-0.5 font-mono text-[0.6rem] whitespace-nowrap text-primary-foreground shadow-sm tabular-nums slashed-zero",
+                            slot.problems.length > 0 ? "bg-warn" : "bg-primary",
+                          )}
+                        >
+                          {toTime(slot.start)}–
+                          {toTime(slot.start + itemLength(slot.item))}
+                          {slot.problems.map((p) => ` · ${p}`).join("")}
+                        </span>
+                      )}
                     </div>
                   ) : null}
                 </DragOverlay>
@@ -1168,4 +1680,11 @@ function NoTrip({ onMake }: { onMake: () => void }) {
       </button>
     </div>
   );
+}
+
+/** The view and layout, as the query string. List is the default and goes unsaid. */
+function writeBoardParams(view: BoardView, layout: BoardLayout) {
+  const params = new URLSearchParams({ view });
+  if (layout === "hours") params.set("layout", layout);
+  window.history.replaceState(null, "", `?${params}`);
 }

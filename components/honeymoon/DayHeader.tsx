@@ -26,6 +26,8 @@ import {
   yenAsUsd,
 } from "./trip";
 import { useRate } from "./RateContext";
+import { toTime, type BoardLayout } from "./hours";
+import type { Sun } from "./sun";
 import type { TripDay, TripItem, TripLeg } from "./types";
 
 /**
@@ -50,8 +52,16 @@ export function DayHeader({
   transit = [],
   style,
   variant = "cell",
+  layout = "list",
+  sun,
 }: {
   style?: React.CSSProperties;
+  /**
+   * In Hours the trains and flights are drawn on the day itself, so the header
+   * stops listing them and says when it gets dark instead.
+   */
+  layout?: BoardLayout;
+  sun?: Sun;
   /** A sticky grid cell on the desktop board, or the top of a day page on a phone. */
   variant?: "cell" | "page";
   /** Flights leaving or landing on this date, from `flightsOnDay`. */
@@ -167,7 +177,7 @@ export function DayHeader({
           ))}
       </p>
 
-      {transit.length > 0 && (
+      {layout === "list" && transit.length > 0 && (
         <ul className="mt-1 space-y-0.5">
           {transit.map(({ ride, leaves, lands }) => (
             <li key={ride.id}>
@@ -189,7 +199,7 @@ export function DayHeader({
         </ul>
       )}
 
-      {flights.length > 0 && (
+      {layout === "list" && flights.length > 0 && (
         <ul className="mt-1 space-y-0.5">
           {flights.map(({ flight, leaves, lands }) => (
             <li key={flight.id}>
@@ -232,6 +242,22 @@ export function DayHeader({
             <span aria-hidden="true">·</span>
             <span title="Cash you'll want on you — anything not already ticketed">
               {formatYen(cash)} cash
+            </span>
+          </>
+        )}
+        {layout === "hours" && sun && (
+          <>
+            <span aria-hidden="true">·</span>
+            <span
+              className="text-foreground"
+              title={
+                sun.approximate
+                  ? "Sunset for the middle of Honshu — the leg's name isn't a place this knows"
+                  : "Sunset where the route has you"
+              }
+            >
+              sunset {sun.approximate && "≈"}
+              {toTime(sun.set)}
             </span>
           </>
         )}

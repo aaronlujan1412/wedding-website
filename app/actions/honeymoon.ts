@@ -214,6 +214,58 @@ export async function moveItem(
 }
 
 /**
+ * A drop in the Hours layout. Where a card lands on the hours is when it
+ * starts, so the time is written along with the move — and a drop onto the
+ * Sometime shelf writes `start_time` null, the way the pile is `on_date` null.
+ */
+export async function scheduleItem(
+  id: string,
+  lane: Lane,
+  onDate: string | null,
+  startTime: string | null,
+  position: number,
+) {
+  if (!(await isHost())) return DENIED;
+  if (startTime !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(startTime)) {
+    return { data: null, error: "That isn't a time of day." };
+  }
+
+  const { error } = await supabase
+    .from("trip_items")
+    .update({
+      lane,
+      on_date: onDate,
+      start_time: startTime,
+      position,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
+
+/** Dragging a card's bottom edge in the Hours layout. */
+export async function setItemDuration(id: string, minutes: number) {
+  if (!(await isHost())) return DENIED;
+  if (!Number.isInteger(minutes) || minutes <= 0 || minutes > 24 * 60) {
+    return { data: null, error: "That isn't a length of time." };
+  }
+
+  const { error } = await supabase
+    .from("trip_items")
+    .update({ duration_min: minutes, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
+
+/**
  * Take a copy of someone's idea into another lane, same day, bottom of the
  * cell. The original stays where it is, and `added_by` comes along unchanged —
  * it's still their idea.
