@@ -107,7 +107,7 @@ export function RouteLine({
             >
               <span
                 className={cn(
-                  "border-l border-dashed border-seal",
+                  "border-l border-dashed border-dateline",
                   hero ? "h-full" : "-my-1 h-[calc(100%+0.5rem)] border-l-[1.5px]",
                 )}
               />
@@ -117,7 +117,7 @@ export function RouteLine({
                   <span className="absolute top-1/2 right-1.5 -translate-y-[120%] font-mono text-[0.55rem] whitespace-nowrap text-muted-foreground tabular-nums slashed-zero">
                     {shortDate(flight.departs_at, flight.departs_tz)}
                   </span>
-                  <span className="absolute top-1/2 left-1.5 -translate-y-[120%] font-mono text-[0.55rem] whitespace-nowrap text-seal tabular-nums slashed-zero">
+                  <span className="absolute top-1/2 left-1.5 -translate-y-[120%] font-mono text-[0.55rem] whitespace-nowrap text-dateline tabular-nums slashed-zero">
                     {shortDate(flight.arrives_at, flight.arrives_tz)}
                   </span>
                 </>
@@ -128,10 +128,10 @@ export function RouteLine({
                   <span className="absolute top-1/2 right-2 -translate-y-[130%] font-mono text-[0.65rem] whitespace-nowrap text-muted-foreground tabular-nums slashed-zero">
                     {shortDate(flight.departs_at, flight.departs_tz)}
                   </span>
-                  <span className="absolute top-1/2 left-2 -translate-y-[130%] font-mono text-[0.65rem] whitespace-nowrap text-seal tabular-nums slashed-zero">
+                  <span className="absolute top-1/2 left-2 -translate-y-[130%] font-mono text-[0.65rem] whitespace-nowrap text-dateline tabular-nums slashed-zero">
                     {shortDate(flight.arrives_at, flight.arrives_tz)}
                   </span>
-                  <span className="absolute top-full mt-1 font-raleway text-[0.55rem] tracking-[0.2em] whitespace-nowrap text-seal uppercase">
+                  <span className="absolute top-full mt-1 font-raleway text-[0.55rem] tracking-[0.2em] whitespace-nowrap text-dateline uppercase">
                     Date line
                   </span>
                 </>
@@ -250,7 +250,7 @@ function Stop({
         {badge && (
           <span
             className={cn(
-              "rounded-sm border border-seal/50 px-1 font-raleway font-semibold text-seal",
+              "rounded-sm border border-dateline/50 px-1 font-raleway font-semibold text-dateline",
               hero ? "text-[0.65rem]" : "text-[0.55rem]",
             )}
           >

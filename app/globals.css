@@ -35,9 +35,8 @@
   /* One hue per card type, all pulled toward the wedding palette so the board
      still reads as the same site rather than a pasted-in project tracker.
      Every one of these clears AA on paper, on a card, and on both lane tints,
-     because the type name renders in its own hue at 0.65rem. Food sits at
-     #a33b1f rather than a true red: nearer the seal and the two of them read
-     as a mistake instead of a pair. */
+     because the type name renders in its own hue at 0.65rem. Food is a rust,
+     #a33b1f, rather than a true red. */
   --color-kind-shrine: #00563f;
   --color-kind-food: #a33b1f;
   --color-kind-workshop: #7d6209;
@@ -63,12 +62,12 @@
 
   /* Warnings had been borrowing the food and workshop hues, which put "that's
      a march" in the same ink as a ramen card. The first attempt at their own
-     pair moved them by a spelling, not a hue: #a32820 sat ΔE 9 from food and
-     9.5 from the seal, and #8a6a12 sat ΔE 4 from workshop. At a 3px tab and
-     0.65rem type, anything under about 10 is the same ink.
+     pair moved them by a spelling, not a hue: #a32820 sat ΔE 9 from food, and
+     #8a6a12 sat ΔE 4 from workshop. At a 3px tab and 0.65rem type, anything
+     under about 10 is the same ink.
 
-     Warn is ebicha 海老茶, a dark wine: at least ΔE 29 from every kind, lane
-     and the seal, and 4.8:1 on every surface a warning lands on.
+     Warn is ebicha 海老茶, a dark wine: at least ΔE 29 from every kind and
+     lane, and 4.8:1 on every surface a warning lands on.
 
      Caution is kohaku 琥珀, amber. It is only ever the pace bar's fill, so it
      is held to the 3:1 of a graphic rather than the 4.5:1 of text — do not
@@ -92,9 +91,15 @@
   --color-ready: #007b43;
   --color-pending: #9c5a00;
 
-  /* The date line on the Flights tab, and nothing else. It was goshuin ink
-     for "booked" until the traffic light above replaced it. */
-  --color-seal: #c0342b;
+  /* The date line on the Flights tab, and nothing else. It has to be loud,
+     because it's the thing people get wrong, but it isn't a status: nothing
+     is wrong and nothing needs doing. So it's the one hue the traffic light
+     and the card types leave free, a deep teal. ΔE 12 from the site's pine,
+     15 from onsen, 17 from ready, 41 from pending and 47 from warn; 5:1 on
+     every surface. Every blue and violet tried sat under 10 from a lane or
+     the event hue. It was vermilion, left over from the old booked seal, and
+     read as "this flight has a problem". */
+  --color-dateline: #00706b;
 
   /* Day columns are pages of the book: one step warmer than a card. */
   --color-paper: #f6f0e4;
