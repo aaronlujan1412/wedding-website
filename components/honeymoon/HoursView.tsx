@@ -27,10 +27,12 @@ import { useBoardData } from "./BoardContext";
 import { blockoutDetail } from "./blockouts";
 import type { CardActions } from "./ItemCard";
 import {
+  PAGE_HALF_HOUR_REM,
   SHELF_LIMIT,
   WAKING,
   freeMinutes,
   hoursId,
+  hoursRange,
   percentAt,
   placeSpans,
   shelfId,
@@ -64,9 +66,15 @@ import type { Lane, TripItem } from "./types";
 
 export function HoursRuler({
   range,
+  pinned = true,
   style,
 }: {
   range: Range;
+  /**
+   * Stays put while the days scroll past it sideways. A phone's page doesn't
+   * scroll sideways, and pinned there it rode up over the sticky day strip.
+   */
+  pinned?: boolean;
   style?: React.CSSProperties;
 }) {
   const hours: number[] = [];
@@ -76,7 +84,10 @@ export function HoursRuler({
     <div
       aria-hidden="true"
       style={style}
-      className="sticky left-0 z-20 border-r border-border bg-background py-2"
+      className={cn(
+        "border-r border-border bg-background py-2",
+        pinned && "sticky left-0 z-20",
+      )}
     >
       <div className="relative h-full">
         {hours.map((m) => (
@@ -179,9 +190,6 @@ export function SometimeShelf({
   const { setNodeRef, isOver } = useDroppable({ id: shelfId(lane, date) });
   const shown = expanded ? items : items.slice(0, SHELF_LIMIT);
   const hidden = items.length - shown.length;
-  const need = items.reduce((sum, i) => sum + itemLength(i), 0);
-  const free = freeMinutes(timed, anchors);
-  const tight = need > free;
 
   return (
     <div
@@ -197,37 +205,15 @@ export function SometimeShelf({
         isToday && "shadow-[inset_3px_0_0_var(--color-primary)]",
       )}
     >
-      <div className="flex items-center gap-2">
-        <p className="min-w-0 truncate font-garamond text-sm text-muted-foreground italic">
-          {label ?? "Sometime"}
-        </p>
-        {items.length > 0 && (
-          <p
-            title={`How long the cards without a time need, against what's left of ${toTime(WAKING.start)}–${toTime(WAKING.end)} once the timed cards, trains and flights are in`}
-            className={cn(
-              "ml-auto font-mono text-[0.6rem] whitespace-nowrap tabular-nums slashed-zero",
-              tight ? "text-warn" : "text-muted-foreground",
-            )}
-          >
-            {formatDuration(need)}
-            {/* Half a day's width has no room for the words; the title has them. */}
-            {!label && " to fit"}
-            {tight && `, ${formatDuration(free)} free`}
-          </p>
-        )}
-        <button
-          type="button"
-          onClick={() => onAdd(lane, date)}
-          aria-label={`Add to ${LANES[lane].label} with no time yet`}
-          title="Add a card with no time yet"
-          className={cn(
-            "flex h-5 w-5 flex-none items-center justify-center rounded-sm text-muted-foreground opacity-0 transition hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring group-hover/shelf:opacity-100 pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:opacity-100",
-            items.length === 0 && "ml-auto",
-          )}
-        >
-          <Plus className="h-3 w-3" strokeWidth={2} />
-        </button>
-      </div>
+      <ShelfHeader
+        lane={lane}
+        date={date}
+        label={label}
+        items={items}
+        timed={timed}
+        anchors={anchors}
+        onAdd={onAdd}
+      />
 
       <SortableContext
         items={shown.map((i) => i.id)}
@@ -255,6 +241,63 @@ export function SometimeShelf({
           {hidden > 0 ? `+${hidden} more` : "Show fewer"}
         </button>
       )}
+    </div>
+  );
+}
+
+/** The shelf's name, whether its cards still fit the day, and its add button. */
+function ShelfHeader({
+  lane,
+  date,
+  label,
+  items,
+  timed,
+  anchors,
+  onAdd,
+}: {
+  lane: Lane;
+  date: string;
+  label?: React.ReactNode;
+  items: TripItem[];
+  timed: TripItem[];
+  anchors: Anchor[];
+  onAdd: (lane: Lane, date: string) => void;
+}) {
+  const need = items.reduce((sum, i) => sum + itemLength(i), 0);
+  const free = freeMinutes(timed, anchors);
+  const tight = need > free;
+
+  return (
+    <div className="flex items-center gap-2">
+      <p className="min-w-0 truncate font-garamond text-sm text-muted-foreground italic">
+        {label ?? "Sometime"}
+      </p>
+      {items.length > 0 && (
+        <p
+          title={`How long the cards without a time need, against what's left of ${toTime(WAKING.start)}–${toTime(WAKING.end)} once the timed cards, trains and flights are in`}
+          className={cn(
+            "ml-auto font-mono text-[0.6rem] whitespace-nowrap tabular-nums slashed-zero",
+            tight ? "text-warn" : "text-muted-foreground",
+          )}
+        >
+          {formatDuration(need)}
+          {/* Half a day's width has no room for the words; the title has them. */}
+          {!label && " to fit"}
+          {tight && `, ${formatDuration(free)} free`}
+        </p>
+      )}
+      <button
+        type="button"
+        onClick={() => onAdd(lane, date)}
+        aria-label={`Add to ${LANES[lane].label} with no time yet`}
+        title="Add a card with no time yet"
+        className={cn(
+          "flex h-5 w-5 flex-none items-center justify-center rounded-sm text-muted-foreground opacity-0 transition hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-ring group-hover/shelf:opacity-100 pointer-coarse:h-9 pointer-coarse:w-9 pointer-coarse:opacity-100",
+          items.length === 0 && "ml-auto",
+        )}
+      >
+        <Plus className="h-3 w-3" strokeWidth={2} />
+      </button>
     </div>
   );
 }
@@ -314,12 +357,15 @@ export function ShelfChipFace({
   actions,
   dragging = false,
   overlay = false,
+  page = false,
   grip,
 }: {
   item: TripItem;
   actions?: CardActions;
   dragging?: boolean;
   overlay?: boolean;
+  /** On the phone's page, where its arrow is always shown and thumb-sized. */
+  page?: boolean;
   grip?: React.ReactNode;
 }) {
   const kind = kindOf(item.kind);
@@ -331,7 +377,8 @@ export function ShelfChipFace({
     <article
       style={kind.blockout ? bandStyle(kind.color) : undefined}
       className={cn(
-        "group/chip flex h-full min-h-7 items-stretch overflow-hidden",
+        "group/chip flex h-full items-stretch overflow-hidden",
+        page ? "min-h-9" : "min-h-7",
         kind.blockout
           ? "rounded-sm"
           : "rounded-md border border-border bg-card",
@@ -360,8 +407,14 @@ export function ShelfChipFace({
         {formatDuration(itemLength(item))}
       </span>
       {actions && !overlay && (
-        <span className="flex flex-none items-center pr-1 opacity-0 transition-opacity group-focus-within/chip:opacity-100 group-hover/chip:opacity-100 pointer-coarse:opacity-100">
-          <LaneButton item={item} actions={actions} />
+        <span
+          className={cn(
+            "flex flex-none items-center pr-1 transition-opacity",
+            !page &&
+              "opacity-0 group-focus-within/chip:opacity-100 group-hover/chip:opacity-100 pointer-coarse:opacity-100",
+          )}
+        >
+          <LaneButton item={item} actions={actions} big={page} />
         </span>
       )}
       {grip}
@@ -533,24 +586,7 @@ function HoursTrack({
   const [hover, setHover] = useState<number | null>(null);
 
   const at = (minute: number) => `${percentAt(minute, range)}%`;
-  const clashing = new Set(
-    overlaps(items).flatMap(({ first, second }) => [first.id, second.id]),
-  );
-
-  // Cards and trains share the width when they share minutes, so a card
-  // booked over a train is drawn beside it rather than on top of it.
-  const placed = placeSpans([
-    ...items.map((item) => {
-      const start = itemStart(item)!;
-      return { key: item.id, start, end: start + itemLength(item), item };
-    }),
-    ...anchors.map((anchor) => ({
-      key: anchor.key,
-      start: anchor.start ?? range.start,
-      end: anchor.end ?? range.end,
-      anchor,
-    })),
-  ]);
+  const { placed, clashing } = placeTrack(items, anchors, range);
 
   function trackHover(e: React.PointerEvent<HTMLDivElement>) {
     if (e.pointerType !== "mouse" || dragging) return;
@@ -703,6 +739,30 @@ function Ghost({ item, range }: { item: TripItem; range: Range }) {
   );
 }
 
+/**
+ * A track's cards and trains, laid out. They share the width when they share
+ * minutes, so a card booked over a train is drawn beside it rather than on
+ * top of it; cards that overlap each other are the clashes.
+ */
+function placeTrack(items: TripItem[], anchors: Anchor[], range: Range) {
+  const clashing = new Set(
+    overlaps(items).flatMap(({ first, second }) => [first.id, second.id]),
+  );
+  const placed = placeSpans([
+    ...items.map((item) => {
+      const start = itemStart(item)!;
+      return { key: item.id, start, end: start + itemLength(item), item };
+    }),
+    ...anchors.map((anchor) => ({
+      key: anchor.key,
+      start: anchor.start ?? range.start,
+      end: anchor.end ?? range.end,
+      anchor,
+    })),
+  ]);
+  return { placed, clashing };
+}
+
 /** Horizontal placement for a span sharing its minutes with `columns - 1` others. */
 function across(column: number, columns: number): React.CSSProperties {
   return {
@@ -847,6 +907,7 @@ export function HoursBlockFace({
   clash = false,
   dragging = false,
   overlay = false,
+  page = false,
   actions,
   grip,
 }: {
@@ -856,6 +917,8 @@ export function HoursBlockFace({
   clash?: boolean;
   dragging?: boolean;
   overlay?: boolean;
+  /** On the phone's page, where its arrow is always shown and thumb-sized. */
+  page?: boolean;
   actions?: CardActions;
   grip?: React.ReactNode;
 }) {
@@ -894,6 +957,8 @@ export function HoursBlockFace({
       <div
         className={cn(
           "min-w-0 flex-1 px-1.5",
+          // Clear of the arrow, which is always there on a phone.
+          page && actions && "pr-9",
           size === "short"
             ? "flex items-center gap-1.5"
             : "flex h-full flex-col flex-wrap content-start gap-x-6 overflow-hidden pt-0.5 *:w-full",
@@ -973,8 +1038,14 @@ export function HoursBlockFace({
       </div>
 
       {actions && !overlay && (
-        <span className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 transition-opacity group-focus-within/block:opacity-100 group-hover/block:opacity-100">
-          <LaneButton item={item} actions={actions} />
+        <span
+          className={cn(
+            "absolute top-0.5 right-0.5 flex gap-0.5 transition-opacity",
+            !page &&
+              "opacity-0 group-focus-within/block:opacity-100 group-hover/block:opacity-100 pointer-coarse:opacity-100",
+          )}
+        >
+          <LaneButton item={item} actions={actions} big={page} />
           {grip}
         </span>
       )}
@@ -1065,15 +1136,189 @@ function MarkLine({ mark, top }: { mark: Mark; top: string }) {
   );
 }
 
+/* ---------------------------------------------------------- on a phone -- */
+
+/**
+ * One lane's day by the hour, on a phone: to read and tap. Nothing is dragged,
+ * as nowhere on the phone board is — a card opens its form, an empty stretch
+ * of the day starts a card at that time, and the arrow agrees to it. The form
+ * is where a loose card gets its time.
+ *
+ * It's the desk's pieces at a thumb's scale, not a second design: the same
+ * shelf total, the same blocks, trains and hotel times, the same dark after
+ * sunset. The ruler covers only this day, since pages don't sit side by side.
+ */
+export function HoursPage({
+  lane,
+  date,
+  items,
+  anchors,
+  marks,
+  sun,
+  actions,
+  onAdd,
+  onAddAt,
+}: {
+  lane: Lane;
+  date: string;
+  /** The lane's cards on this day, in drag order. */
+  items: TripItem[];
+  anchors: Anchor[];
+  marks: Mark[];
+  sun: Sun;
+  actions: CardActions;
+  onAdd: (lane: Lane, date: string) => void;
+  onAddAt: (lane: Lane, date: string, time: string) => void;
+}) {
+  const loose = items.filter((i) => i.start_time === null);
+  const timed = items.filter((i) => i.start_time !== null);
+  const range = hoursRange([
+    ...timed.flatMap((item) => {
+      const start = itemStart(item)!;
+      return [start, Math.min(start + itemLength(item), 24 * 60)];
+    }),
+    ...anchors.flatMap((a) =>
+      [a.start, a.end].filter((m): m is number => m !== null),
+    ),
+    ...marks.map((m) => m.at),
+  ]);
+  const at = (minute: number) => `${percentAt(minute, range)}%`;
+  const { placed, clashing } = placeTrack(timed, anchors, range);
+
+  function addAt(e: React.MouseEvent<HTMLDivElement>) {
+    // A card, a train or a hotel time answers its own tap.
+    if ((e.target as HTMLElement).closest("[data-hours-solid], button, a")) {
+      return;
+    }
+    const box = e.currentTarget.getBoundingClientRect();
+    const minute =
+      range.start +
+      ((e.clientY - box.top) / box.height) * (range.end - range.start);
+    const start = Math.max(
+      range.start,
+      Math.min(Math.floor(minute / 30) * 30, range.end - 30),
+    );
+    onAddAt(lane, date, toTime(start));
+  }
+
+  return (
+    <div className="space-y-3">
+      <section
+        aria-label="Sometime"
+        style={{
+          backgroundColor: `color-mix(in srgb, ${LANES[lane].tint} 55%, var(--color-background))`,
+        }}
+        className="rounded-xl border border-border/70 px-3 pt-2 pb-3"
+      >
+        <ShelfHeader
+          lane={lane}
+          date={date}
+          items={loose}
+          timed={timed}
+          anchors={anchors}
+          onAdd={onAdd}
+        />
+        {loose.length > 0 ? (
+          <ol className="mt-1.5 space-y-1.5">
+            {loose.map((item) => (
+              <li key={item.id}>
+                <ShelfChipFace item={item} actions={actions} page />
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="font-garamond text-sm text-muted-foreground/70 italic">
+            Nothing loose
+          </p>
+        )}
+      </section>
+
+      <p className="px-1 font-garamond text-sm text-muted-foreground italic">
+        Tap a free stretch to add something then.
+      </p>
+
+      <div
+        style={{
+          gridTemplateRows: `${((range.end - range.start) / 30) * PAGE_HALF_HOUR_REM}rem`,
+        }}
+        className="grid grid-cols-[2.75rem_minmax(0,1fr)] overflow-hidden rounded-xl border border-border/70"
+      >
+        <HoursRuler
+          range={range}
+          pinned={false}
+          style={{ gridRow: 1, gridColumn: 1 }}
+        />
+        <div
+          style={{
+            gridRow: 1,
+            gridColumn: 2,
+            backgroundColor: LANES[lane].tint,
+          }}
+          className="relative py-2"
+        >
+          <div onClick={addAt} className="relative h-full">
+            {sun.rise > range.start && <Dark from={null} to={at(sun.rise)} />}
+            {sun.set < range.end && <Dark from={at(sun.set)} to={null} />}
+
+            {marks.map((mark) => (
+              <MarkLine key={mark.key} mark={mark} top={at(mark.at)} />
+            ))}
+
+            {placed.map((span) => {
+              const position = {
+                top: at(span.start),
+                height: `${percentAt(Math.min(span.end, range.end), range) - percentAt(span.start, range)}%`,
+                ...across(span.column, span.columns),
+              };
+              return "anchor" in span ? (
+                <AnchorBlock
+                  key={span.key}
+                  anchor={span.anchor}
+                  style={position}
+                />
+              ) : (
+                <div
+                  key={span.key}
+                  data-hours-solid=""
+                  style={position}
+                  // The whole card is the tap, not only its title.
+                  onClick={(e) => {
+                    if ((e.target as HTMLElement).closest("button, a")) return;
+                    actions.onEdit(span.item);
+                  }}
+                  className="absolute z-3"
+                >
+                  <HoursBlockFace
+                    item={span.item}
+                    start={span.start}
+                    length={itemLength(span.item)}
+                    clash={clashing.has(span.item.id)}
+                    actions={actions}
+                    page
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+        <HoursLines range={range} style={{ gridRow: 1, gridColumn: 2 }} />
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------- shared -- */
 
 /** Agreeing is the point of the board, so every card keeps its arrow here too. */
 function LaneButton({
   item,
   actions,
+  big = false,
 }: {
   item: TripItem;
   actions: CardActions;
+  /** Thumb-sized, for the phone's page: still inside a half-hour card. */
+  big?: boolean;
 }) {
   const decided = item.lane === "decided";
   const label = decided
@@ -1090,16 +1335,20 @@ function LaneButton({
         actions.onMoveLane(item, decided ? item.added_by : "decided")
       }
       className={cn(
-        "flex h-4 w-4 items-center justify-center rounded-sm border bg-card transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        "flex items-center justify-center border bg-card transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        big ? "h-7 w-7 rounded-md" : "h-4 w-4 rounded-sm",
         decided
           ? "border-border text-muted-foreground hover:border-primary hover:text-primary"
           : "border-primary/60 text-primary hover:bg-primary hover:text-primary-foreground",
       )}
     >
       {decided ? (
-        <ArrowDown className="h-2.5 w-2.5" strokeWidth={2} />
+        <ArrowDown
+          className={big ? "h-4 w-4" : "h-2.5 w-2.5"}
+          strokeWidth={2}
+        />
       ) : (
-        <ArrowUp className="h-2.5 w-2.5" strokeWidth={2} />
+        <ArrowUp className={big ? "h-4 w-4" : "h-2.5 w-2.5"} strokeWidth={2} />
       )}
     </button>
   );

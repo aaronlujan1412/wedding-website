@@ -1142,8 +1142,21 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
               flights={board.flights}
               transit={decidedTransit}
               today={today}
+              layout={layout}
+              onLayout={setLayout}
+              // A phone shows one lane by the hour. Compare's two drafts
+              // won't fit side by side, so it opens on what's agreed.
+              hoursLane={
+                BOARD_VIEWS[view].lanes.length === 1
+                  ? BOARD_VIEWS[view].lanes[0]
+                  : "decided"
+              }
+              onHoursLane={setView}
               actions={actions}
               onAdd={(l, d) => setDraft({ item: null, lane: l, onDate: d })}
+              onAddAt={(l, d, time) =>
+                setDraft({ item: null, lane: l, onDate: d, startTime: time })
+              }
               onEditLeg={(leg) => setLegDraft({ leg, lane: leg.lane })}
               onCreateLeg={(l, from, to) =>
                 setLegDraft({ leg: null, lane: l, from, to })

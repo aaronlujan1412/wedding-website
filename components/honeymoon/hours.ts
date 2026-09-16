@@ -47,8 +47,15 @@ export function isBoardLayout(value: string | null): value is BoardLayout {
  */
 export const SNAP = 15;
 
-/** A card on the shelf can be tall enough to read its title, and no smaller. */
+/** A half hour on the ruler: tall enough for a half-hour card's title, and no taller. */
 export const HALF_HOUR_REM = 1.125;
+
+/**
+ * A half hour on a phone, where a card is tapped rather than pointed at. At the
+ * desk's height a half-hour card is an 18px target; at this one it's 32px, and
+ * the hour-long cards most things are clear a thumb comfortably.
+ */
+export const PAGE_HALF_HOUR_REM = 2;
 
 /** Shelves show this many cards until someone asks for the rest. */
 export const SHELF_LIMIT = 4;

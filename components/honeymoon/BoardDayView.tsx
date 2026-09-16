@@ -15,6 +15,9 @@ import { cn } from "@/lib/utils";
 import { DayHeader } from "./DayHeader";
 import { ItemCardFace, type CardActions } from "./ItemCard";
 import { flightsOnDay } from "./flights";
+import { anchorsOnDay, marksOnDay, type BoardLayout } from "./hours";
+import { HoursPage } from "./HoursView";
+import { sunOn } from "./sun";
 import { transitOnDay } from "./transit";
 import { sleepsOn, staysIn } from "./stays";
 import {
@@ -22,6 +25,7 @@ import {
   LANES,
   LANE_ORDER,
   LIGHT_ORDER,
+  PLANNERS,
   formatDuration,
   isAdopted,
   itemsInCell,
@@ -63,8 +67,13 @@ export function BoardDayView({
   flights,
   transit,
   today,
+  layout,
+  onLayout,
+  hoursLane,
+  onHoursLane,
   actions,
   onAdd,
+  onAddAt,
   onEditLeg,
   onCreateLeg,
   onAdoptLeg,
@@ -80,10 +89,17 @@ export function BoardDayView({
   items: TripItem[];
   dayNotes: TripDay[];
   flights: TripFlight[];
+  /** Decided's rides. */
   transit: TripTransit[];
   today: string;
+  layout: BoardLayout;
+  onLayout: (layout: BoardLayout) => void;
+  /** The one lane a day shows by the hour. */
+  hoursLane: Lane;
+  onHoursLane: (lane: Lane) => void;
   actions: CardActions;
   onAdd: (lane: Lane, date: string | null) => void;
+  onAddAt: (lane: Lane, date: string, time: string) => void;
   onEditLeg: (leg: TripLeg) => void;
   onCreateLeg: (lane: Lane, from: string, to: string) => void;
   onAdoptLeg: (leg: TripLeg) => void;
@@ -233,8 +249,13 @@ export function BoardDayView({
               flights={flights}
               transit={transit}
               isToday={selected === today}
+              layout={layout}
+              onLayout={onLayout}
+              hoursLane={hoursLane}
+              onHoursLane={onHoursLane}
               actions={actions}
               onAdd={onAdd}
+              onAddAt={onAddAt}
               onEditLeg={onEditLeg}
               onCreateLeg={onCreateLeg}
               onAdoptLeg={onAdoptLeg}
@@ -369,8 +390,13 @@ function DayPage({
   flights,
   transit,
   isToday,
+  layout,
+  onLayout,
+  hoursLane,
+  onHoursLane,
   actions,
   onAdd,
+  onAddAt,
   onEditLeg,
   onCreateLeg,
   onAdoptLeg,
@@ -385,14 +411,27 @@ function DayPage({
   flights: TripFlight[];
   transit: TripTransit[];
   isToday: boolean;
+  layout: BoardLayout;
+  onLayout: (layout: BoardLayout) => void;
+  hoursLane: Lane;
+  onHoursLane: (lane: Lane) => void;
   actions: CardActions;
   onAdd: (lane: Lane, date: string | null) => void;
+  onAddAt: (lane: Lane, date: string, time: string) => void;
   onEditLeg: (leg: TripLeg) => void;
   onCreateLeg: (lane: Lane, from: string, to: string) => void;
   onAdoptLeg: (leg: TripLeg) => void;
   onEditNote: (date: string) => void;
   onSortByTime: (date: string) => void;
 }) {
+  const hours = layout === "hours";
+  // Sunset for the lane's own leg that day, else the agreed one's.
+  const sun = sunOn(
+    date,
+    legForDay(legsIn(legs, hoursLane), date)?.name,
+    legForDay(legsIn(legs, "decided"), date)?.name,
+  );
+
   return (
     <article className="pt-5">
       <DayHeader
@@ -400,79 +439,159 @@ function DayPage({
         date={date}
         note={note}
         legs={legs}
-        laneItems={itemsInCell(items, "decided", date)}
+        // The header costs the lane on screen: all three are in the list, so
+        // that's Decided; by the hour it's the one you picked.
+        laneItems={itemsInCell(items, hours ? hoursLane : "decided", date)}
         flights={flightsOnDay(flights, date)}
         transit={transitOnDay(transit, date)}
+        layout={layout}
+        sun={sun}
         isToday={isToday}
         onEditNote={onEditNote}
         onSortByTime={onSortByTime}
       />
 
-      <div className="mt-5 space-y-3">
-        {LANE_ORDER.map((lane) => {
-          const meta = LANES[lane];
-          const cards = itemsInCell(items, lane, date);
-          return (
-            <section
-              key={lane}
-              aria-label={meta.label}
-              className="rounded-xl border border-border/70 px-3 py-3"
-              style={{ backgroundColor: meta.tint }}
-            >
-              <div className="flex min-h-9 items-center gap-2">
-                <h3
-                  className="flex-none font-raleway text-[0.65rem] font-semibold uppercase tracking-[0.2em]"
-                  style={{ color: meta.accent }}
-                >
-                  {meta.label}
-                </h3>
-                <LegChip
-                  lane={lane}
-                  date={date}
-                  legs={legs}
-                  stays={stays}
-                  onEdit={onEditLeg}
-                  onCreate={onCreateLeg}
-                  onAdopt={onAdoptLeg}
-                />
-              </div>
-
-              {cards.length > 0 && (
-                <ol className="mt-2">
-                  {lane === "decided"
-                    ? layoutDay(cards).map((row) =>
-                        row.kind === "gap" ? (
-                          <li
-                            key={row.key}
-                            className="flex items-center gap-2 py-1.5 pl-1 font-mono text-[0.65rem] text-muted-foreground tabular-nums slashed-zero"
-                          >
-                            <span className="h-px w-4 bg-border" />
-                            {formatDuration(row.minutes)} open
-                          </li>
-                        ) : (
-                          <li key={row.item.id} className="pb-2">
-                            <ItemCardFace item={row.item} actions={actions} />
-                          </li>
-                        ),
-                      )
-                    : cards.map((item) => (
-                        <li key={item.id} className="pb-2">
-                          <ItemCardFace item={item} actions={actions} />
-                        </li>
-                      ))}
-                </ol>
+      {/* The switch comes first, so the button you just pressed stays where
+          it was when the lane choice appears beside it. */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div
+          role="radiogroup"
+          aria-label="Layout"
+          className="flex rounded-full border border-border bg-card p-0.5"
+        >
+          {(["list", "hours"] as const).map((l) => (
+            <button
+              key={l}
+              type="button"
+              role="radio"
+              aria-checked={layout === l}
+              onClick={() => onLayout(l)}
+              className={cn(
+                "min-h-9 rounded-full px-2.5 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                layout === l
+                  ? "bg-secondary text-primary"
+                  : "text-muted-foreground",
               )}
-
-              <AddButton
-                className={cards.length ? "mt-0" : "mt-2"}
-                onClick={() => onAdd(lane, date)}
-              >
-                {lane === "decided" ? "Add to Decided" : "Add an idea"}
-              </AddButton>
-            </section>
-          );
-        })}
+            >
+              {l === "list" ? "List" : "Hours"}
+            </button>
+          ))}
+        </div>
+        {hours && (
+          <div
+            role="radiogroup"
+            aria-label="Lane"
+            className="flex rounded-full border border-border bg-card p-0.5"
+          >
+            {LANE_ORDER.map((lane) => {
+              const meta = LANES[lane];
+              const on = lane === hoursLane;
+              return (
+                <button
+                  key={lane}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  onClick={() => onHoursLane(lane)}
+                  style={
+                    on
+                      ? { backgroundColor: meta.tint, color: meta.accent }
+                      : undefined
+                  }
+                  className={cn(
+                    "min-h-9 rounded-full px-2.5 font-raleway text-[0.65rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    on ? "font-semibold" : "text-muted-foreground",
+                  )}
+                >
+                  {meta.planner ? PLANNERS[meta.planner].label : meta.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      {hours ? (
+        <div className="mt-3">
+          <HoursPage
+            lane={hoursLane}
+            date={date}
+            items={itemsInCell(items, hoursLane, date)}
+            anchors={anchorsOnDay(date, flights, transit)}
+            marks={marksOnDay(date, staysIn(stays, "decided"))}
+            sun={sun}
+            actions={actions}
+            onAdd={onAdd}
+            onAddAt={onAddAt}
+          />
+        </div>
+      ) : (
+        <div className="mt-3 space-y-3">
+          {LANE_ORDER.map((lane) => {
+            const meta = LANES[lane];
+            const cards = itemsInCell(items, lane, date);
+            return (
+              <section
+                key={lane}
+                aria-label={meta.label}
+                className="rounded-xl border border-border/70 px-3 py-3"
+                style={{ backgroundColor: meta.tint }}
+              >
+                <div className="flex min-h-9 items-center gap-2">
+                  <h3
+                    className="flex-none font-raleway text-[0.65rem] font-semibold uppercase tracking-[0.2em]"
+                    style={{ color: meta.accent }}
+                  >
+                    {meta.label}
+                  </h3>
+                  <LegChip
+                    lane={lane}
+                    date={date}
+                    legs={legs}
+                    stays={stays}
+                    onEdit={onEditLeg}
+                    onCreate={onCreateLeg}
+                    onAdopt={onAdoptLeg}
+                  />
+                </div>
+
+                {cards.length > 0 && (
+                  <ol className="mt-2">
+                    {lane === "decided"
+                      ? layoutDay(cards).map((row) =>
+                          row.kind === "gap" ? (
+                            <li
+                              key={row.key}
+                              className="flex items-center gap-2 py-1.5 pl-1 font-mono text-[0.65rem] text-muted-foreground tabular-nums slashed-zero"
+                            >
+                              <span className="h-px w-4 bg-border" />
+                              {formatDuration(row.minutes)} open
+                            </li>
+                          ) : (
+                            <li key={row.item.id} className="pb-2">
+                              <ItemCardFace item={row.item} actions={actions} />
+                            </li>
+                          ),
+                        )
+                      : cards.map((item) => (
+                          <li key={item.id} className="pb-2">
+                            <ItemCardFace item={item} actions={actions} />
+                          </li>
+                        ))}
+                  </ol>
+                )}
+
+                <AddButton
+                  className={cards.length ? "mt-0" : "mt-2"}
+                  onClick={() => onAdd(lane, date)}
+                >
+                  {lane === "decided" ? "Add to Decided" : "Add an idea"}
+                </AddButton>
+              </section>
+            );
+          })}
+        </div>
+      )}
     </article>
   );
 }
