@@ -1,4 +1,4 @@
-import { getFaqs } from "../actions/faq";
+import { getFaqs } from "@/app/actions/faq";
 import FaqAccordion from "@/components/faq/FaqAccordion";
 
 export default async function FaqPage() {
