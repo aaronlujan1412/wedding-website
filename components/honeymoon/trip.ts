@@ -816,8 +816,16 @@ export function dayWarnings(
     });
   }
 
-  for (const w of items.flatMap((i) => itemWarnings(i, today))) {
-    if (w.tone === "warn") out.push(w);
+  // A card's warning, said for the whole day, has to say which card: a bare
+  // "Closed Tuesdays" over four cards is a puzzle, not a warning.
+  for (const item of items) {
+    for (const w of itemWarnings(item, today)) {
+      if (w.tone !== "warn") continue;
+      out.push({
+        tone: "warn",
+        text: `${item.title}: ${w.text.charAt(0).toLowerCase()}${w.text.slice(1)}`,
+      });
+    }
   }
 
   // Timed cards dragged out of sequence.
