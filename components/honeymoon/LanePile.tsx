@@ -97,7 +97,23 @@ export function LanePile({
         {unsorted > 0 && ` · ${unsorted} unsorted`}
       </p>
 
-      <div className="mt-2 flex-1 space-y-2">
+      {/* Above the list, not below it: a pile fifty cards deep put this off the
+          bottom of the screen, and the button you reach for most was the one
+          furthest away. */}
+      <button
+        type="button"
+        onClick={() => onAdd(lane, null)}
+        className="mt-2 flex w-full items-center justify-center gap-1 rounded-sm border border-dashed border-border py-1 font-raleway text-[0.6rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
+      >
+        <Plus className="h-3 w-3" strokeWidth={2} />
+        Add an idea
+      </button>
+
+      {/* The pile scrolls inside its own box. It shares a grid row with the day
+          columns, so an uncapped pile sets the height of every day beside it —
+          fifty ideas made each day a screen of empty paper and you could not
+          see what was actually planned. */}
+      <div className="mt-2 max-h-[26rem] flex-1 space-y-2 overflow-y-auto overscroll-contain pr-0.5">
         <SortableContext
           items={visible.map((i) => i.id)}
           strategy={verticalListSortingStrategy}
@@ -118,15 +134,6 @@ export function LanePile({
           </p>
         )}
       </div>
-
-      <button
-        type="button"
-        onClick={() => onAdd(lane, null)}
-        className="mt-2 flex w-full items-center justify-center gap-1 rounded-sm border border-dashed border-border py-1 font-raleway text-[0.6rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
-      >
-        <Plus className="h-3 w-3" strokeWidth={2} />
-        Add an idea
-      </button>
     </div>
   );
 }

@@ -465,6 +465,7 @@ export type Database = {
           title_ja: string | null
           updated_at: string
           url: string | null
+          wander_id: string | null
         }
         Insert: {
           added_by?: Database["public"]["Enums"]["trip_planner"]
@@ -495,6 +496,7 @@ export type Database = {
           title_ja?: string | null
           updated_at?: string
           url?: string | null
+          wander_id?: string | null
         }
         Update: {
           added_by?: Database["public"]["Enums"]["trip_planner"]
@@ -525,6 +527,7 @@ export type Database = {
           title_ja?: string | null
           updated_at?: string
           url?: string | null
+          wander_id?: string | null
         }
         Relationships: [
           {
@@ -539,6 +542,13 @@ export type Database = {
             columns: ["linked_transit_id"]
             isOneToOne: false
             referencedRelation: "trip_transit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_items_wander_id_fkey"
+            columns: ["wander_id"]
+            isOneToOne: false
+            referencedRelation: "trip_items"
             referencedColumns: ["id"]
           },
         ]

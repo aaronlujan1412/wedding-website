@@ -39,6 +39,7 @@ import {
 } from "./trip";
 import { CostField } from "./CostField";
 import { useBoardData } from "./BoardContext";
+import { WanderList } from "./WanderList";
 import { byDeparture, departsClock, departsOn } from "./transit";
 import { sleepsOn } from "./stays";
 import type {
@@ -288,6 +289,14 @@ function ItemForm({
           <BlockoutLink form={form} set={set} />
         </Fieldset>
 
+        {/* The wander block's whole point, and it needs the card to exist
+            first so the attachments have something to point at. */}
+        {kindOf(form.kind).links === "city" && (
+          <Fieldset legend="What to check out">
+            <WanderList item={draft.item} />
+          </Fieldset>
+        )}
+
         <Fieldset legend="When">
           <div className="grid gap-3 sm:grid-cols-3">
             <Field label="Day" className="sm:col-span-3">
@@ -410,7 +419,7 @@ function ItemForm({
               className={blockout ? "sm:col-span-2" : undefined}
               hint={
                 meta.links === "city"
-                  ? "Name the place and the card lists what's still in the pile nearby. Nothing to keep in sync — it reads the pile as it is."
+                  ? "Where you'll be wandering. Ideas with the same city float to the top of the picker below."
                   : undefined
               }
             >

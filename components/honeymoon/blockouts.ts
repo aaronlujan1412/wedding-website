@@ -43,19 +43,44 @@ export function restStay(item: TripItem, stays: TripStay[]): TripStay | null {
   return covering.length === 1 ? covering[0] : null;
 }
 
+/** Must-dos first, then drag order, with a tiebreak both engines agree on. */
+function byInterest(a: TripItem, b: TripItem): number {
+  return (
+    Number(b.must_do) - Number(a.must_do) ||
+    a.position - b.position ||
+    // Positions are floats and can tie after enough drags; the id keeps the
+    // comparator consistent so the server and both engines agree on order.
+    compare(a.id, b.id)
+  );
+}
+
 /**
- * Ideas in the city a wander block names, still sitting in a pile.
+ * The cards attached to a wander block — its actual list.
  *
- * Scoped to cards with no day of their own: something already scheduled for
- * Tuesday is not a suggestion for Tuesday's wander, it is Tuesday. Deliberately
- * not scoped to a lane — on the afternoon itself you want everything either of
- * you ever flagged in that city, not just the half that got agreed. Matching is
- * case- and space-insensitive because these cities are typed by hand on both
- * sides.
+ * Attached explicitly, because the first version of this derived the list from
+ * matching `city` across the pile and that turned out to be a list nobody
+ * could see or add to: almost no card has a city, and the ones that do
+ * disagree about what to call the same neighbourhood.
+ *
+ * A card that has since been given its own day drops off: it is no longer
+ * something to do *if you feel like it* that afternoon, it is the afternoon.
  */
 export function wanderIdeas(item: TripItem, all: TripItem[]): TripItem[] {
+  return all
+    .filter((i) => i.wander_id === item.id && i.on_date === null)
+    .sort(byInterest);
+}
+
+/**
+ * Cards worth offering in the picker but not attached yet.
+ *
+ * This is where matching on `city` still earns its place: as a suggestion it
+ * can be wrong or empty without costing anything, whereas as the whole list it
+ * silently showed nothing. Everything loose in a pile is offered; anything in
+ * the block's city floats to the top.
+ */
+export function wanderCandidates(item: TripItem, all: TripItem[]): TripItem[] {
   const city = item.city?.trim().toLowerCase();
-  if (!city) return [];
 
   return all
     .filter(
@@ -63,16 +88,17 @@ export function wanderIdeas(item: TripItem, all: TripItem[]): TripItem[] {
         i.id !== item.id &&
         i.on_date === null &&
         !isBlockout(i) &&
-        i.city?.trim().toLowerCase() === city,
+        i.wander_id !== item.id,
     )
-    .sort(
-      (a, b) =>
-        Number(b.must_do) - Number(a.must_do) ||
-        a.position - b.position ||
-        // Positions are floats and can tie after enough drags; the id keeps the
-        // comparator consistent so the server and both engines agree on order.
-        compare(a.id, b.id),
-    );
+    .sort((a, b) => {
+      if (city) {
+        const inCity = (x: TripItem) =>
+          Number(x.city?.trim().toLowerCase() === city);
+        const byCity = inCity(b) - inCity(a);
+        if (byCity !== 0) return byCity;
+      }
+      return byInterest(a, b);
+    });
 }
 
 export function blockoutDetail(
@@ -92,11 +118,11 @@ export function blockoutDetail(
 
   if (links === "city") {
     const ideas = wanderIdeas(item, items);
-    if (!item.city) return { text: null, ideas };
+    const count = ideas.length
+      ? `${ideas.length} to check out`
+      : "nothing picked yet";
     return {
-      text: ideas.length
-        ? `${item.city} · ${ideas.length} ${ideas.length === 1 ? "idea" : "ideas"} nearby`
-        : item.city,
+      text: item.city ? `${item.city} · ${count}` : count,
       ideas,
     };
   }

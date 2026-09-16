@@ -506,3 +506,25 @@ export async function deleteDoc(id: string) {
   refresh();
   return { data: true, error: null };
 }
+
+/**
+ * Put a card on a wander block's list, or take it off with `wanderId: null`.
+ *
+ * Its own write rather than part of the item form, because it is edited from
+ * the wander block's dialog while the card being changed is a different row —
+ * and because ticking a dozen things onto an afternoon shouldn't mean opening
+ * a dozen forms.
+ */
+export async function setWanderItem(id: string, wanderId: string | null) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase
+    .from("trip_items")
+    .update({ wander_id: wanderId, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
