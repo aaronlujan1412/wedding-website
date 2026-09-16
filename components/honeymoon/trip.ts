@@ -601,6 +601,35 @@ export function layoutDay(items: TripItem[]): RailRow[] {
 }
 
 /**
+ * Timed cards that claim the same minutes, a pair at a time.
+ *
+ * Wander blocks are exempt: eating and shopping inside an afternoon of walking
+ * a neighbourhood is what one is for, not a clash with it.
+ */
+export function overlaps(
+  items: TripItem[],
+): { first: TripItem; second: TripItem; minutes: number }[] {
+  const timed = items
+    .filter((i) => i.start_time !== null && i.kind !== "wander")
+    .sort((a, b) => itemStart(a)! - itemStart(b)! || compare(a.id, b.id));
+
+  const out: { first: TripItem; second: TripItem; minutes: number }[] = [];
+  for (const [i, first] of timed.entries()) {
+    const end = itemEnd(first)!;
+    for (const second of timed.slice(i + 1)) {
+      const start = itemStart(second)!;
+      if (start >= end) break;
+      out.push({
+        first,
+        second,
+        minutes: Math.min(end, itemEnd(second)!) - start,
+      });
+    }
+  }
+  return out;
+}
+
+/**
  * Minutes of actual activity in a day. Blockouts are time you claimed on
  * purpose, so they are not in this number -- a day with a long rest block
  * should read as restful, not as a full day. They still fill the rail, because
@@ -795,6 +824,15 @@ export function dayWarnings(
   const timed = items.map(itemStart).filter((s): s is number => s !== null);
   if (timed.some((s, i) => i > 0 && s < timed[i - 1])) {
     out.push({ tone: "info", text: "Times are out of order" });
+  }
+
+  // Two things at once. A list draws them one above the other, which reads as
+  // a morning, so it has to be said in words.
+  for (const { first, second, minutes } of overlaps(items)) {
+    out.push({
+      tone: "warn",
+      text: `${first.title} and ${second.title} overlap by ${formatDuration(minutes)}`,
+    });
   }
 
   // Two cities in a day with nothing on the board to get between them. Only
