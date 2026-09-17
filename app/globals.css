@@ -242,3 +242,11 @@
 @utility animate-route-mark {
   animation: route-mark 300ms ease-out 650ms both;
 }
+
+/* `scroll-smooth` on <html> is unconditional, so every scrollIntoView animates
+   — including the first dance page re-centring itself once an eight-count. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

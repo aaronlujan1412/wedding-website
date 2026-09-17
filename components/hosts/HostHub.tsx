@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Images, NotebookPen, Plane } from "lucide-react";
+import { ArrowRight, Footprints, Images, NotebookPen, Plane } from "lucide-react";
 import { signOutAsHost } from "@/app/actions/admin";
 import { daysUntilWedding } from "@/lib/constants";
+import { trainingWeek } from "@/lib/first-dance";
 import { countdown as flightCountdown } from "@/components/honeymoon/flights";
 
 type Props = {
@@ -27,6 +28,7 @@ export function HostHub({
   honeymoon,
 }: Props) {
   const daysOut = daysUntilWedding();
+  const dance = trainingWeek();
 
   return (
     <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24">
@@ -90,6 +92,17 @@ export function HostHub({
                   : `${honeymoon.decided} decided, ${honeymoon.suggested} suggested`
           }
           blurb="Japan. Suggest in your own lane, agree by dragging it up, print what's decided."
+        />
+        <HubCard
+          href="/first-dance"
+          icon={<Footprints className="h-5 w-5" strokeWidth={1.5} />}
+          title="First Dance"
+          status={
+            dance.outside
+              ? "Touching Heaven — 38 eight-counts"
+              : `Week ${dance.week} of 17, ${dance.weeksToDecision > 0 ? `${dance.weeksToDecision} to the tier decision` : "tier decided"}`
+          }
+          blurb="The count sheet, one cue per eight-count, with a metronome that walks you through it at tempo."
         />
       </ul>
     </main>
