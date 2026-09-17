@@ -1,16 +1,13 @@
-import type { Metadata } from "next";
-import { FinderView } from "@/components/honeymoon/FinderView";
-import { getFinderPage } from "@/lib/honeymoon-queries";
+import { redirect } from "next/navigation";
 
-/** Host-only and always live — never prerender it with build-time rows. */
+/** Like every planner page: decided per request, behind the host gate. */
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Lodging finder",
-  robots: { index: false, follow: false },
-};
-
-export default async function FinderPage() {
-  const { routes, decided, rate } = await getFinderPage();
-  return <FinderView routes={routes} decided={decided} rate={rate} />;
+/**
+ * The finder was the trip's nights drawn a fourth time, on a tab of its own.
+ * Its routes are rows on the Lodging strip now, and its places are options in
+ * the list of nights, so an old bookmark lands there.
+ */
+export default function FinderPage() {
+  redirect("/honeymoon/lodging");
 }

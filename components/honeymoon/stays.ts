@@ -123,18 +123,24 @@ export function tripNights(
 }
 
 /**
- * The strip's columns: every night any lane has a route or a stay on, so a
- * suggestion for an extra night past the agreed trip still has somewhere to
- * sit.
+ * The strip's columns: every night any lane has a route or a stay on — and any
+ * night a finder route reaches — so a suggestion for an extra night past the
+ * agreed trip still has somewhere to sit.
  */
-export function stripNights(legs: TripLeg[], stays: TripStay[]): string[] {
+export function stripNights(
+  legs: TripLeg[],
+  stays: TripStay[],
+  proposed: { check_in_on: string; check_out_on: string }[] = [],
+): string[] {
   const starts = [
     ...legs.map((l) => l.starts_on),
     ...stays.map((s) => s.check_in_on),
+    ...proposed.map((s) => s.check_in_on),
   ].sort();
   const ends = [
     ...legs.map((l) => addDays(l.ends_on, -1)),
     ...stays.map((s) => addDays(s.check_out_on, -1)),
+    ...proposed.map((s) => addDays(s.check_out_on, -1)),
   ].sort();
   if (starts.length === 0 || ends.at(-1)! < starts[0]) return [];
   return eachDay(starts[0], ends.at(-1)!);
@@ -153,35 +159,6 @@ export function stackStays(stays: TripStay[]): TripStay[][] {
     else rows.push([stay]);
   }
   return rows;
-}
-
-/**
- * Suggestions grouped by the nights they're competing for. Stays whose nights
- * overlap — directly or through a chain — are one question: "where do we sleep
- * Dec 29 to Jan 1?"
- */
-export type StayQuestion = { from: string; to: string; stays: TripStay[] };
-
-export function groupSuggestions(stays: TripStay[]): StayQuestion[] {
-  const out: StayQuestion[] = [];
-  const sorted = stays
-    .filter((s) => s.lane !== "decided")
-    .sort(byCheckIn);
-
-  for (const stay of sorted) {
-    const last = out.at(-1);
-    if (last && stay.check_in_on < last.to) {
-      last.stays.push(stay);
-      if (stay.check_out_on > last.to) last.to = stay.check_out_on;
-    } else {
-      out.push({
-        from: stay.check_in_on,
-        to: stay.check_out_on,
-        stays: [stay],
-      });
-    }
-  }
-  return out;
 }
 
 /* ------------------------------------------------------------- adopting -- */

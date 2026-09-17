@@ -1,6 +1,5 @@
 import {
   BedDouble,
-  Compass,
   LayoutGrid,
   NotebookPen,
   Plane,
@@ -32,7 +31,6 @@ export const SECTIONS: Section[] = [
   { href: "/honeymoon/flights", label: "Flights", icon: Plane },
   { href: "/honeymoon/transit", label: "Transit", icon: TramFront },
   { href: "/honeymoon/lodging", label: "Lodging", icon: BedDouble },
-  { href: "/honeymoon/finder", label: "Finder", icon: Compass },
   { href: "/honeymoon/itinerary", label: "Itinerary", icon: ScrollText },
 ];
 
@@ -48,8 +46,8 @@ function section(href: string): Section {
  * confirmation codes someone at a counter will ask for. The fifth slot holds
  * the rest, which is planning done at a laptop.
  *
- * The bar used to be a five-column grid of all seven, so Itinerary and Pocket
- * wrapped onto a second row that sat over the page.
+ * The bar used to be a five-column grid of every tab, so the last two wrapped
+ * onto a second row that sat over the page.
  */
 export const PHONE_BAR: Section[] = [
   section("/honeymoon/itinerary"),
