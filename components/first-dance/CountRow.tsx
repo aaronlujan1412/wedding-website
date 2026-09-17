@@ -3,6 +3,7 @@
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clock, type EightCount, startOf } from "@/lib/first-dance";
+import { FigureCard } from "./Figures";
 import { BeatStrip, Pips } from "./Notation";
 
 /**
@@ -86,6 +87,8 @@ export function CountRow({
             on={active && !countIn ? beat : undefined}
           />
         )}
+
+        {count.figure && <FigureCard figure={count.figure} />}
 
         {count.note && (
           <div className="mt-3 max-w-[58ch] border-l-2 border-border pl-3">

@@ -17,6 +17,7 @@ import {
 } from "@/lib/first-dance";
 import { cn } from "@/lib/utils";
 import { CountRow, HeldRow } from "./CountRow";
+import { FigureCard } from "./Figures";
 import { GearKey } from "./Notation";
 import { type Mode, SongPanel } from "./SongPanel";
 import {
@@ -345,7 +346,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           ))}
         </div>
 
-        <Reference week={week} />
+        <Reference week={week} tier={tier} />
       </main>
     </>
   );
@@ -401,6 +402,8 @@ function MovementBlock({
           {movement.failure}
         </p>
       )}
+
+      {movement.figure && <FigureCard figure={movement.figure} />}
 
       {movement.id === "peak" && (
         <div className="mt-5">

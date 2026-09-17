@@ -77,6 +77,41 @@ export function weightedBeats(gear: Gear): number[] {
 
 /* The routine ------------------------------------------------------------- */
 
+/**
+ * A named figure, so it can be looked up and watched.
+ *
+ * The source sheet described every element physically and named none of them —
+ * "single slow 360°, led low at waist height" rather than "free spin". That is
+ * fine with a teacher in the room and useless without one, because you cannot
+ * search for a description. Every figure here carries the words a video will
+ * actually use.
+ *
+ * `effort` is the honest read on learning it from video with nobody correcting
+ * you, and `instead` is where the sheet asks for something harder or less
+ * documented than it needs to.
+ */
+export type Figure = {
+  name: string;
+  /** Phrases that return the figure, not an essay about weddings. */
+  lookUp: string[];
+  /** The feet, by count, from the lead's side. */
+  steps?: string;
+  /** Where the sheet's rhythm differs from how the figure is taught. */
+  timing?: string;
+  effort: Effort;
+  /** A change worth making, and why. */
+  instead?: string;
+};
+
+/** How much of it you get from watching, and how much only from repetition. */
+export type Effort = "session" | "weeks" | "careful";
+
+export const EFFORT: Record<Effort, string> = {
+  session: "An evening with a video gets you this.",
+  weeks: "Weeks of repetition. Video shows you the shape, not the timing.",
+  careful: "This one can hurt someone. Read the mechanics before the reps.",
+};
+
 export type BeatSpan = {
   /** 1-indexed beat within the eight-count. */
   from: number;
@@ -100,6 +135,8 @@ export type EightCount = {
   continues?: boolean;
   /** Carries load, or altitude. Drawn heavier, and never drilled cold. */
   care?: boolean;
+  /** Set where this eight-count is its own nameable figure. */
+  figure?: Figure;
 };
 
 export type Movement = {
@@ -114,6 +151,9 @@ export type Movement = {
   /** 0–1. Drives how heavily the movement's spine is drawn: the page's own
    *  picture of the song's arc, quiet through the peak and back. */
   heat: number;
+  /** The figure the movement is mostly made of. Individual eight-counts carry
+   *  their own where they depart from it. */
+  figure?: Figure;
   counts: EightCount[];
 };
 
@@ -124,6 +164,17 @@ export const MOVEMENTS: Movement[] = [
     name: "Settle",
     gearLabel: "Gear 1 throughout",
     heat: 0.15,
+    figure: {
+      name: "Box step, turning",
+      lookUp: ["rumba box step", "box step turning left"],
+      steps:
+        "Lead: forward L · side R · close L · back R · side L · close R. Follow mirrors it, starting back on the right. Six steps and you are where you began, which is what makes it a box.",
+      timing:
+        "Schools count the box differently — slow-quick-quick and quick-quick-slow are both taught — but the footprint is identical in all of them, so any video works. Gear 1 gives you four even changes rather than six.",
+      effort: "session",
+      instead:
+        "Dance the real six-step box rather than four even changes. Nothing on the sheet depends on the count of four, and every video you find will show six — translating each one is friction you will pay forty times over. Turn it LEFT, too: a left-turning box is the version everybody teaches.",
+    },
     intent:
       "Deliberately unimpressive. You are setting the baseline that everything after it contrasts against. The slow full rotation is also the answer to a round room: over one minute, every section of it gets a front view without you doing anything.",
     failure:
@@ -198,6 +249,15 @@ export const MOVEMENTS: Movement[] = [
     name: "Open",
     gearLabel: "Gear 2",
     heat: 0.35,
+    figure: {
+      name: "Progressive walks, curving",
+      lookUp: ["rumba walks", "rumba open break"],
+      steps:
+        "One-hand hold, facing. He walks forward along the inside of the arc, she walks back along the outside, one step per beat. The arc comes from both of you angling a little on every step, not from steering.",
+      effort: "session",
+      instead:
+        "The sheet does not say whether you face each other or travel side by side. Face each other: a round room then sees a front and a back rather than two profiles, and backward travel is led rather than guessed — which matters in a gown she cannot see behind.",
+    },
     intent:
       "The first “look at that” moment is literally just walking. Covering real ground with intent reads as trained; rotating on the spot reads as a school dance. The skirt does the rest.",
     counts: [
@@ -232,6 +292,15 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "A single slow 360°, led low at waist height with a body-rotation cue. She spots. The skirt flares.",
         gear: 2,
+        figure: {
+          name: "Free spin",
+          lookUp: ["free spin salsa", "how to spot a turn dancing"],
+          steps:
+            "He releases on 1 with a small body-rotation cue; she turns on her own and he takes the hand again as she arrives. Spotting is the whole technique: eyes hold one point, head whips round last.",
+          effort: "weeks",
+          instead:
+            "The usual figure here is an underarm turn, and the sheet rules it out for good reason at equal height. A free spin is the named alternative — no raised arm, and no load through her wrists at all, which suits the wrist protocol better than the standard figure does.",
+        },
         beats: [
           { from: 1, to: 4, text: "turn" },
           { from: 5, to: 8, text: "settle" },
@@ -255,6 +324,13 @@ export const MOVEMENTS: Movement[] = [
     name: "Break",
     gearLabel: "Gear 2, the mirrored unison",
     heat: 0.5,
+    figure: {
+      name: "Apart work",
+      lookUp: ["dance shines", "port de bras arms"],
+      steps:
+        "Nothing here is a partner figure — you are apart for five eight-counts. The walking needs no technique; the arms do.",
+      effort: "weeks",
+    },
     intent:
       "Side-by-side unison only reads from two sides of a round room. Mirrored and facing, every guest sees one of you in profile and one head-on executing the same phrase — so it reads from every seat.",
     failure:
@@ -293,6 +369,15 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "Both stop, facing each other, and run the phrase as a mirror rather than side by side.",
         gear: 2,
+        figure: {
+          name: "Port de bras, mirrored",
+          lookUp: ["port de bras", "ballroom arm styling"],
+          steps:
+            "Arms only, with a quarter turn in the middle. Port de bras is the name for carrying the arms as a shape rather than waving them; it is where to look for the quality.",
+          effort: "weeks",
+          instead:
+            "This is the only passage in the routine with no figure behind it — somebody invented it, so no video shows it. Consider halving it: one slow sweep and the quarter turn, holding 5–8. Two people doing one simple thing together beats two people nearly doing four.",
+        },
         beats: [
           { from: 1, to: 2, text: "sweep up and out" },
           { from: 3, to: 4, text: "quarter turn away" },
@@ -319,6 +404,13 @@ export const MOVEMENTS: Movement[] = [
     name: "Build",
     gearLabel: "Gear 2 → 3 → 2",
     heat: 0.75,
+    figure: {
+      name: "Travelling box, into pivots",
+      lookUp: ["rumba progressive box", "closed position walks dance"],
+      steps:
+        "The same box as Settle, but let each one land a little further round the circle instead of closing exactly. A box that does not quite close is how a stationary figure travels.",
+      effort: "session",
+    },
     intent:
       "The gear change is the point. The room's ear is calibrated to 70 by now; at E27 the rate of visible events doubles. It costs almost nothing technically and reads as a burst of skill.",
     counts: [
@@ -348,6 +440,15 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "A full eight-count at Gear 3. Small quick steps, tight couple rotation, two to three full turns. The skirt is at flare the whole way.",
         gear: 3,
+        figure: {
+          name: "Couple pivots",
+          lookUp: ["pivot turns ballroom", "couple pivots dance"],
+          steps:
+            "Both of you rotate around a shared centre, stepping between each other's feet — his right foot forward between hers as hers goes back between his, and alternating. Sixteen small steps in the eight-count.",
+          effort: "weeks",
+          instead:
+            "Build to one full rotation, then two. Three at speed is a lot of dizziness to carry into what comes after, and a skirt at flare is a skirt you can stand on.",
+        },
       },
       {
         n: 28,
@@ -363,6 +464,15 @@ export const MOVEMENTS: Movement[] = [
           "Forearm grip. Both lean into opposition at about 20° off vertical, and rotate as a single unit.",
         gear: 2,
         care: true,
+        figure: {
+          name: "Counterbalance",
+          lookUp: ["acroyoga counterbalance", "partner counterbalance two person"],
+          steps:
+            "Forearm to forearm, each hand closing below the other's elbow. Both lean away until the connection is carrying you, spines long, hips under you.",
+          effort: "session",
+          instead:
+            "Nothing — this is the best element in the routine to learn without a teacher. At near-equal mass it is self-correcting: too little lean and you simply stand up, too much and you feel it immediately. The acro videos are the clearest, because they explain the physics rather than the styling.",
+        },
         note: {
           title: "Both of you lean away",
           body: "The connection is what holds you up. Keep your spines long — the failure is bending at the waist, which collapses the shape and dumps the load onto arms. If it feels like either of you is holding the other up, the angle is wrong.",
@@ -400,6 +510,14 @@ export const MOVEMENTS: Movement[] = [
           "Forearm grip, both into full opposition at 30–35°. He walks a curved path; she counterbalances throughout, off her own balance the entire time.",
         gear: 2,
         care: true,
+        figure: {
+          name: "Travelling counterbalance",
+          lookUp: ["moving counterbalance partner", "acroyoga counterbalance walking"],
+          steps: "The same grip and the same physics as E29, but he walks it.",
+          effort: "careful",
+          instead:
+            "Take the angle in stages across the weeks — 20°, then 25°, then 30°. At 35° a broken connection puts both of you down, and the only thing that stops it breaking is having done it enough times to feel it going.",
+        },
       },
       {
         n: 33,
@@ -415,6 +533,15 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "He leads her into three to four continuous rotations from a low connection, rotating the opposite way himself. This is the visual peak of the whole thing.",
         gear: 2,
+        figure: {
+          name: "Multiple free spins",
+          lookUp: ["multiple spins spotting", "how to do multiple turns dance"],
+          steps:
+            "The same spin as E17, repeated without stopping. Spotting is the only thing that makes more than one possible.",
+          effort: "careful",
+          instead:
+            "Cut it to two rotations, and have him hold his own orientation instead of counter-rotating. Three or four consecutive turns is months of work on its own, and the counter-rotation buys a moment of spectacle at the price of a lead who is dizzy and facing the wrong way at exactly the count he has to catch her on.",
+        },
       },
       {
         n: 35,
@@ -423,6 +550,15 @@ export const MOVEMENTS: Movement[] = [
           "She exits the spin into his frame. He receives at the natural waist, above the skirt volume, on her jump. Hips rise about eighteen inches and he rotates 180° with her airborne for a second and a half.",
         gear: 2,
         care: true,
+        figure: {
+          name: "Waist lift, half turn",
+          lookUp: ["waist lift partner dance", "beginner dance lift technique"],
+          steps:
+            "She jumps on 5 and he redirects that jump upward, hands at the natural waist above the skirt. He turns 180° with her up, and sets her down on 7.",
+          effort: "careful",
+          instead:
+            "Dance Tier B. Not because the lift is beyond you, but because of what it is entered from: she has to find a jump on a specific count while dizzy out of a multi-turn spin, and he has to receive a body arriving with momentum he cannot predict. That combination is what drops people, and it is the one thing on this sheet that no amount of careful reading substitutes for someone spotting you.",
+        },
         beats: [{ from: 7, text: "down" }],
         note: {
           title: "She jumps; he redirects",
@@ -436,6 +572,15 @@ export const MOVEMENTS: Movement[] = [
           "Three seconds down. Head below hips, her supporting leg loaded, free leg extended. His descent is knee-driven, not a backward lean. Hold at the bottom.",
         gear: 2,
         care: true,
+        figure: {
+          name: "Dip",
+          lookUp: ["how to dip your partner", "ballroom dip technique"],
+          steps:
+            "She keeps a straight supporting leg under her and her own core loaded; he lowers by bending his knees, never by leaning back. Her head follows her spine rather than dropping on its own.",
+          effort: "careful",
+          instead:
+            "Take the standard depth, head above hips — Tier C's version. An inverted dip needs her to hold her own weight upside down and him to have a base that does not move, and on camera the difference between a clean standard dip and a wobbling deep one is all in the wobble.",
+        },
         note: {
           title: "Supported, not held",
           body: "Her centre of mass stays over the line between her supporting foot and his, and she keeps her own core loaded. Watch for the skirt bunching behind her and wedging — practise this one in the actual crinoline.",
@@ -509,6 +654,7 @@ const TIER_EDITS: Record<
       detail:
         "She exits the spin and he catches her into a held shape with both feet on the floor, straight on into the dip. Everything either side of this is unchanged.",
       beats: undefined,
+      figure: undefined,
       note: {
         title: "Why this is the first thing to go",
         body: "The lift is the only element carrying altitude, and it is the one the rest of the routine does not depend on. Removing it changes one eight-count.",
@@ -520,6 +666,13 @@ const TIER_EDITS: Record<
       cue: "Static counterbalance",
       detail:
         "Forearm grip into full opposition, but held on the spot — no travel across the floor.",
+      figure: {
+        name: "Counterbalance, held",
+        lookUp: ["acroyoga counterbalance", "partner counterbalance two person"],
+        steps:
+          "The grip and the physics of E29, taken to a deeper angle and held still. Standing still is the easy version: the connection only has to hold one shape rather than survive being walked.",
+        effort: "session",
+      },
     },
     33: {
       cue: "Hold the opposition",
@@ -537,12 +690,20 @@ const TIER_EDITS: Record<
         "She exits the spin into a closed frame, both feet down. Settle, and go straight into the dip.",
       beats: undefined,
       note: undefined,
+      figure: undefined,
       care: false,
     },
     36: {
       cue: "The dip, standard depth",
       detail:
         "Three seconds down to a standard depth — no inversion, head stays above hips. Her supporting leg loaded, his descent knee-driven. Hold.",
+      figure: {
+        name: "Dip, standard depth",
+        lookUp: ["how to dip your partner", "ballroom dip technique"],
+        steps:
+          "She keeps a straight supporting leg under her and her own core loaded; he lowers by bending his knees, never by leaning back. Head stays above hips.",
+        effort: "session",
+      },
       note: {
         title: "Still practise it in the crinoline",
         body: "A shallower dip does not stop the skirt bunching behind her and wedging. That is a gown problem, not a depth problem.",
@@ -574,6 +735,26 @@ export function allCounts(tier: Tier): EightCount[] {
 
 export function movementOf(n: number, tier: Tier = "a") {
   return routine(tier).find((m) => m.counts.some((c) => c.n === n));
+}
+
+/**
+ * Every named figure in the routine, in order, with where it happens. One list
+ * so the whole thing can be watched through in a sitting rather than hunted
+ * down a movement at a time.
+ */
+export function allFigures(tier: Tier = "a") {
+  const found: { where: string; figure: Figure }[] = [];
+  for (const movement of routine(tier)) {
+    if (movement.figure) {
+      found.push({ where: movement.name, figure: movement.figure });
+    }
+    for (const count of movement.counts) {
+      if (count.figure) {
+        found.push({ where: `E${count.n}, ${count.cue}`, figure: count.figure });
+      }
+    }
+  }
+  return found;
 }
 
 /* Protocols --------------------------------------------------------------- */

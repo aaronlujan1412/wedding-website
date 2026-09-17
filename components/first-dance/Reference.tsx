@@ -1,15 +1,19 @@
 import {
+  allFigures,
   BLOCKS,
   CARE,
   CONVENTIONS,
   DECISION_WEEK,
   FLOOR,
   type Protocol,
+  EFFORT,
   SESSION,
   SONG,
+  type Tier,
   trainingWeek,
 } from "@/lib/first-dance";
 import { cn } from "@/lib/utils";
+import { LookUp } from "./Figures";
 import { Strip } from "./Strip";
 
 /**
@@ -20,9 +24,57 @@ import { Strip } from "./Strip";
  * motion were pulled out of here and attached to the eight-counts they belong
  * to, which is why there is no lift section down here.
  */
-export function Reference({ week }: { week: ReturnType<typeof trainingWeek> }) {
+export function Reference({
+  week,
+  tier,
+}: {
+  week: ReturnType<typeof trainingWeek>;
+  tier: Tier;
+}) {
+  const figures = allFigures(tier);
+  const careful = figures.filter((f) => f.figure.effort === "careful").length;
+
   return (
     <div className="mt-24 border-t border-border pt-12">
+      <section className="mb-16">
+        <h2 className="font-garamond text-3xl text-pop">
+          Everything to look up
+        </h2>
+        <p className="mt-1 max-w-[62ch] font-garamond text-lg leading-relaxed text-muted-foreground">
+          Every figure in the routine, in the order you meet it. The sheet
+          described all of these and named none of them, which is workable with
+          a teacher in the room and a dead end without one — you cannot search
+          for a description. Sit down and watch the lot in an evening;{" "}
+          {careful === 1 ? "one of them is" : `${careful} of them are`} worth
+          reading twice before trying.
+        </p>
+        <ul className="mt-6 space-y-5">
+          {figures.map(({ where, figure }) => (
+            <li key={where} className="border-t border-border pt-4">
+              <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
+                <p className="font-garamond text-2xl text-foreground">
+                  {figure.name}
+                </p>
+                <p className="font-mono text-xs tabular-nums slashed-zero text-muted-foreground">
+                  {where}
+                </p>
+              </div>
+              <p
+                className={cn(
+                  "mt-0.5 font-garamond text-base",
+                  figure.effort === "careful"
+                    ? "text-warn"
+                    : "text-muted-foreground",
+                )}
+              >
+                {EFFORT[figure.effort]}
+              </p>
+              <LookUp terms={figure.lookUp} className="mt-2" />
+            </li>
+          ))}
+        </ul>
+      </section>
+
       <div className="space-y-12">
         <section>
           <h2 className="font-garamond text-3xl text-pop">
