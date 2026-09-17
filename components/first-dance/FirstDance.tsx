@@ -18,7 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import { CountRow, HeldRow } from "./CountRow";
 import { FigureCard } from "./Figures";
-import { GearKey } from "./Notation";
+import { Footsteps, GearKey } from "./Notation";
 import { type Mode, SongPanel } from "./SongPanel";
 import {
   loadSong,
@@ -378,6 +378,10 @@ function MovementBlock({
 }) {
   const first = movement.counts[0].n;
   const last = movement.counts[movement.counts.length - 1].n;
+  // The pattern repeats every eight-count, so the beat lights all the way
+  // through the movement rather than only on the one eight-count you are on.
+  const inThis =
+    here !== undefined && movement.counts.some((count) => count.n === here);
 
   return (
     <section id={`m-${movement.id}`} className="scroll-mt-24">
@@ -404,6 +408,13 @@ function MovementBlock({
       )}
 
       {movement.figure && <FigureCard figure={movement.figure} />}
+
+      {movement.footwork && (
+        <Footsteps
+          footwork={movement.footwork}
+          on={inThis && !countIn ? beat : undefined}
+        />
+      )}
 
       {movement.id === "peak" && (
         <div className="mt-5">

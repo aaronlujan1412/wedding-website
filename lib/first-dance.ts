@@ -120,6 +120,22 @@ export type BeatSpan = {
   text: string;
 };
 
+/**
+ * The feet, by beat, for each of you.
+ *
+ * Deliberately the same shape as `BeatSpan` so it draws on the same eight
+ * columns as the choreography does — the footwork is not a different kind of
+ * fact, it is the same eight beats read from the floor up. Seeing both rows
+ * against each other is also the only way to check the thing beginners get
+ * wrong most: which foot you are supposed to finish on.
+ */
+export type Footwork = {
+  lead: BeatSpan[];
+  follow: BeatSpan[];
+  /** Shape, direction, or the thing the feet alone do not say. */
+  note?: string;
+};
+
 export type EightCount = {
   n: number;
   /** Three to five words. The thing you read while moving. */
@@ -137,6 +153,8 @@ export type EightCount = {
   care?: boolean;
   /** Set where this eight-count is its own nameable figure. */
   figure?: Figure;
+  /** Set where the feet depart from the movement's pattern. */
+  footwork?: Footwork;
 };
 
 export type Movement = {
@@ -154,6 +172,8 @@ export type Movement = {
   /** The figure the movement is mostly made of. Individual eight-counts carry
    *  their own where they depart from it. */
   figure?: Figure;
+  /** The repeating pattern under the movement, for the same reason. */
+  footwork?: Footwork;
   counts: EightCount[];
 };
 
@@ -174,6 +194,21 @@ export const MOVEMENTS: Movement[] = [
       effort: "session",
       instead:
         "Dance the real six-step box rather than four even changes. Nothing on the sheet depends on the count of four, and every video you find will show six — translating each one is friction you will pay forty times over. Turn it LEFT, too: a left-turning box is the version everybody teaches.",
+    },
+    footwork: {
+      lead: [
+        { from: 1, to: 2, text: "L forward" },
+        { from: 3, to: 4, text: "R side" },
+        { from: 5, to: 6, text: "L back" },
+        { from: 7, to: 8, text: "R closes" },
+      ],
+      follow: [
+        { from: 1, to: 2, text: "R back" },
+        { from: 3, to: 4, text: "L side" },
+        { from: 5, to: 6, text: "R forward" },
+        { from: 7, to: 8, text: "L closes" },
+      ],
+      note: "This is the six-step box with its two closing steps absorbed, which is what Gear 1's four changes leave room for. The eighth of a turn comes out of the forward and back steps angling a few degrees — never from twisting the frame, which just unscrews you from each other.",
     },
     intent:
       "Deliberately unimpressive. You are setting the baseline that everything after it contrasts against. The slow full rotation is also the answer to a round room: over one minute, every section of it gets a front view without you doing anything.",
@@ -258,6 +293,29 @@ export const MOVEMENTS: Movement[] = [
       instead:
         "The sheet does not say whether you face each other or travel side by side. Face each other: a round room then sees a front and a back rather than two profiles, and backward travel is led rather than guessed — which matters in a gown she cannot see behind.",
     },
+    footwork: {
+      lead: [
+        { from: 1, text: "L fwd" },
+        { from: 2, text: "R" },
+        { from: 3, text: "L" },
+        { from: 4, text: "R" },
+        { from: 5, text: "L" },
+        { from: 6, text: "R" },
+        { from: 7, text: "L" },
+        { from: 8, text: "R" },
+      ],
+      follow: [
+        { from: 1, text: "R back" },
+        { from: 2, text: "L" },
+        { from: 3, text: "R" },
+        { from: 4, text: "L" },
+        { from: 5, text: "R" },
+        { from: 6, text: "L" },
+        { from: 7, text: "R" },
+        { from: 8, text: "L" },
+      ],
+      note: "Eight steps means you finish on the other foot and start the next eight-count on the one you began with — check that and you will catch a dropped step before it compounds. He walks the inside of the arc, so his steps are shorter than hers; the curve comes from both of you angling a few degrees each step rather than from him steering.",
+    },
     intent:
       "The first “look at that” moment is literally just walking. Covering real ground with intent reads as trained; rotating on the spot reads as a school dance. The skirt does the rest.",
     counts: [
@@ -300,6 +358,21 @@ export const MOVEMENTS: Movement[] = [
           effort: "weeks",
           instead:
             "The usual figure here is an underarm turn, and the sheet rules it out for good reason at equal height. A free spin is the named alternative — no raised arm, and no load through her wrists at all, which suits the wrist protocol better than the standard figure does.",
+        },
+        footwork: {
+          lead: [
+            { from: 1, text: "release" },
+            { from: 2, to: 4, text: "hold your ground, stay square to her" },
+            { from: 5, text: "offer the hand" },
+            { from: 6, to: 8, text: "settle, frame back up" },
+          ],
+          follow: [
+            { from: 1, text: "step out" },
+            { from: 2, to: 3, text: "walk the turn round, spotting" },
+            { from: 4, text: "close, facing him" },
+            { from: 5, to: 8, text: "take the hand, settle" },
+          ],
+          note: "A 360° over four beats at this tempo is walked round, not whipped — closer to four steps on a small circle than to a spin. Her head is the only fast thing in it.",
         },
         beats: [
           { from: 1, to: 4, text: "turn" },
@@ -348,6 +421,21 @@ export const MOVEMENTS: Movement[] = [
           { from: 5, text: "back" },
           { from: 7, to: 8, text: "hold" },
         ],
+        footwork: {
+          lead: [
+            { from: 1, to: 2, text: "L back" },
+            { from: 3, to: 4, text: "R back" },
+            { from: 5, to: 6, text: "L back" },
+            { from: 7, to: 8, text: "hold, weight centred" },
+          ],
+          follow: [
+            { from: 1, to: 2, text: "L back" },
+            { from: 3, to: 4, text: "R back" },
+            { from: 5, to: 6, text: "L back" },
+            { from: 7, to: 8, text: "hold, weight centred" },
+          ],
+          note: "The SAME foot each, not mirrored feet. Facing each other and both starting on the left is what the room reads as a mirror; opposite feet would read as one of you getting it wrong.",
+        },
       },
       {
         n: 20,
@@ -355,6 +443,29 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "Walk a circle around a common centre, staying diametrically opposite. Eyes locked across the gap. Eight steps.",
         gear: 2,
+        footwork: {
+          lead: [
+            { from: 1, text: "L fwd" },
+            { from: 2, text: "R" },
+            { from: 3, text: "L" },
+            { from: 4, text: "R" },
+            { from: 5, text: "L" },
+            { from: 6, text: "R" },
+            { from: 7, text: "L" },
+            { from: 8, text: "R" },
+          ],
+          follow: [
+            { from: 1, text: "L fwd" },
+            { from: 2, text: "R" },
+            { from: 3, text: "L" },
+            { from: 4, text: "R" },
+            { from: 5, text: "L" },
+            { from: 6, text: "R" },
+            { from: 7, text: "L" },
+            { from: 8, text: "R" },
+          ],
+          note: "Both walking forward, same foot, half a circle each across the eight-count. If you can see the other's face straight across the middle the whole way, you are still opposite — that is the only check you need, and it is why the eyes stay locked.",
+        },
       },
       {
         n: 21,
@@ -384,6 +495,21 @@ export const MOVEMENTS: Movement[] = [
           { from: 5, to: 6, text: "sweep down, shift" },
           { from: 7, to: 8, text: "turn back to face" },
         ],
+        footwork: {
+          lead: [
+            { from: 1, to: 2, text: "feet still, weight centred" },
+            { from: 3, to: 4, text: "quarter turn on both balls" },
+            { from: 5, to: 6, text: "weight to the outside foot" },
+            { from: 7, to: 8, text: "quarter turn back" },
+          ],
+          follow: [
+            { from: 1, to: 2, text: "feet still, weight centred" },
+            { from: 3, to: 4, text: "quarter turn on both balls" },
+            { from: 5, to: 6, text: "weight to the outside foot" },
+            { from: 7, to: 8, text: "quarter turn back" },
+          ],
+          note: "Almost no footwork, which is exactly why it is hard — with nothing travelling, the only thing keeping you together is the count. Both of you turn away from each other on 3, so the room sees the shape open outward.",
+        },
         note: {
           title: "Drill this one dry",
           body: "Metronome, no music, until it is automatic — then put the song back. This is the eight-count most worth over-rehearsing.",
@@ -394,6 +520,29 @@ export const MOVEMENTS: Movement[] = [
         cue: "Walk back in",
         detail: "Eight slow steps toward each other.",
         gear: 2,
+        footwork: {
+          lead: [
+            { from: 1, text: "L fwd" },
+            { from: 2, text: "R" },
+            { from: 3, text: "L" },
+            { from: 4, text: "R" },
+            { from: 5, text: "L" },
+            { from: 6, text: "R" },
+            { from: 7, text: "L" },
+            { from: 8, text: "R closes" },
+          ],
+          follow: [
+            { from: 1, text: "L fwd" },
+            { from: 2, text: "R" },
+            { from: 3, text: "L" },
+            { from: 4, text: "R" },
+            { from: 5, text: "L" },
+            { from: 6, text: "R" },
+            { from: 7, text: "L" },
+            { from: 8, text: "R closes" },
+          ],
+          note: "Eight feet of floor in eight steps, so they are ordinary walking steps, not lunges. Same foot each again — you are still mirrored until the moment you close.",
+        },
         beats: [{ from: 8, text: "close" }],
       },
     ],
@@ -405,11 +554,36 @@ export const MOVEMENTS: Movement[] = [
     gearLabel: "Gear 2 → 3 → 2",
     heat: 0.75,
     figure: {
-      name: "Travelling box, into pivots",
-      lookUp: ["rumba progressive box", "closed position walks dance"],
+      name: "Closed-position walks, curving",
+      lookUp: ["closed position walks dance", "rumba progressive walks"],
       steps:
-        "The same box as Settle, but let each one land a little further round the circle instead of closing exactly. A box that does not quite close is how a stationary figure travels.",
+        "The walking from Open, but in closed frame and on a wider circle. He goes forward, she goes back, one step a beat.",
+      timing:
+        "Gear 2 is eight changes an eight-count and a box is six steps, so this cannot be a box however it is shaped. Settle is the box; Build is the same walking as Open with the frame closed.",
       effort: "session",
+    },
+    footwork: {
+      lead: [
+        { from: 1, text: "L fwd" },
+        { from: 2, text: "R" },
+        { from: 3, text: "L" },
+        { from: 4, text: "R" },
+        { from: 5, text: "L" },
+        { from: 6, text: "R" },
+        { from: 7, text: "L" },
+        { from: 8, text: "R" },
+      ],
+      follow: [
+        { from: 1, text: "R back" },
+        { from: 2, text: "L" },
+        { from: 3, text: "R" },
+        { from: 4, text: "L" },
+        { from: 5, text: "R" },
+        { from: 6, text: "L" },
+        { from: 7, text: "R" },
+        { from: 8, text: "L" },
+      ],
+      note: "Open's walk with the frame closed and the circle wider. In closed hold she cannot see where she is going at all, so he checks the path over her shoulder and the steps stay short enough to stop inside one.",
     },
     intent:
       "The gear change is the point. The room's ear is calibrated to 70 by now; at E27 the rate of visible events doubles. It costs almost nothing technically and reads as a burst of skill.",
@@ -449,6 +623,17 @@ export const MOVEMENTS: Movement[] = [
           instead:
             "Build to one full rotation, then two. Three at speed is a lot of dizziness to carry into what comes after, and a skirt at flare is a skirt you can stand on.",
         },
+        footwork: {
+          lead: [
+            { from: 1, to: 4, text: "eight small steps — about one turn" },
+            { from: 5, to: 8, text: "eight more — the second turn" },
+          ],
+          follow: [
+            { from: 1, to: 4, text: "eight small steps, mirroring him" },
+            { from: 5, to: 8, text: "eight more, square up on 8" },
+          ],
+          note: "Sixteen steps in the eight-count, one every half beat. Keep every one of them underneath your own body — a rotation that travels is a rotation that finds the cake table. Neither of you steers: rotate as one piece and let the frame hold the shape.",
+        },
       },
       {
         n: 28,
@@ -472,6 +657,17 @@ export const MOVEMENTS: Movement[] = [
           effort: "session",
           instead:
             "Nothing — this is the best element in the routine to learn without a teacher. At near-equal mass it is self-correcting: too little lean and you simply stand up, too much and you feel it immediately. The acro videos are the clearest, because they explain the physics rather than the styling.",
+        },
+        footwork: {
+          lead: [
+            { from: 1, to: 2, text: "feet apart, plant, set the grip" },
+            { from: 3, to: 8, text: "shuffle round — small steps, never crossed" },
+          ],
+          follow: [
+            { from: 1, to: 2, text: "feet apart, plant, set the grip" },
+            { from: 3, to: 8, text: "shuffle round, weight back the whole way" },
+          ],
+          note: "Feet stay wide and never cross — a crossed foot is the one thing that can take the base out from under a counterbalance. You rotate by shuffling, not by stepping over.",
         },
         note: {
           title: "Both of you lean away",
@@ -518,6 +714,15 @@ export const MOVEMENTS: Movement[] = [
           instead:
             "Take the angle in stages across the weeks — 20°, then 25°, then 30°. At 35° a broken connection puts both of you down, and the only thing that stops it breaking is having done it enough times to feel it going.",
         },
+        footwork: {
+          lead: [
+            { from: 1, to: 8, text: "walk the curve — short steps, weight back against her the whole way" },
+          ],
+          follow: [
+            { from: 1, to: 8, text: "off your own balance throughout; feet follow his path, hips stay under you" },
+          ],
+          note: "Neither of you recovers to vertical until E33's 7. If one of you keeps drifting upright to feel safe, the other is suddenly holding a person — which is the failure this figure has, and it arrives without warning.",
+        },
       },
       {
         n: 33,
@@ -542,6 +747,19 @@ export const MOVEMENTS: Movement[] = [
           instead:
             "Cut it to two rotations, and have him hold his own orientation instead of counter-rotating. Three or four consecutive turns is months of work on its own, and the counter-rotation buys a moment of spectacle at the price of a lead who is dizzy and facing the wrong way at exactly the count he has to catch her on.",
         },
+        footwork: {
+          lead: [
+            { from: 1, text: "low cue, release" },
+            { from: 2, to: 6, text: "your own rotation, opposite way" },
+            { from: 7, to: 8, text: "square up, find her" },
+          ],
+          follow: [
+            { from: 1, text: "step out" },
+            { from: 2, to: 6, text: "turn, spotting every one" },
+            { from: 7, to: 8, text: "last turn, find him, feet under you" },
+          ],
+          note: "He has to square up and find her by 8, because the catch is on the next 5. Her spot point has to be him, not a wall — she arrives needing to know where he is, not where the room is. This is the eight-count the whole Peak hangs on: everything after it assumes you both finish it facing each other and balanced.",
+        },
       },
       {
         n: 35,
@@ -558,6 +776,23 @@ export const MOVEMENTS: Movement[] = [
           effort: "careful",
           instead:
             "Dance Tier B. Not because the lift is beyond you, but because of what it is entered from: she has to find a jump on a specific count while dizzy out of a multi-turn spin, and he has to receive a body arriving with momentum he cannot predict. That combination is what drops people, and it is the one thing on this sheet that no amount of careful reading substitutes for someone spotting you.",
+        },
+        footwork: {
+          lead: [
+            { from: 1, to: 4, text: "feet apart, knees soft, hands ready at her waist" },
+            { from: 5, text: "catch, from the legs" },
+            { from: 6, text: "turn 180°" },
+            { from: 7, text: "set down" },
+            { from: 8, text: "settle" },
+          ],
+          follow: [
+            { from: 1, to: 4, text: "exit the spin, feet under you, find him" },
+            { from: 5, text: "jump" },
+            { from: 6, text: "stay long" },
+            { from: 7, text: "land, both feet" },
+            { from: 8, text: "settle" },
+          ],
+          note: "Her jump comes from the knees and she stays long in the air; he takes it with his legs, never by pulling with his arms. The timing is hers and he only redirects it. If he is pulling on 5, the count went wrong — stop and reset rather than finishing it. Practise the jump and catch standing still, on a count, dozens of times before it ever comes out of a spin.",
         },
         beats: [{ from: 7, text: "down" }],
         note: {
@@ -581,6 +816,17 @@ export const MOVEMENTS: Movement[] = [
           instead:
             "Take the standard depth, head above hips — Tier C's version. An inverted dip needs her to hold her own weight upside down and him to have a base that does not move, and on camera the difference between a clean standard dip and a wobbling deep one is all in the wobble.",
         },
+        footwork: {
+          lead: [
+            { from: 1, to: 4, text: "down over three seconds — bend the knees, spine stays upright" },
+            { from: 5, to: 8, text: "hold, and keep breathing" },
+          ],
+          follow: [
+            { from: 1, to: 4, text: "supporting leg straight under you, free leg extends" },
+            { from: 5, to: 8, text: "hold — your core, not his arms" },
+          ],
+          note: "His feet are apart and staggered, front foot between hers, so the base is a triangle rather than a line. Her weight stays over the line between her standing foot and his front one; the moment it goes outside that, he is lifting instead of supporting.",
+        },
         note: {
           title: "Supported, not held",
           body: "Her centre of mass stays over the line between her supporting foot and his, and she keeps her own core loaded. Watch for the skirt bunching behind her and wedging — practise this one in the actual crinoline.",
@@ -592,6 +838,17 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "Three seconds of recovery, straight up, into a held close position.",
         gear: 2,
+        footwork: {
+          lead: [
+            { from: 1, to: 4, text: "straighten the knees — no pulling with the arms" },
+            { from: 5, to: 8, text: "close, held" },
+          ],
+          follow: [
+            { from: 1, to: 4, text: "come up through your own standing leg" },
+            { from: 5, to: 8, text: "close, held" },
+          ],
+          note: "Up the same way you went down and at the same speed. A dip that drops in three seconds and snaps up in one looks like a rescue.",
+        },
       },
     ],
   },
@@ -610,6 +867,15 @@ export const MOVEMENTS: Movement[] = [
         detail:
           "Closed frame, near-motionless, one slow quarter rotation. Kiss or held pose on the final chord — and stay there until the track has genuinely ended.",
         gear: 2,
+        footwork: {
+          lead: [
+            { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
+          ],
+          follow: [
+            { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
+          ],
+          note: "There is no footwork left to get wrong here, which is the point. The only mistake available is moving too soon.",
+        },
       },
     ],
   },

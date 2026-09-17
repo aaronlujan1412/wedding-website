@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import {
   type BeatSpan,
+  type Footwork,
   type Gear,
   GEARS,
   weightedBeats,
@@ -100,17 +101,45 @@ export function Pips({
  * phrase in four pairs. Everywhere else the eight-count is the unit and a beat
  * grid would be eight empty boxes.
  */
-export function BeatStrip({ beats, on }: { beats: BeatSpan[]; on?: number }) {
+export function BeatStrip({
+  beats,
+  on,
+  label,
+  numbers = true,
+  className,
+}: {
+  beats: BeatSpan[];
+  on?: number;
+  /** Set when two strips are stacked and you need to know whose feet. */
+  label?: string;
+  numbers?: boolean;
+  className?: string;
+}) {
   const covers = (span: BeatSpan) =>
     on !== undefined && on >= span.from && on <= (span.to ?? span.from);
 
+  // Whether the eight columns survive a phone. A column is about 41px at
+  // 390px wide, so roughly seven characters fit in one — and a span two beats
+  // long has twice the room. Short enough and the grid is kept at every width,
+  // because listing "L R L R" as sixteen rows of one letter buries the only
+  // thing it is for: seeing at a glance which foot you finish on.
+  const terse = beats.every(
+    (span) =>
+      span.text.length <= 7 * ((span.to ?? span.from) - span.from + 1),
+  );
+
   return (
-    <>
+    <div className={cn("mt-3", className)}>
+      {label && (
+        <p className="mb-1 font-raleway text-[0.65rem] tracking-[0.2em] text-muted-foreground uppercase">
+          {label}
+        </p>
+      )}
       {/* Below sm the eight columns come out around 37px and clip every label.
           The grid's information is WHERE in the eight-count, and at phone width
           the beat numbers say that in far less room. Both are in the DOM and
           CSS picks one, so there is no media-query hook and no hydration flash. */}
-      <ul className="mt-3 space-y-1 sm:hidden">
+      <ul className={cn("space-y-1 sm:hidden", terse && "hidden")}>
         {beats.map((span) => (
           <li
             key={span.from}
@@ -129,7 +158,7 @@ export function BeatStrip({ beats, on }: { beats: BeatSpan[]; on?: number }) {
         ))}
       </ul>
 
-      <div className="mt-3 max-w-lg max-sm:hidden">
+      <div className={cn("max-w-lg", !terse && "max-sm:hidden")}>
         <div className="grid grid-cols-8 gap-px overflow-hidden rounded-sm border border-border bg-border">
           {beats.map((span) => (
             <div
@@ -142,7 +171,8 @@ export function BeatStrip({ beats, on }: { beats: BeatSpan[]; on?: number }) {
                 gridColumn: `${span.from} / ${(span.to ?? span.from) + 1}`,
               }}
               className={cn(
-                "px-1.5 py-1 font-garamond text-sm leading-snug",
+                "px-1.5 py-1 font-garamond leading-snug",
+                terse ? "text-center text-xs sm:text-sm" : "text-sm",
                 covers(span)
                   ? "bg-primary text-primary-foreground"
                   : "bg-card text-foreground",
@@ -162,6 +192,7 @@ export function BeatStrip({ beats, on }: { beats: BeatSpan[]; on?: number }) {
             />
           ))}
         </div>
+        {numbers && (
         <div className="mt-1 grid grid-cols-8 px-1.5">
           {BEATS.map((b) => (
             <span
@@ -175,8 +206,43 @@ export function BeatStrip({ beats, on }: { beats: BeatSpan[]; on?: number }) {
             </span>
           ))}
         </div>
+        )}
       </div>
-    </>
+    </div>
+  );
+}
+
+/**
+ * Both of you, on the same eight beats.
+ *
+ * Stacked rather than side by side so the columns line up: the useful thing is
+ * reading straight down a beat and seeing what each of you is doing on it. It
+ * also makes the commonest beginner error checkable at a glance — whether you
+ * finish the eight-count on the foot that lets you start the next one.
+ */
+export function Footsteps({
+  footwork,
+  on,
+}: {
+  footwork: Footwork;
+  on?: number;
+}) {
+  return (
+    <div className="mt-4">
+      <BeatStrip
+        beats={footwork.lead}
+        on={on}
+        label="Lead"
+        numbers={false}
+        className="mt-0"
+      />
+      <BeatStrip beats={footwork.follow} on={on} label="Follow" className="mt-2" />
+      {footwork.note && (
+        <p className="mt-2 max-w-[62ch] font-garamond text-base leading-relaxed text-muted-foreground">
+          {footwork.note}
+        </p>
+      )}
+    </div>
   );
 }
 

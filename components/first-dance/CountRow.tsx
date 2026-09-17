@@ -4,7 +4,7 @@ import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clock, type EightCount, startOf } from "@/lib/first-dance";
 import { FigureCard } from "./Figures";
-import { BeatStrip, Pips } from "./Notation";
+import { BeatStrip, Footsteps, Pips } from "./Notation";
 
 /**
  * One eight-count.
@@ -84,6 +84,13 @@ export function CountRow({
         {count.beats && (
           <BeatStrip
             beats={count.beats}
+            on={active && !countIn ? beat : undefined}
+          />
+        )}
+
+        {count.footwork && (
+          <Footsteps
+            footwork={count.footwork}
             on={active && !countIn ? beat : undefined}
           />
         )}
