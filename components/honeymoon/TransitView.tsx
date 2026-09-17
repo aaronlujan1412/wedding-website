@@ -120,7 +120,7 @@ export function TransitView({
         {decided.length === 0 ? (
           <p className="mt-6 rounded-lg border border-dashed border-border px-6 py-10 text-center font-garamond text-lg text-muted-foreground">
             Nothing booked yet. Add the first train and it&apos;ll show up on
-            the board and the pocket print.
+            the board and in the itinerary.
           </p>
         ) : (
           <ol className="mt-8 space-y-10">

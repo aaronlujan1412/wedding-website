@@ -16,8 +16,8 @@ export const POOL = "pool";
 /**
  * The three rows of the board.
  *
- * `decided` is the final draft and the only lane the itinerary and the pocket
- * print read. The other two are drafting rows — throw anything in, argue later,
+ * `decided` is the final draft and the only lane the itinerary, and its
+ * printout, read. The other two are drafting rows — throw anything in, argue later,
  * and promote the card when you agree. A lane is where a card sits now;
  * `added_by` is who thought of it and never changes.
  */
@@ -617,6 +617,31 @@ export function hoursProblems(
 function toClock(minutes: number): string {
   const total = minutes % (24 * 60);
   return `${String(Math.floor(total / 60)).padStart(2, "0")}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/* ---------------------------------------------------------------- links -- */
+
+/**
+ * Where a card is, on a map.
+ *
+ * `map_url` is a pin somebody saved, so it wins outright. Most cards never get
+ * one, and a name and a city are enough to find a place — so the fallback is a
+ * maps search, offered as a search rather than as a pin, because it can land
+ * on the wrong branch of the same ramen chain.
+ *
+ * The Japanese name goes into that search when the card has one. Maps finds
+ * 伏見稲荷大社 first time; "Fushimi Inari" competes with every blog post ever
+ * written about it.
+ */
+export function mapsLink(item: TripItem): { href: string; saved: boolean } {
+  if (item.map_url) return { href: item.map_url, saved: true };
+  const query =
+    item.address ??
+    [item.title_ja ?? item.title, item.city].filter(Boolean).join(" ");
+  return {
+    href: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+    saved: false,
+  };
 }
 
 /* ------------------------------------------------------------- the rail -- */

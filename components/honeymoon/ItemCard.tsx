@@ -18,6 +18,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ItemMenu, cardKeys } from "./CardMenu";
 import { Seal, StatusLabel, TONE_INK } from "./Seal";
 import { useRate } from "./RateContext";
 import { useBoardData } from "./BoardContext";
@@ -33,7 +34,7 @@ import {
   itemWarnings,
   kindOf,
 } from "./trip";
-import type { Lane, TripItem } from "./types";
+import type { BookingStatus, Lane, TripItem } from "./types";
 
 export type CardActions = {
   onEdit: (item: TripItem) => void;
@@ -45,6 +46,20 @@ export type CardActions = {
   onCopy: (item: TripItem, lane: Lane) => void;
   /** Goes straight away, with an undo in the toast rather than a confirm. */
   onDelete: (item: TripItem) => void;
+
+  /* The right-click menu's half. Everything above is a button on the card. */
+
+  /** Onto the board's clipboard. A cut card moves when it lands. */
+  onClip: (item: TripItem, cut: boolean) => void;
+  /** Whatever is on the clipboard, into this cell. */
+  onPaste: (lane: Lane, onDate: string | null) => void;
+  /** A second copy in the same cell. */
+  onDuplicate: (item: TripItem) => void;
+  /** One column, without opening the form. */
+  onFlag: (item: TripItem, flag: "must_do" | "pinned", value: boolean) => void;
+  onStatus: (item: TripItem, status: BookingStatus) => void;
+  /** Anywhere on the board: another lane, another day, or back to the pile. */
+  onSend: (item: TripItem, lane: Lane, onDate: string | null) => void;
 };
 
 /** An idea card's copy goes to the other person's lane. Decided has none. */
@@ -96,8 +111,11 @@ export function ItemCardFace({
 
   const unsorted = item.kind === "unsorted";
 
-  return (
+  const card = (
     <article
+      onKeyDown={
+        actions && !overlay ? (e) => cardKeys(e, item, actions) : undefined
+      }
       className={cn(
         "group relative flex gap-2 overflow-hidden rounded-md border border-border bg-card",
         "transition-shadow",
@@ -221,6 +239,15 @@ export function ItemCardFace({
       </div>
     </article>
   );
+
+  // The card under the pointer mid-drag is a picture of a card, not one.
+  return actions && !overlay ? (
+    <ItemMenu item={item} actions={actions}>
+      {card}
+    </ItemMenu>
+  ) : (
+    card
+  );
 }
 
 /**
@@ -251,8 +278,11 @@ function BlockoutBand({
   const board = useBoardData();
   const detail = blockoutDetail(item, board);
 
-  return (
+  const band = (
     <article
+      onKeyDown={
+        actions && !overlay ? (e) => cardKeys(e, item, actions) : undefined
+      }
       className={cn(
         "group relative flex overflow-hidden rounded-sm",
         overlay && "shadow-lg ring-1 ring-primary/30",
@@ -330,6 +360,14 @@ function BlockoutBand({
         )}
       </div>
     </article>
+  );
+
+  return actions && !overlay ? (
+    <ItemMenu item={item} actions={actions}>
+      {band}
+    </ItemMenu>
+  ) : (
+    band
   );
 }
 

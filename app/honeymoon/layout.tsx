@@ -4,7 +4,7 @@ import { SectionTabBar } from "@/components/honeymoon/SectionTabs";
 /**
  * Shared frame for every honeymoon tab: the planner bar, once, and the phone's
  * bottom tab bar. Pages render only their own content underneath. Neither bar
- * prints, so the pocket card prints as just the sheets.
+ * prints, so the itinerary prints as just its sheets.
  *
  * This sits outside app/(site), so none of the guest site's chrome — navbar,
  * footer, RSVP modal — is drawn here.

@@ -660,6 +660,92 @@ export type Database = {
           },
         ]
       }
+      trip_notebooks: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner: Database["public"]["Enums"]["trip_planner"] | null
+          position: number
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner?: Database["public"]["Enums"]["trip_planner"] | null
+          position?: number
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner?: Database["public"]["Enums"]["trip_planner"] | null
+          position?: number
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_notebooks_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trip_notes: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          notebook_id: string
+          on_date: string | null
+          title: string
+          trip_id: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          notebook_id: string
+          on_date?: string | null
+          title?: string
+          trip_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          notebook_id?: string
+          on_date?: string | null
+          title?: string
+          trip_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_notes_notebook_id_fkey"
+            columns: ["notebook_id"]
+            isOneToOne: false
+            referencedRelation: "trip_notebooks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_notes_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_route_proposals: {
         Row: {
           created_at: string

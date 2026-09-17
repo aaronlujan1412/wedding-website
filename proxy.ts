@@ -33,5 +33,6 @@ export const config = {
     "/photo-review/:path*",
     "/honeymoon",
     "/honeymoon/:path*",
+    "/first-dance",
   ],
 };

@@ -1,7 +1,8 @@
 "use client";
 
-import { BedDouble, Check, Plane, Plus } from "lucide-react";
+import { BedDouble, Check, Compass, Plane, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { agreesWithDecided, routeRank } from "./lodging";
 import {
   formatNights,
   isStayAdopted,
@@ -11,8 +12,8 @@ import {
   staysIn,
   type Night,
 } from "./stays";
-import { LANES, PLANNERS, addDays, legForDay, legsIn, parseDay } from "./trip";
-import type { Lane, TripLeg, TripStay } from "./types";
+import { LANES, PLANNERS, addDays, formatYen, legForDay, legsIn, parseDay } from "./trip";
+import type { Lane, ProposedRoute, StayProposal, TripLeg, TripStay } from "./types";
 
 /** The lane-name column. Narrower on a phone, where every night counts. */
 const LABEL_WIDTH = "var(--strip-label)";
@@ -29,12 +30,19 @@ const NIGHT_WIDTH = "2.75rem";
  * Suggestions in a planner's lane can overlap, so each lane stacks into as
  * many rows as its most contested night needs. Bars link down to the stay's
  * details rather than opening a form: on a phone the strip is for looking.
+ *
+ * The finder's routes are rows under the people's, one per route, drawn only
+ * where they say something: a stretch the agreed plan already sleeps in reads
+ * "same", and a stretch over nights with no bed is drawn in the same amber the
+ * hole above it is, because it is an answer to that hole.
  */
 export function NightsStrip({
   columns,
   nights,
   legs,
   stays,
+  routes,
+  anchors,
   tonight,
   onCreate,
 }: {
@@ -42,6 +50,10 @@ export function NightsStrip({
   nights: Night[];
   legs: TripLeg[];
   stays: TripStay[];
+  /** The finder's routes, cheapest first. */
+  routes: ProposedRoute[];
+  /** Where a finder row's bar links to in the list below. */
+  anchors: Map<string, string>;
   tonight: string;
   onCreate: (lane: Lane, from: string, to: string) => void;
 }) {
@@ -62,10 +74,18 @@ export function NightsStrip({
     return { lane, rows: rows.length ? rows : [[]], start, count };
   });
 
+  const finderStart = nextRow;
+  nextRow += routes.length;
+
   const place = (row: number, column: number, span = 1) => ({
     gridRow: row,
     gridColumn: `${column + 2} / span ${span}`,
   });
+
+  /** Nights inside the agreed trip that nothing sleeps in. */
+  const openNights = new Set(
+    nights.filter((n) => !n.stay && !n.onPlane).map((n) => n.date),
+  );
 
   return (
     <div className="overflow-x-auto rounded-lg border border-border bg-card">
@@ -95,6 +115,16 @@ export function NightsStrip({
           className="border-t border-border"
           style={{ gridRow: 3, gridColumn: "1 / -1" }}
         />
+        {routes.length > 0 && (
+          <div
+            aria-hidden="true"
+            className="border-t border-border bg-muted/40"
+            style={{
+              gridRow: `${finderStart} / span ${routes.length}`,
+              gridColumn: "1 / -1",
+            }}
+          />
+        )}
         {columns.map((date, i) =>
           i === 0 ? null : (
             <div
@@ -239,6 +269,21 @@ export function NightsStrip({
             onCreate={onCreate}
           />
         ))}
+
+        {routes.map((route, i) => (
+          <FinderRow
+            key={route.id}
+            route={route}
+            rank={routeRank(i)}
+            first={i === 0}
+            row={finderStart + i}
+            columns={columns}
+            stays={stays}
+            openNights={openNights}
+            anchors={anchors}
+            place={place}
+          />
+        ))}
       </div>
     </div>
   );
@@ -320,6 +365,149 @@ function LaneRows({
       )}
     </>
   );
+}
+
+/**
+ * One published route, drawn across the nights it books. It is not part of the
+ * plan and never adopts on its own — the bar links down to the option in the
+ * list, where it can be sent to a lane.
+ */
+function FinderRow({
+  route,
+  rank,
+  first,
+  row,
+  columns,
+  stays,
+  openNights,
+  anchors,
+  place,
+}: {
+  route: ProposedRoute;
+  rank: string;
+  first: boolean;
+  row: number;
+  columns: string[];
+  stays: TripStay[];
+  openNights: Set<string>;
+  anchors: Map<string, string>;
+  place: (row: number, column: number, span?: number) => React.CSSProperties;
+}) {
+  const total = route.lodging_yen + route.travel_yen;
+
+  return (
+    <>
+      <div
+        className="sticky left-0 z-10 flex items-center gap-1.5 border-r border-border bg-muted/40 px-3 py-1"
+        style={{ gridRow: row, gridColumn: 1 }}
+      >
+        {first && (
+          <Compass
+            className="h-3 w-3 flex-none text-muted-foreground max-sm:hidden"
+            strokeWidth={1.75}
+            aria-hidden="true"
+          />
+        )}
+        <span
+          className="min-w-0 font-raleway text-[0.6rem] uppercase tracking-[0.15em] text-muted-foreground"
+          // The total is in the list of routes under the page; up here it
+          // cost the row's name the space to be read.
+          title={`${formatYen(total)} · ${formatYen(route.lodging_yen)} beds${route.travel_yen > 0 ? ` + ${formatYen(route.travel_yen)} travel` : ""}`}
+        >
+          {first && <span className="block">Finder</span>}
+          <span className="block truncate">{rank}</span>
+        </span>
+      </div>
+
+      {runs(columns, (date) => {
+        const stay = route.stays.find(
+          (s) => s.check_in_on <= date && date < s.check_out_on,
+        );
+        return stay ? stay.id : null;
+      }).map((run) => {
+        const at = place(row, run.column, run.span);
+        const proposal = run.key
+          ? route.stays.find((s) => s.id === run.key)
+          : undefined;
+        if (!proposal) return <div key={`${route.id}-${run.from}`} style={at} />;
+
+        // A stretch the plan already sleeps in is worth one quiet word.
+        if (agreesWithDecided(proposal, stays)) {
+          return (
+            <div
+              key={proposal.id}
+              style={at}
+              className="flex items-center justify-center overflow-hidden px-1 py-1"
+            >
+              <span className="truncate font-garamond text-xs text-muted-foreground italic">
+                same
+              </span>
+            </div>
+          );
+        }
+
+        const fills = nightsOf(proposal).some((n) => openNights.has(n));
+        return (
+          <div key={proposal.id} style={at} className="flex px-0.5 py-1">
+            <FinderBar
+              proposal={proposal}
+              fills={fills}
+              href={`#${anchors.get(proposal.id) ?? `finder-${proposal.id}`}`}
+            />
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+function FinderBar({
+  proposal,
+  fills,
+  href,
+}: {
+  proposal: StayProposal;
+  fills: boolean;
+  href: string;
+}) {
+  const nights = nightsOf(proposal).length;
+  return (
+    <a
+      href={href}
+      title={[
+        proposal.place_name,
+        formatNights(nights),
+        proposal.cost_yen !== null && formatYen(proposal.cost_yen),
+        fills && "over nights with no bed",
+      ]
+        .filter(Boolean)
+        .join(" · ")}
+      className={cn(
+        "flex h-7 min-w-0 flex-1 items-center gap-1.5 overflow-hidden rounded-md border border-dotted px-1.5 transition-colors",
+        "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring",
+        fills
+          ? "border-pending bg-pending/5 text-pending hover:bg-pending/10"
+          : "border-border bg-background/60 text-muted-foreground hover:bg-background",
+      )}
+    >
+      <span className="truncate font-raleway text-[0.65rem]">
+        {proposal.place_name}
+      </span>
+    </a>
+  );
+}
+
+/** The nights a proposal covers, named by the evening they start. */
+function nightsOf(proposal: StayProposal): string[] {
+  const out: string[] = [];
+  for (
+    let night = proposal.check_in_on;
+    night < proposal.check_out_on;
+    night = addDays(night, 1)
+  ) {
+    out.push(night);
+  }
+  return out;
 }
 
 function StayBar({

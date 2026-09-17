@@ -28,7 +28,6 @@ const DENIED = { data: null, error: "Not authorised." };
 function refresh() {
   revalidatePath("/honeymoon");
   revalidatePath("/honeymoon/itinerary");
-  revalidatePath("/honeymoon/pocket");
   revalidatePath("/honeymoon/lodging");
   revalidatePath("/hosts");
 }
@@ -271,11 +270,22 @@ export async function setItemDuration(id: string, minutes: number) {
 }
 
 /**
- * Take a copy of someone's idea into another lane, same day, bottom of the
- * cell. The original stays where it is, and `added_by` comes along unchanged —
- * it's still their idea.
+ * Take a copy of a card: into another lane on the same day (the card's copy
+ * button), or into any cell at all (a paste). The original stays where it is,
+ * and `added_by` comes along unchanged — it's still their idea.
+ *
+ * One thing does not come along. A copy is a plan, not a reservation: two
+ * cards carrying the same confirmation number is how you end up at a counter
+ * that has never heard of you, so the copy lands as an idea with no reference.
+ * The booking link and the date bookings open both stay, because those belong
+ * to the place rather than to this particular booking.
  */
-export async function copyItem(id: string, lane: Lane) {
+export async function copyItem(
+  id: string,
+  lane: Lane,
+  /** Left out, the copy lands on the source's own day. */
+  onDate?: string | null,
+) {
   if (!(await isHost())) return DENIED;
 
   const { data: source, error: readError } = await supabase
@@ -288,15 +298,19 @@ export async function copyItem(id: string, lane: Lane) {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { id: _id, created_at, updated_at, position, ...fields } = source;
+  const day = onDate === undefined ? source.on_date : onDate;
 
   const { data, error } = await supabase
     .from("trip_items")
     .insert({
       ...fields,
       lane,
+      on_date: day,
+      booking_status: "idea",
+      booking_ref: null,
       // The copy belongs to the same trip as the card it came from.
       trip_id: source.trip_id,
-      position: await nextPosition(lane, source.on_date),
+      position: await nextPosition(lane, day),
     })
     .select()
     .single();
@@ -314,6 +328,30 @@ export async function setBookingStatus(id: string, status: BookingStatus) {
   const { error } = await supabase
     .from("trip_items")
     .update({ booking_status: status, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  return { data: true, error: null };
+}
+
+/**
+ * The other two switches that shouldn't need the form open: must-do, and
+ * pinned. One column each, so two people editing the same card at once can't
+ * undo each other's typing by ticking a box.
+ */
+export async function setItemFlag(
+  id: string,
+  flag: "must_do" | "pinned",
+  value: boolean,
+) {
+  if (!(await isHost())) return DENIED;
+
+  const patch = flag === "pinned" ? { pinned: value } : { must_do: value };
+  const { error } = await supabase
+    .from("trip_items")
+    .update({ ...patch, updated_at: new Date().toISOString() })
     .eq("id", id);
 
   if (error) return { data: null, error: error.message };
@@ -639,5 +677,146 @@ export async function restoreItem(row: TripItem) {
   if (error) return { data: null, error: error.message };
 
   refresh();
+  return { data: true, error: null };
+}
+
+/* ---------------------------------------------------------------- notes -- */
+
+/**
+ * Notebooks and the notes in them.
+ *
+ * A note saves while it is still being written, so `saveNote` is called far
+ * more often than any other write here: it returns the row rather than
+ * revalidating every planner page, and only a note tied to a day refreshes the
+ * pages that draw it.
+ */
+export async function saveNotebook(
+  id: string | null,
+  name: string,
+  owner: Planner | null,
+) {
+  if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+  const title = name.trim();
+  if (!title) return { data: null, error: "A notebook needs a name." };
+
+  const now = new Date().toISOString();
+  const { data, error } = id
+    ? await supabase
+        .from("trip_notebooks")
+        .update({ name: title, owner, updated_at: now })
+        .eq("id", id)
+        .select()
+        .single()
+    : await supabase
+        .from("trip_notebooks")
+        .insert({ trip_id: trip, name: title, owner, position: Date.now() })
+        .select()
+        .single();
+
+  if (error) return { data: null, error: error.message };
+  revalidatePath("/honeymoon/notes");
+  return { data, error: null };
+}
+
+/**
+ * Deleting a notebook takes its notes with it (`on delete cascade`), so the
+ * caller has to have said so. An empty one goes without ceremony.
+ */
+export async function deleteNotebook(id: string) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase.from("trip_notebooks").delete().eq("id", id);
+  if (error) return { data: null, error: error.message };
+
+  revalidatePath("/honeymoon/notes");
+  return { data: true, error: null };
+}
+
+export type NoteInput = {
+  title?: string;
+  body?: string;
+  /** A day this note is about, or null to set it loose again. */
+  on_date?: string | null;
+};
+
+export async function saveNote(
+  id: string | null,
+  notebookId: string,
+  input: NoteInput,
+  /**
+   * The note's `updated_at` as the writer last saw it. Both of them share one
+   * login and the tab refreshes itself, so the same note can be open twice.
+   * When it has moved on since, the other version is kept below a rule rather
+   * than overwritten — the save that loses a paragraph is the one nobody
+   * forgives.
+   */
+  expected?: string | null,
+) {
+  if (!(await isHost())) return DENIED;
+  const trip = await currentTripId();
+  if (!trip) {
+    return { data: null, error: "There's no trip yet. Make one first." };
+  }
+
+  let body = input.body ?? "";
+  if (id && expected) {
+    const { data: current } = await supabase
+      .from("trip_notes")
+      .select("body, updated_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (
+      current &&
+      current.updated_at !== expected &&
+      current.body.trim() &&
+      current.body !== body
+    ) {
+      const at = new Date(current.updated_at).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+      body = `${body}\n\n---\n\n_Written in another window at ${at}:_\n\n${current.body}`;
+    }
+  }
+
+  const fields = {
+    title: input.title?.trim() ?? "",
+    body,
+    on_date: blankToNull(input.on_date),
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = id
+    ? await supabase
+        .from("trip_notes")
+        .update(fields)
+        .eq("id", id)
+        .select()
+        .single()
+    : await supabase
+        .from("trip_notes")
+        .insert({ ...fields, trip_id: trip, notebook_id: notebookId })
+        .select()
+        .single();
+
+  if (error) return { data: null, error: error.message };
+
+  // Only a note pinned to a day shows up anywhere else.
+  if (fields.on_date) revalidatePath("/honeymoon/itinerary");
+  return { data, error: null };
+}
+
+export async function deleteNote(id: string) {
+  if (!(await isHost())) return DENIED;
+
+  const { error } = await supabase.from("trip_notes").delete().eq("id", id);
+  if (error) return { data: null, error: error.message };
+
+  revalidatePath("/honeymoon/notes");
+  revalidatePath("/honeymoon/itinerary");
   return { data: true, error: null };
 }

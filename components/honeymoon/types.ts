@@ -14,6 +14,8 @@ export type StayProposal =
 /** A proposed route with the stays that make it up, in order. */
 export type ProposedRoute = RouteProposal & { stays: StayProposal[] };
 export type TripTransit = Database["public"]["Tables"]["trip_transit"]["Row"];
+export type Notebook = Database["public"]["Tables"]["trip_notebooks"]["Row"];
+export type Note = Database["public"]["Tables"]["trip_notes"]["Row"];
 export type ChecklistItem =
   Database["public"]["Tables"]["trip_checklist_items"]["Row"];
 export type Cabin = Database["public"]["Enums"]["trip_cabin"];

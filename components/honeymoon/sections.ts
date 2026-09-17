@@ -1,9 +1,8 @@
 import {
   BedDouble,
-  Compass,
   LayoutGrid,
+  NotebookPen,
   Plane,
-  Printer,
   ScrollText,
   TramFront,
   type LucideIcon,
@@ -28,12 +27,11 @@ export type Section = {
 
 export const SECTIONS: Section[] = [
   { href: "/honeymoon", label: "Board", icon: LayoutGrid, exact: true },
+  { href: "/honeymoon/notes", label: "Notes", icon: NotebookPen },
   { href: "/honeymoon/flights", label: "Flights", icon: Plane },
   { href: "/honeymoon/transit", label: "Transit", icon: TramFront },
   { href: "/honeymoon/lodging", label: "Lodging", icon: BedDouble },
-  { href: "/honeymoon/finder", label: "Finder", icon: Compass },
   { href: "/honeymoon/itinerary", label: "Itinerary", icon: ScrollText },
-  { href: "/honeymoon/pocket", label: "Pocket", icon: Printer },
 ];
 
 function section(href: string): Section {
@@ -43,13 +41,13 @@ function section(href: string): Section {
 }
 
 /**
- * A phone's bottom bar has room for five, and there are seven tabs. These four
+ * A phone's bottom bar has room for five, and there are more tabs than that. These four
  * are what gets opened on a phone mid-trip — today's plan, and the times and
  * confirmation codes someone at a counter will ask for. The fifth slot holds
  * the rest, which is planning done at a laptop.
  *
- * The bar used to be a five-column grid of all seven, so Itinerary and Pocket
- * wrapped onto a second row that sat over the page.
+ * The bar used to be a five-column grid of every tab, so the last two wrapped
+ * onto a second row that sat over the page.
  */
 export const PHONE_BAR: Section[] = [
   section("/honeymoon/itinerary"),

@@ -206,9 +206,9 @@
 }
 
 @media print {
-  /* The pocket view exists to be carried on paper. The planner has no site
-     navbar or footer to hide any more, and its own bar is print:hidden. */
-  body:has(#pocket) {
+  /* The Itinerary's printout is the pocket copy, carried on paper. The planner
+     has no site navbar or footer to hide, and its own bars are print:hidden. */
+  body:has(#itinerary) {
     background: #fff;
   }
 }
@@ -241,4 +241,12 @@
 
 @utility animate-route-mark {
   animation: route-mark 300ms ease-out 650ms both;
+}
+
+/* `scroll-smooth` on <html> is unconditional, so every scrollIntoView animates
+   — including the first dance page re-centring itself once an eight-count. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
 }
