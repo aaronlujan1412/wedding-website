@@ -28,7 +28,6 @@ const DENIED = { data: null, error: "Not authorised." };
 function refresh() {
   revalidatePath("/honeymoon");
   revalidatePath("/honeymoon/itinerary");
-  revalidatePath("/honeymoon/pocket");
   revalidatePath("/honeymoon/lodging");
   revalidatePath("/hosts");
 }

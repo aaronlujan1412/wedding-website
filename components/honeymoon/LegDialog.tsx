@@ -137,7 +137,7 @@ function LegForm({
         <Fieldset legend="Where and when">
           <Field
             label="Lane"
-            hint="Only Decided reaches the itinerary and the pocket print."
+            hint="Only Decided reaches the itinerary."
           >
             <SelectField
               value={form.lane}

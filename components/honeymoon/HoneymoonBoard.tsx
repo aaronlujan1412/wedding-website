@@ -87,8 +87,9 @@ import { TripDialog, type TripDraft } from "./TripDialog";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { BoardProvider } from "./BoardContext";
 import { flightsOnDay } from "./flights";
-import { payableRides, transitIn, transitOnDay } from "./transit";
+import { transitIn, transitOnDay } from "./transit";
 import { staysIn } from "./stays";
+import { tripSpend } from "./spend";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { TripDocsPanel } from "./TripDocsPanel";
 import {
@@ -109,7 +110,6 @@ import {
   parseCell,
   parseDay,
   positionBetween,
-  sumYen,
   todayISO,
   tripDays,
   isBoardView,
@@ -323,19 +323,12 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
     if (scroller.current) scrollBoardTo(scroller.current, date);
   }
 
-  const decided = items.filter((i) => i.lane === "decided");
   // The header names the agreed day, so only the agreed route's rides belong
   // in it. A suggested night bus lives on the Transit tab until it's adopted.
   const decidedTransit = transitIn(board.transit, "decided");
-  // Flights and agreed stays count toward the trip total like any other cost.
-  const spend =
-    sumYen(decided, rate) +
-    sumYen(docs, rate) +
-    sumYen(board.flights, rate) +
-    // Rides the rail pass covers cost nothing on the day — the pass itself is
-    // a trip_docs row and its price is counted there instead.
-    sumYen(payableRides(decidedTransit), rate) +
-    sumYen(staysIn(stays, "decided"), rate);
+  // The local mirror, not the server's rows, so a card dragged into Decided
+  // moves the total with it.
+  const spend = tripSpend({ ...board, items }, rate);
 
   // The lanes drawn by the hour, left to right: one, or Compare's two drafts
   // side by side over what Decided already has.

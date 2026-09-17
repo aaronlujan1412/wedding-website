@@ -21,7 +21,7 @@ const DENIED = { data: null, error: "Not authorised." };
 
 function refresh() {
   // Every honeymoon tab shows flights somewhere: the Flights tab, the travel
-  // days on the board, the pocket print, the hub's countdown.
+  // days on the board, the itinerary, the hub's countdown.
   revalidatePath("/honeymoon", "layout");
   revalidatePath("/hosts");
 }

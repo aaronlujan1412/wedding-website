@@ -22,8 +22,8 @@ async function isHost() {
 const DENIED = { data: null, error: "Not authorised." };
 
 function refresh() {
-  // Stays show on the Lodging tab, on the board's leg bands, in the itinerary
-  // and on the pocket print.
+  // Stays show on the Lodging tab, on the board's leg bands, and in the
+  // itinerary, on screen and printed.
   revalidatePath("/honeymoon", "layout");
 }
 

@@ -23,8 +23,8 @@ async function isHost() {
 const DENIED = { data: null, error: "Not authorised." };
 
 function refresh() {
-  // Rides show on the Transit tab, in the board's day columns, in the
-  // itinerary and on the pocket print.
+  // Rides show on the Transit tab, in the board's day columns and in the
+  // itinerary, on screen and printed.
   revalidatePath("/honeymoon", "layout");
 }
 

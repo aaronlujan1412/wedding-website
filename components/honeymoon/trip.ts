@@ -16,8 +16,8 @@ export const POOL = "pool";
 /**
  * The three rows of the board.
  *
- * `decided` is the final draft and the only lane the itinerary and the pocket
- * print read. The other two are drafting rows — throw anything in, argue later,
+ * `decided` is the final draft and the only lane the itinerary, and its
+ * printout, read. The other two are drafting rows — throw anything in, argue later,
  * and promote the card when you agree. A lane is where a card sits now;
  * `added_by` is who thought of it and never changes.
  */

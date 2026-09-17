@@ -103,6 +103,41 @@ export async function getTripBoard(): Promise<TripBoard> {
 }
 
 /**
+ * The Itinerary: the whole board, plus the checklists that belong on a day —
+ * a journey's "grab before you leave" on the day it flies, and a stay's
+ * "before you check in" on the day you arrive.
+ */
+export async function getItineraryPage() {
+  const board = await getTripBoard();
+  const of = <T>(q: T) =>
+    board.trip
+      ? (q as { eq: (c: string, v: string) => T }).eq("trip_id", board.trip.id)
+      : q;
+
+  const [flights, stays] = await Promise.all([
+    of(
+      supabase
+        .from("trip_checklist_items")
+        .select()
+        .like("list", "flight:%")
+        .order("position"),
+    ),
+    of(
+      supabase
+        .from("trip_checklist_items")
+        .select()
+        .like("list", "stay:%")
+        .order("position"),
+    ),
+  ]);
+
+  return {
+    ...board,
+    checklist: [...(flights.data ?? []), ...(stays.data ?? [])],
+  };
+}
+
+/**
  * The Transit tab: every ride in every lane, the legs that say which days need
  * getting between places, and the rides' checklists ("transit:<id>").
  */

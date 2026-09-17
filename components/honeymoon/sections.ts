@@ -4,7 +4,6 @@ import {
   LayoutGrid,
   NotebookPen,
   Plane,
-  Printer,
   ScrollText,
   TramFront,
   type LucideIcon,
@@ -35,7 +34,6 @@ export const SECTIONS: Section[] = [
   { href: "/honeymoon/lodging", label: "Lodging", icon: BedDouble },
   { href: "/honeymoon/finder", label: "Finder", icon: Compass },
   { href: "/honeymoon/itinerary", label: "Itinerary", icon: ScrollText },
-  { href: "/honeymoon/pocket", label: "Pocket", icon: Printer },
 ];
 
 function section(href: string): Section {
@@ -45,7 +43,7 @@ function section(href: string): Section {
 }
 
 /**
- * A phone's bottom bar has room for five, and there are seven tabs. These four
+ * A phone's bottom bar has room for five, and there are more tabs than that. These four
  * are what gets opened on a phone mid-trip — today's plan, and the times and
  * confirmation codes someone at a counter will ask for. The fifth slot holds
  * the rest, which is planning done at a laptop.
