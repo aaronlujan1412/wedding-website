@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Minus, Play, Plus, Square, Volume2, VolumeX } from "lucide-react";
+import { Play, Square, Volume2, VolumeX } from "lucide-react";
 import {
   allCounts,
   clock,
@@ -18,13 +18,19 @@ import {
 import { cn } from "@/lib/utils";
 import { CountRow, HeldRow } from "./CountRow";
 import { GearKey } from "./Notation";
+import { type Mode, SongPanel } from "./SongPanel";
+import {
+  loadSong,
+  readCalibration,
+  saveSong,
+  writeCalibration,
+} from "./songFile";
+import { useSongWalk } from "./useSongWalk";
 import { useWalkthrough as useWalk } from "./useWalkthrough";
 import { Reference } from "./Reference";
 import { Strip } from "./Strip";
 
 const TIER_ORDER: Tier[] = ["a", "b", "c"];
-const TEMPO_MIN = 40;
-const TEMPO_STEP = 5;
 
 /**
  * Runs of eight-counts that hold. The source table wrote "Same." five times in
@@ -45,6 +51,15 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
   const [bpm, setBpm] = useState<number>(SONG.bpm);
   const [sound, setSound] = useState(true);
 
+  const [mode, setMode] = useState<Mode>("metronome");
+  const [song, setSong] = useState<{ file: File; url: string } | null>(null);
+  /** Measured against the actual file; 0 and 70 until someone taps them in. */
+  const [anchor, setAnchor] = useState(0);
+  const [songBpm, setSongBpm] = useState<number>(SONG.bpm);
+  const [rate, setRate] = useState(1);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const urlRef = useRef<string | null>(null);
+
   const movements = useMemo(() => routine(tier), [tier]);
   const counts = useMemo(() => allCounts(tier), [tier]);
   const indexOf = useMemo(
@@ -57,12 +72,81 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
     [counts],
   );
 
-  const { spot, running, start, stop, park } = useWalk({
+  // Both clocks exist; the mode picks which one the page listens to. They are
+  // genuinely different machines — one generates the beat, the other reads it
+  // off a recording — so they stay separate rather than sharing a muddle.
+  const metronome = useWalk({ total: counts.length, gearAt, bpm, sound });
+  const toSong = useSongWalk(audioRef, {
+    anchor,
+    bpm: songBpm,
     total: counts.length,
-    gearAt,
-    bpm,
-    sound,
   });
+
+  const playing = mode === "song" && song ? toSong : metronome;
+  const { spot, running, start, stop, park } = playing;
+  const canWalk = mode === "metronome" || song !== null;
+
+  // Whatever is on this device from last session.
+  useEffect(() => {
+    let alive = true;
+    void loadSong().then((file) => {
+      if (!alive || !file) return;
+      const url = URL.createObjectURL(file);
+      urlRef.current = url;
+      setSong({ file, url });
+      const saved = readCalibration(file);
+      if (saved) {
+        setAnchor(saved.anchor);
+        setSongBpm(saved.bpm);
+      }
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(
+    () => () => {
+      if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    },
+    [],
+  );
+
+  // Slowing a recording down to learn to it is only useful if it stays in
+  // tune. `currentTime` still measures the song, so nothing else has to know.
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio.playbackRate = rate;
+    audio.preservesPitch = true;
+  }, [rate, song]);
+
+  const pick = useCallback((file: File) => {
+    if (urlRef.current) URL.revokeObjectURL(urlRef.current);
+    const url = URL.createObjectURL(file);
+    urlRef.current = url;
+    setSong({ file, url });
+    const saved = readCalibration(file);
+    setAnchor(saved?.anchor ?? 0);
+    setSongBpm(saved?.bpm ?? SONG.bpm);
+    void saveSong(file);
+  }, []);
+
+  const calibrate = useCallback(
+    (nextAnchor: number, nextBpm: number) => {
+      setAnchor(nextAnchor);
+      setSongBpm(nextBpm);
+      if (song) {
+        writeCalibration({
+          name: song.file.name,
+          size: song.file.size,
+          anchor: nextAnchor,
+          bpm: nextBpm,
+        });
+      }
+    },
+    [song],
+  );
 
   const at = spot?.index;
 
@@ -88,11 +172,11 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
       }
       event.preventDefault();
       if (running) stop();
-      else void start(at ?? 0);
+      else if (canWalk) void start(at ?? 0);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [running, start, stop, at]);
+  }, [running, start, stop, at, canWalk]);
 
   const jump = useCallback(
     (movement: Movement) => {
@@ -122,8 +206,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
 
           <button
             type="button"
+            disabled={!running && !canWalk}
+            title={canWalk ? undefined : "Choose the mp3 first"}
             onClick={() => (running ? stop() : void start(at ?? 0))}
-            className="flex flex-none items-center gap-1.5 rounded-full bg-primary-foreground px-3 py-1.5 font-raleway text-xs tracking-wide text-primary transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground sm:px-4 motion-reduce:transition-none"
+            className="flex flex-none items-center gap-1.5 rounded-full bg-primary-foreground px-3 py-1.5 font-raleway text-xs tracking-wide text-primary transition-opacity hover:opacity-90 disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground sm:px-4 motion-reduce:transition-none"
           >
             {running ? (
               <Square className="h-3 w-3 fill-current" strokeWidth={0} />
@@ -175,6 +261,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
         </div>
       </header>
 
+      {/* Played from an object URL over a file on this device. Never uploaded,
+          and deliberately not in `public/`, which proxy.ts does not guard. */}
+      {song && <audio ref={audioRef} src={song.url} preload="auto" />}
+
       <main className="mx-auto max-w-3xl px-4 pt-[calc(var(--spacing-planner-bar)+2.5rem)] pb-32 sm:px-6">
         <h2 className="font-garamond text-4xl leading-none text-pop sm:text-5xl">
           {SONG.title}
@@ -210,11 +300,31 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           }))}
         />
         <p className="mt-2 font-garamond text-base text-muted-foreground">
-          Tap a movement to go to it. Press Walk — or the space bar — for an
-          eight-count of count-in and then the beat, live, down the sheet.
+          Tap a movement to go to it. Press Walk, or the space bar, for{" "}
+          {mode === "song" && song
+            ? "the bar before it and then the song, with the sheet following the music."
+            : "an eight-count of count-in and then the beat, live, down the sheet."}
         </p>
 
-        <Tempo bpm={bpm} onChange={setBpm} running={running} />
+        <SongPanel
+          mode={mode}
+          onMode={(next) => {
+            // Whichever clock was running is not the one you just asked for.
+            metronome.stop();
+            toSong.stop();
+            setMode(next);
+          }}
+          song={song}
+          onPick={pick}
+          bpm={bpm}
+          onBpm={setBpm}
+          anchor={anchor}
+          songBpm={songBpm}
+          onCalibrate={calibrate}
+          rate={rate}
+          onRate={setRate}
+          audioRef={audioRef}
+        />
 
         <GearKey />
 
@@ -229,6 +339,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
               here={here}
               beat={running ? spot?.beat : undefined}
               countIn={spot?.countIn}
+              canWalk={canWalk}
               onStart={(index) => void start(index)}
             />
           ))}
@@ -240,58 +351,6 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
   );
 }
 
-/**
- * Practice tempo. Drilling at 70 from the first session is how you learn a
- * shape wrong at speed — but the song is 70, so there is no reason to go above
- * it, and the control says so by having no room to.
- */
-function Tempo({
-  bpm,
-  onChange,
-  running,
-}: {
-  bpm: number;
-  onChange: (bpm: number) => void;
-  running: boolean;
-}) {
-  const step = (by: number) =>
-    onChange(Math.min(SONG.bpm, Math.max(TEMPO_MIN, bpm + by)));
-
-  return (
-    <div className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 print:hidden">
-      <div className="flex items-center gap-1 rounded-full border border-border bg-card p-1">
-        <button
-          type="button"
-          onClick={() => step(-TEMPO_STEP)}
-          disabled={bpm <= TEMPO_MIN}
-          title="Slower"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
-        >
-          <Minus className="h-4 w-4" strokeWidth={1.5} />
-          <span className="sr-only">Slower</span>
-        </button>
-        <span className="min-w-14 text-center font-mono text-sm tabular-nums slashed-zero">
-          {bpm} bpm
-        </span>
-        <button
-          type="button"
-          onClick={() => step(TEMPO_STEP)}
-          disabled={bpm >= SONG.bpm}
-          title="Faster"
-          className="flex h-8 w-8 items-center justify-center rounded-full text-foreground transition-colors hover:bg-secondary disabled:opacity-30 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none"
-        >
-          <Plus className="h-4 w-4" strokeWidth={1.5} />
-          <span className="sr-only">Faster</span>
-        </button>
-      </div>
-      <p className="font-garamond text-base text-muted-foreground">
-        {bpm === SONG.bpm
-          ? "Song tempo. Timings on the sheet are this."
-          : `Practice tempo. The song is ${SONG.bpm}${running ? "" : " — put it back before a full run"}.`}
-      </p>
-    </div>
-  );
-}
 
 function MovementBlock({
   movement,
@@ -301,6 +360,7 @@ function MovementBlock({
   here,
   beat,
   countIn,
+  canWalk,
   onStart,
 }: {
   movement: Movement;
@@ -311,6 +371,8 @@ function MovementBlock({
   here?: number;
   beat?: number;
   countIn?: boolean;
+  /** False in song mode before a file has been chosen. */
+  canWalk: boolean;
   onStart: (index: number) => void;
 }) {
   const first = movement.counts[0].n;
@@ -371,8 +433,9 @@ function MovementBlock({
 
       <button
         type="button"
+        disabled={!canWalk}
         onClick={() => onStart(indexOf.get(first) ?? 0)}
-        className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary px-4 py-1.5 font-raleway text-xs tracking-wide text-primary transition-colors hover:bg-primary hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring print:hidden motion-reduce:transition-none"
+        className="mt-5 inline-flex items-center gap-2 rounded-full border border-primary px-4 py-1.5 font-raleway text-xs tracking-wide text-primary transition-colors hover:bg-primary hover:text-primary-foreground disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring print:hidden motion-reduce:transition-none"
       >
         <Play className="h-3 w-3 fill-current" strokeWidth={0} />
         Walk {movement.name}
@@ -387,6 +450,7 @@ function MovementBlock({
               active={here === block[0].n}
               beat={beat}
               countIn={countIn}
+              canWalk={canWalk}
               onStart={() => onStart(indexOf.get(block[0].n) ?? 0)}
             />
           ) : (
@@ -396,6 +460,7 @@ function MovementBlock({
               activeIndex={block.findIndex((c) => c.n === here)}
               beat={beat}
               countIn={countIn}
+              canWalk={canWalk}
               onStart={() => onStart(indexOf.get(block[0].n) ?? 0)}
             />
           ),

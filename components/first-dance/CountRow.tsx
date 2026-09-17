@@ -19,12 +19,15 @@ export function CountRow({
   active,
   beat,
   countIn,
+  canWalk,
   onStart,
 }: {
   count: EightCount;
   active: boolean;
   beat?: number;
   countIn?: boolean;
+  /** False in song mode before a file has been chosen. */
+  canWalk: boolean;
   onStart: () => void;
 }) {
   return (
@@ -98,9 +101,10 @@ export function CountRow({
 
       <button
         type="button"
+        disabled={!canWalk}
         onClick={onStart}
         title={`Count in and walk from E${count.n}`}
-        className="absolute top-4 right-0 flex h-9 w-9 flex-none items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-hover:opacity-100 pointer-coarse:opacity-100 print:hidden motion-reduce:transition-none"
+        className="absolute top-4 right-0 flex h-9 w-9 flex-none items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-hover:opacity-100 disabled:hidden pointer-coarse:opacity-100 print:hidden motion-reduce:transition-none"
       >
         <Play className="h-4 w-4" strokeWidth={1.5} />
         <span className="sr-only">Walk from E{count.n}</span>
@@ -123,6 +127,7 @@ export function HeldRow({
   activeIndex,
   beat,
   countIn,
+  canWalk,
   onStart,
 }: {
   counts: EightCount[];
@@ -130,6 +135,8 @@ export function HeldRow({
   activeIndex: number;
   beat?: number;
   countIn?: boolean;
+  /** False in song mode before a file has been chosen. */
+  canWalk: boolean;
   onStart: () => void;
 }) {
   const first = counts[0];
@@ -183,9 +190,10 @@ export function HeldRow({
 
       <button
         type="button"
+        disabled={!canWalk}
         onClick={onStart}
         title={`Count in and walk from E${first.n}`}
-        className="absolute top-3 right-0 flex h-9 w-9 flex-none items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-hover:opacity-100 pointer-coarse:opacity-100 print:hidden motion-reduce:transition-none"
+        className="absolute top-3 right-0 flex h-9 w-9 flex-none items-center justify-center rounded-full text-muted-foreground opacity-0 transition-opacity hover:bg-secondary hover:text-primary focus-visible:opacity-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring group-hover:opacity-100 disabled:hidden pointer-coarse:opacity-100 print:hidden motion-reduce:transition-none"
       >
         <Play className="h-4 w-4" strokeWidth={1.5} />
         <span className="sr-only">Walk from E{first.n}</span>
