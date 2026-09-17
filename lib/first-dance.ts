@@ -734,9 +734,9 @@ export const MOVEMENTS: Movement[] = [
       },
       {
         n: 34,
-        cue: "Counter-rotating spin",
+        cue: "Continuous spin",
         detail:
-          "He leads her into three to four continuous rotations from a low connection, rotating the opposite way himself. This is the visual peak of the whole thing.",
+          "He leads her into three to four continuous rotations from a low connection and holds his own orientation, so he is square and still when she comes out of them. This is the visual peak of the whole thing.",
         gear: 2,
         figure: {
           name: "Multiple free spins",
@@ -745,12 +745,12 @@ export const MOVEMENTS: Movement[] = [
             "The same spin as E17, repeated without stopping. Spotting is the only thing that makes more than one possible.",
           effort: "careful",
           instead:
-            "Cut it to two rotations, and have him hold his own orientation instead of counter-rotating. Three or four consecutive turns is months of work on its own, and the counter-rotation buys a moment of spectacle at the price of a lead who is dizzy and facing the wrong way at exactly the count he has to catch her on.",
+            "Cut it to two rotations. Three or four consecutive turns is months of work on its own, and this is the eight-count that hands you into the catch — she has to come out of it on her feet and knowing where he is.",
         },
         footwork: {
           lead: [
             { from: 1, text: "low cue, release" },
-            { from: 2, to: 6, text: "your own rotation, opposite way" },
+            { from: 2, to: 6, text: "hold square, track her" },
             { from: 7, to: 8, text: "square up, find her" },
           ],
           follow: [
@@ -758,7 +758,7 @@ export const MOVEMENTS: Movement[] = [
             { from: 2, to: 6, text: "turn, spotting every one" },
             { from: 7, to: 8, text: "last turn, find him, feet under you" },
           ],
-          note: "He has to square up and find her by 8, because the catch is on the next 5. Her spot point has to be him, not a wall — she arrives needing to know where he is, not where the room is. This is the eight-count the whole Peak hangs on: everything after it assumes you both finish it facing each other and balanced.",
+          note: "He stays square and still the whole way through, which is what gives her something to spot. The catch is on the next 5 and he has to be there for it. Her spot point has to be him, not a wall — she arrives needing to know where he is, not where the room is. This is the eight-count the whole Peak hangs on: everything after it assumes you both finish it facing each other and balanced.",
         },
       },
       {
@@ -948,7 +948,14 @@ const TIER_EDITS: Record<
     34: {
       cue: "Spin, twice",
       detail:
-        "Two rotations from the low connection, still counter-rotating. Two is comfortably inside what a 3″ heel on suede will give you.",
+        "Two rotations from the low connection, with him square and still. Two is comfortably inside what a 3″ heel on suede will give you.",
+      figure: {
+        name: "Double free spin",
+        lookUp: ["double spin dance spotting", "how to spot a turn dancing"],
+        steps:
+          "E17's spin, twice through, without stopping between. Spotting is the whole of it — the head holds its point and whips round last, twice.",
+        effort: "weeks",
+      },
     },
     35: {
       cue: "Close the frame",
