@@ -5,6 +5,8 @@ import {
   Geist_Mono,
   Corinthia,
   Cormorant_Garamond,
+  Dela_Gothic_One,
+  DotGothic16,
   Raleway,
 } from "next/font/google";
 
@@ -38,6 +40,31 @@ const raleway = Raleway({
   subsets: ["latin"],
 });
 
+/**
+ * The Ring's two faces, and nowhere else on the site.
+ *
+ * Dela Gothic is the chunky Japanese poster face that every anime title and
+ * every arcade cabinet is set in; DotGothic16 is a pixel face for the HUD, so
+ * the score, the clock and the combo counter read as a game rather than as a
+ * planner that has had colours thrown at it.
+ *
+ * Latin subsets only. Both families cover kana as well, and both are megabytes
+ * if you ask for it -- the Japanese on that tab is set in the system gothic
+ * stack (`--font-jp-gothic`) instead, which is what manga lettering looks like
+ * anyway once it has an outline on it.
+ */
+const delaGothic = Dela_Gothic_One({
+  variable: "--font-dela",
+  weight: ["400"],
+  subsets: ["latin"],
+});
+
+const dotGothic = DotGothic16({
+  variable: "--font-dot",
+  weight: ["400"],
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Savea and Aaron's Wedding",
   description: "We're the cooliest",
@@ -57,7 +84,9 @@ export default function RootLayout({
           ${geistMono.variable} 
           ${corinthia.variable} 
           ${raleway.variable} 
-          ${cormorantGaramond.variable} 
+          ${cormorantGaramond.variable}
+          ${delaGothic.variable}
+          ${dotGothic.variable} 
           antialiased`}
       >
         {/* Chrome belongs to each section's layout: the guest site's navbar,
