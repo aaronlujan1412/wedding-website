@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -12,9 +13,10 @@ import {
   styleOf,
   type Sfx,
 } from "./arcade";
+import { FINISH_SFX, MOVES } from "./arcade";
 import { OUTCOMES, type Pairing, type Standing } from "./bouts";
 import { PLANNERS, formatDuration, itemLength } from "./trip";
-import type { BoutOutcome } from "./types";
+import type { BoutOutcome, Planner } from "./types";
 
 /**
  * The arena.
@@ -32,7 +34,24 @@ import type { BoutOutcome } from "./types";
 /** Long enough for the sound effect to land and the loser to leave. */
 export const FLASH_MS = 680;
 
-export type Flash = { pairing: Pairing; outcome: BoutOutcome; crit: boolean };
+/**
+ * What just happened, held on screen while it plays.
+ *
+ * A bout has a verdict and two fates. A move has neither: it is one person
+ * spending one of three on one card, and the other card is untouched — which
+ * is why it is a separate shape rather than another outcome.
+ */
+export type Flash =
+  | { kind: "bout"; pairing: Pairing; outcome: BoutOutcome; crit: boolean }
+  | {
+      kind: "move";
+      pairing: Pairing;
+      move: "wish" | "finish";
+      on: "east" | "west";
+      planner: Planner;
+    };
+
+export type Fate = "won" | "lost" | "kept" | "cut" | "wished" | null;
 
 const NEON = {
   savea: "var(--color-neon-savea)",
@@ -118,7 +137,7 @@ function Fighter({
 }: {
   standing: Standing;
   side: "savea" | "aaron";
-  fate: "won" | "lost" | "kept" | null;
+  fate: Fate;
   quiet: boolean;
   onPick: () => void;
 }) {
@@ -147,9 +166,37 @@ function Fighter({
           : "lg:items-start lg:pl-28 lg:[clip-path:polygon(4rem_0,100%_0,100%_100%,0_100%)]",
         !quiet && fate === "lost" && "animate-ring-ko",
         !quiet && fate === "won" && "animate-ring-win",
-        quiet && fate === "lost" && "opacity-25 grayscale",
+        // A finisher cuts down and a wish lifts out — opposite moves, opposite
+        // directions, so which one happened is legible without the lettering.
+        !quiet && fate === "cut" && "animate-ring-cut-bottom",
+        !quiet && fate === "wished" && "animate-ring-ascend",
+        quiet && (fate === "lost" || fate === "cut") && "opacity-25 grayscale",
       )}
     >
+      {/* The blade, and the halo. One frame each, over the card they happen
+          to. */}
+      {fate === "cut" && !quiet ? (
+        <span className="pointer-events-none absolute inset-0 overflow-hidden">
+          <span
+            className="animate-ring-slash absolute top-1/2 left-0 h-2 w-[140%] -translate-y-1/2"
+            style={{
+              background:
+                "linear-gradient(90deg, transparent, #fff 30%, var(--color-ko) 55%, transparent)",
+            }}
+          />
+        </span>
+      ) : null}
+      {fate === "wished" && !quiet ? (
+        <span className="pointer-events-none absolute inset-0 grid place-items-center overflow-hidden">
+          <span
+            className="animate-ring-halo aspect-square w-[70%] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, color-mix(in srgb, var(--color-gold) 70%, transparent) 0%, transparent 65%)",
+            }}
+          />
+        </span>
+      ) : null}
       {/* Both survive: a shine crosses each of them instead of anyone falling. */}
       {fate === "kept" && !quiet ? (
         <span className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -209,6 +256,85 @@ function Fighter({
 }
 
 /* ------------------------------------------------------------------ *
+ * The scarce moves
+ * ------------------------------------------------------------------ */
+
+/**
+ * How many of something is left, as filled and hollow marks.
+ *
+ * Three is small enough to read as a shape rather than a number, which is the
+ * point — you should be able to tell you are down to your last wish without
+ * doing arithmetic in the middle of an argument.
+ */
+export function Pips({
+  total,
+  left,
+  glyph,
+  tone,
+}: {
+  total: number;
+  left: number;
+  glyph: string;
+  /** The move's colour, not the person's: which of the two budgets this is
+   *  matters more at a glance than whose it is, and whose is already said by
+   *  the name beside it. */
+  tone?: string;
+}) {
+  return (
+    <span
+      className="text-[0.7rem] leading-none tracking-[0.15em]"
+      style={tone ? { color: tone } : undefined}
+    >
+      {Array.from({ length: total }, (_, i) => (
+        <span key={i} className={i < left ? "" : "opacity-25"}>
+          {glyph}
+        </span>
+      ))}
+      <span className="sr-only">
+        {left} of {total} left
+      </span>
+    </span>
+  );
+}
+
+/** One of the two budgeted moves, aimed at one side of the ring. */
+function Special({
+  move,
+  side,
+  disabled,
+  onPick,
+}: {
+  move: "wish" | "finish";
+  side: "savea" | "aaron";
+  disabled: boolean;
+  onPick: () => void;
+}) {
+  const meta = MOVES[move];
+  const tone =
+    move === "wish" ? "var(--color-gold)" : "var(--color-ko)";
+  return (
+    <button
+      type="button"
+      onClick={onPick}
+      disabled={disabled}
+      title={`${meta.roman} — ${meta.blurb}`}
+      className={cn(
+        "font-dot flex min-h-10 items-center gap-2 border-2 px-2.5 py-1",
+        "text-[0.6rem] tracking-widest transition-colors",
+        "enabled:hover:bg-white/10 disabled:opacity-30",
+      )}
+      style={{ borderColor: tone, color: tone }}
+    >
+      <span className="font-jp-gothic text-sm leading-none">{meta.kana}</span>
+      <span className="hidden sm:inline">{meta.roman}</span>
+      <span className="sr-only">
+        {meta.roman} the {side === "savea" ? "left" : "right"} idea
+      </span>
+    </button>
+  );
+}
+
+/* ------------------------------------------------------------------ *
  * The hit
  * ------------------------------------------------------------------ */
 
@@ -238,11 +364,15 @@ function Impact({
   outcome,
   crit,
   quiet,
+  lines = true,
 }: {
   sfx: Sfx;
   outcome: BoutOutcome;
   crit: boolean;
   quiet: boolean;
+  /** Focus lines are for a hit. A wish or a finisher lands on one card and
+   *  nobody was struck, so they get the lettering only. */
+  lines?: boolean;
 }) {
   const tint =
     outcome === "neither"
@@ -255,7 +385,7 @@ function Impact({
 
   return (
     <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center overflow-hidden">
-      {!quiet ? <Burst tint={tint} /> : null}
+      {!quiet && lines ? <Burst tint={tint} /> : null}
       <div
         className={cn(
           "relative flex flex-col items-center gap-1",
@@ -333,7 +463,11 @@ export function Ring({
   flash,
   round,
   quiet,
+  held,
+  heldCount,
+  moves,
   onSettle,
+  onMove,
 }: {
   pairing: Pairing;
   flash: Flash | null;
@@ -341,46 +475,78 @@ export function Ring({
   round: number;
   /** Reduced motion, or somebody typed `zen`. */
   quiet: boolean;
+  /** This is the held-over round: every pair here was parked earlier. */
+  held: boolean;
+  /** How many pairs are waiting in 預かり. */
+  heldCount: number;
+  /** What each of them has left to spend. */
+  moves: Record<Planner, { wishes: number; finishers: number }>;
   onSettle: (outcome: BoutOutcome) => void;
+  onMove: (move: "wish" | "finish", on: "east" | "west", by: Planner) => void;
 }) {
+  // Which card a scarce move is about to be spent on, while the ring asks
+  // whose move it is. Two people share one login, so the ring has to ask —
+  // and it is the right moment to ask, because three each is few enough that
+  // spending one should take a beat.
+  const [picking, setPicking] = useState<{
+    move: "wish" | "finish";
+    on: "east" | "west";
+  } | null>(null);
+
   // While the hit plays, the pair that took it stays on screen. Swapping the
   // next question in under the sound effect makes the sound effect look like
   // it happened to the wrong card.
   const shown = flash?.pairing ?? pairing;
-  const result = flash?.outcome ?? null;
+  const result = flash?.kind === "bout" ? flash.outcome : null;
   const callout = calloutFor(shown);
   const loaded = isCritical(
     pairing.east.item.id,
     pairing.west.item.id,
     round - 1,
   );
+  const busy = flash !== null;
 
-  const fate = (side: "savea" | "aaron"): "won" | "lost" | "kept" | null => {
-    if (!result || result === "skip") return null;
+  const fate = (side: "savea" | "aaron"): Fate => {
+    if (flash?.kind === "move") {
+      const target = flash.on === "east" ? "savea" : "aaron";
+      if (side !== target) return null;
+      return flash.move === "wish" ? "wished" : "cut";
+    }
+    if (!result || result === "skip" || result === "deadlock") return null;
     if (result === "both") return "kept";
     if (result === "neither") return "lost";
     const winner = result === "east" ? "savea" : "aaron";
     return side === winner ? "won" : "lost";
   };
 
+  function ask(move: "wish" | "finish", on: "east" | "west") {
+    const left = (planner: Planner) =>
+      move === "wish" ? moves[planner].wishes : moves[planner].finishers;
+    // Nobody has any: say so instead of opening a dialog with two dead
+    // buttons in it.
+    if (left("savea") === 0 && left("aaron") === 0) return;
+    setPicking({ move, on });
+  }
+
   return (
     <div className={cn("relative", flash && !quiet && "animate-ring-shake")}>
       {/* What kind of fight this is. */}
       <div className="flex flex-wrap items-center justify-center gap-x-3 border-2 border-b-0 border-[color:var(--color-arena-line)] bg-[color:var(--color-arena-deep)] px-4 py-2">
         <span
-          key={callout.title}
+          key={held ? "held" : callout.title}
           className={cn(
-            "font-dela text-sm tracking-wide text-[color:var(--color-gold)] sm:text-base",
+            "font-dela text-sm tracking-wide sm:text-base",
             !quiet && "animate-ring-announce",
           )}
+          style={{
+            color: held ? "var(--color-chip)" : "var(--color-gold)",
+          }}
         >
-          {callout.title}
+          {held ? "HELD OVER — SETTLE IT NOW" : callout.title}
         </span>
-        {callout.kana ? (
-          <span className="font-jp-gothic text-sm text-white/45">
-            {callout.kana}
-          </span>
-        ) : null}
+        <span className="font-jp-gothic text-sm text-white/45">
+          {held ? MOVES.held.kana : callout.kana}
+        </span>
       </div>
 
       {/* Health, facing each other across the middle. */}
@@ -436,13 +602,100 @@ export function Ring({
           VS
         </span>
 
-        {flash ? (
+        {flash?.kind === "bout" ? (
           <Impact
             sfx={sfxFor(flash.outcome, `${round}:${flash.pairing.east.item.id}`)}
             outcome={flash.outcome}
             crit={flash.crit}
             quiet={quiet}
           />
+        ) : null}
+
+        {/* A move has no verdict, so it gets lettering and nothing else — no
+            focus lines, because nobody was hit. */}
+        {flash?.kind === "move" ? (
+          <Impact
+            sfx={
+              flash.move === "finish"
+                ? FINISH_SFX
+                : { kana: MOVES.wish.kana, gloss: "A WISH IS SPENT" }
+            }
+            outcome={flash.move === "finish" ? "neither" : "both"}
+            crit={false}
+            quiet={quiet}
+            lines={false}
+          />
+        ) : null}
+
+        {/* Whose move is it? */}
+        {picking ? (
+          <div className="absolute inset-0 z-30 grid place-items-center bg-[color:var(--color-arena-deep)]/92 px-4">
+            <div className="w-full max-w-md border-2 border-[color:var(--color-gold)]/50 bg-[color:var(--color-arena)] px-5 py-6 text-center">
+              <p className="font-jp-gothic text-3xl text-[color:var(--color-gold)]">
+                {MOVES[picking.move].kana}
+              </p>
+              <p className="font-dot mt-1 text-[0.65rem] tracking-[0.3em] text-white/60">
+                {MOVES[picking.move].roman} ON
+              </p>
+              <p className="font-dela mt-2 text-lg text-white">
+                {(picking.on === "east" ? shown.east : shown.west).item.title}
+              </p>
+              <p className="font-dot mt-2 text-[0.6rem] tracking-widest text-white/40">
+                {MOVES[picking.move].blurb.toUpperCase()}
+              </p>
+
+              <p className="font-dot mt-6 text-[0.6rem] tracking-[0.3em] text-white/40">
+                WHOSE MOVE?
+              </p>
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                {(["savea", "aaron"] as Planner[]).map((planner) => {
+                  const left =
+                    picking.move === "wish"
+                      ? moves[planner].wishes
+                      : moves[planner].finishers;
+                  return (
+                    <button
+                      key={planner}
+                      type="button"
+                      disabled={left === 0}
+                      onClick={() => {
+                        setPicking(null);
+                        onMove(picking.move, picking.on, planner);
+                      }}
+                      className={cn(
+                        "font-dela flex min-h-16 flex-col items-center justify-center gap-1 border-2 px-3 py-2",
+                        "transition-colors enabled:hover:bg-white/10 disabled:opacity-30",
+                      )}
+                      style={{
+                        borderColor: NEON[planner],
+                        color: NEON[planner],
+                      }}
+                    >
+                      {PLANNERS[planner].label.toUpperCase()}
+                      <Pips
+                        total={3}
+                        left={left}
+                        glyph={MOVES[picking.move].pip}
+                        tone={
+                          picking.move === "wish"
+                            ? "var(--color-gold)"
+                            : "var(--color-ko)"
+                        }
+                      />
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setPicking(null)}
+                className="font-dot mt-4 text-[0.6rem] tracking-widest text-white/40 underline"
+              >
+                NEVER MIND
+              </button>
+            </div>
+          </div>
         ) : null}
       </div>
 
@@ -459,10 +712,79 @@ export function Ring({
         </span>
       </p>
 
-      <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+      {/* The specials, mirroring the arena: the left group acts on the left
+          card, the right group on the right, and 預かり sits in the middle
+          because it is the only one that acts on the bout rather than on a
+          card. */}
+      <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+        <div className="flex flex-1 items-center justify-center gap-2 lg:justify-end">
+          <span aria-hidden className="font-dot text-[0.6rem] text-white/30">
+            <span className="lg:hidden">▲</span>
+            <span className="hidden lg:inline">◀</span>
+          </span>
+          <Special
+            move="wish"
+            side="savea"
+            disabled={busy}
+            onPick={() => ask("wish", "east")}
+          />
+          <Special
+            move="finish"
+            side="savea"
+            disabled={busy}
+            onPick={() => ask("finish", "east")}
+          />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => onSettle("deadlock")}
+          disabled={busy}
+          title={`${MOVES.held.roman} — ${MOVES.held.blurb}`}
+          className={cn(
+            "font-dot flex min-h-10 items-center gap-2 border-2 border-white/25 px-3 py-1",
+            "text-[0.6rem] tracking-widest text-white/70 transition-colors",
+            "enabled:hover:bg-white/10 disabled:opacity-30",
+          )}
+        >
+          <span className="font-jp-gothic text-sm leading-none text-[color:var(--color-chip)]">
+            {MOVES.held.kana}
+          </span>
+          <span className="hidden sm:inline">{MOVES.held.roman}</span>
+          <kbd className="border border-current/40 px-1 opacity-70 pointer-coarse:hidden">
+            {OUTCOMES.deadlock.key}
+          </kbd>
+          {heldCount > 0 ? (
+            <span className="text-[color:var(--color-chip)] tabular-nums">
+              {heldCount}
+            </span>
+          ) : null}
+        </button>
+
+        <div className="flex flex-1 items-center justify-center gap-2 lg:justify-start">
+          <Special
+            move="finish"
+            side="aaron"
+            disabled={busy}
+            onPick={() => ask("finish", "west")}
+          />
+          <Special
+            move="wish"
+            side="aaron"
+            disabled={busy}
+            onPick={() => ask("wish", "west")}
+          />
+          <span aria-hidden className="font-dot text-[0.6rem] text-white/30">
+            <span className="lg:hidden">▼</span>
+            <span className="hidden lg:inline">▶</span>
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-2 flex flex-col gap-2 sm:flex-row">
         <Verdict
           outcome="both"
-          disabled={result !== null}
+          disabled={busy}
           onPick={() => onSettle("both")}
           label="BOTH SURVIVE"
           kana="両者"
@@ -470,7 +792,7 @@ export function Ring({
         />
         <Verdict
           outcome="neither"
-          disabled={result !== null}
+          disabled={busy}
           onPick={() => onSettle("neither")}
           label="DOUBLE K.O."
           kana="全滅"
@@ -478,7 +800,7 @@ export function Ring({
         />
         <Verdict
           outcome="skip"
-          disabled={result !== null}
+          disabled={busy}
           onPick={() => onSettle("skip")}
           label="MATTA"
           kana="待った"

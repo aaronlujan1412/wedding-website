@@ -2,8 +2,8 @@
 
 import { RotateCcw, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { rankFor } from "./arcade";
-import { standingsOf, type Standing } from "./bouts";
+import { MOVES, rankFor } from "./arcade";
+import { standingsOf, wished, type Standing } from "./bouts";
 import { PLANNERS } from "./trip";
 
 /**
@@ -147,6 +147,7 @@ export function Banzuke({
   inTrip,
   cut,
   onRevive,
+  onRelease,
   busy,
 }: {
   ranked: Standing[];
@@ -154,8 +155,10 @@ export function Banzuke({
   inTrip: Set<string>;
   cut: Standing[];
   onRevive: (id: string) => void;
+  onRelease: (id: string) => void;
   busy: boolean;
 }) {
+  const saved = wished(ranked);
   const east = standingsOf(ranked, "savea");
   const west = standingsOf(ranked, "aaron");
   const rows = Math.max(east.length, west.length);
@@ -163,7 +166,7 @@ export function Banzuke({
   const eastFits = fitting(east, inTrip);
   const westFits = fitting(west, inTrip);
 
-  if (rows === 0) {
+  if (rows === 0 && saved.length === 0) {
     return (
       <p className="font-dot py-16 text-center text-sm tracking-widest text-white/50">
         NO CHALLENGERS. ADD IDEAS ON THE BOARD.
@@ -181,6 +184,52 @@ export function Banzuke({
           OFFICIAL RANKINGS
         </span>
       </p>
+
+      {/* 不戦勝 — a real sumo result: a win awarded with no bout, because the
+          other side never showed up. A wished card is exactly that, so it sits
+          above the ranking rather than at the top of it. */}
+      {saved.length > 0 ? (
+        <div className="mb-6 border-2 border-[color:var(--color-gold)]/50 px-3 py-3">
+          <p>
+            <span className="font-jp-gothic text-lg text-[color:var(--color-gold)]">
+              不戦勝
+            </span>
+            <span className="font-dot ml-3 text-[0.65rem] tracking-[0.3em] text-white/50">
+              WON WITHOUT FIGHTING
+            </span>
+          </p>
+          <ul className="mt-2 flex flex-col gap-1.5">
+            {saved.map((standing) => (
+              <li
+                key={standing.item.id}
+                className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
+              >
+                <span className="font-jp-gothic text-sm text-[color:var(--color-gold)]">
+                  {MOVES.wish.pip}
+                </span>
+                <span className="font-dela text-base text-white sm:text-lg">
+                  {standing.item.title}
+                </span>
+                <span
+                  className="font-dot text-[0.6rem] tracking-widest"
+                  style={{ color: NEON[standing.saved ?? "savea"] }}
+                >
+                  {PLANNERS[standing.saved ?? "savea"].label.toUpperCase()}
+                  &apos;S WISH
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onRelease(standing.item.id)}
+                  disabled={busy}
+                  className="font-dot ml-auto min-h-8 border-2 border-white/15 px-2 text-[0.6rem] tracking-widest text-white/45 transition-colors hover:border-[color:var(--color-gold)]/60 hover:text-white disabled:opacity-40"
+                >
+                  TAKE IT BACK
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
       <div className="grid grid-cols-[1fr_3rem_1fr] items-baseline gap-x-2 sm:gap-x-4">
         <h3
@@ -291,6 +340,15 @@ export function Banzuke({
                   )}
                 >
                   <RotateCcw className="size-3" aria-hidden />
+                  {standing.vetoed ? (
+                    <span
+                      className="font-jp-gothic text-sm leading-none"
+                      style={{ color: NEON[standing.vetoed] }}
+                      title={`${PLANNERS[standing.vetoed].label}'s finisher`}
+                    >
+                      {MOVES.finish.kana}
+                    </span>
+                  ) : null}
                   <span className="line-through">
                     {standing.item.title.toUpperCase()}
                   </span>

@@ -556,12 +556,14 @@ export type Database = {
           opens_at: string | null
           pinned: boolean
           position: number
+          saved_by: Database["public"]["Enums"]["trip_planner"] | null
           start_time: string | null
           title: string
           title_ja: string | null
           trip_id: string
           updated_at: string
           url: string | null
+          vetoed_by: Database["public"]["Enums"]["trip_planner"] | null
           wander_id: string | null
         }
         Insert: {
@@ -591,12 +593,14 @@ export type Database = {
           opens_at?: string | null
           pinned?: boolean
           position?: number
+          saved_by?: Database["public"]["Enums"]["trip_planner"] | null
           start_time?: string | null
           title: string
           title_ja?: string | null
           trip_id: string
           updated_at?: string
           url?: string | null
+          vetoed_by?: Database["public"]["Enums"]["trip_planner"] | null
           wander_id?: string | null
         }
         Update: {
@@ -626,12 +630,14 @@ export type Database = {
           opens_at?: string | null
           pinned?: boolean
           position?: number
+          saved_by?: Database["public"]["Enums"]["trip_planner"] | null
           start_time?: string | null
           title?: string
           title_ja?: string | null
           trip_id?: string
           updated_at?: string
           url?: string | null
+          vetoed_by?: Database["public"]["Enums"]["trip_planner"] | null
           wander_id?: string | null
         }
         Relationships: [
@@ -1215,7 +1221,13 @@ export type Database = {
       dietary: "restriction" | "preference" | "none"
       table_shape: "round" | "rectangular" | "square"
       trip_booking_status: "idea" | "to_book" | "booked" | "in_hand"
-      trip_bout_outcome: "east" | "west" | "both" | "neither" | "skip"
+      trip_bout_outcome:
+        | "east"
+        | "west"
+        | "both"
+        | "neither"
+        | "skip"
+        | "deadlock"
       trip_cabin: "economy" | "premium" | "business" | "first"
       trip_currency: "JPY" | "USD"
       trip_doc_category:
@@ -1378,7 +1390,14 @@ export const Constants = {
       dietary: ["restriction", "preference", "none"],
       table_shape: ["round", "rectangular", "square"],
       trip_booking_status: ["idea", "to_book", "booked", "in_hand"],
-      trip_bout_outcome: ["east", "west", "both", "neither", "skip"],
+      trip_bout_outcome: [
+        "east",
+        "west",
+        "both",
+        "neither",
+        "skip",
+        "deadlock",
+      ],
       trip_cabin: ["economy", "premium", "business", "first"],
       trip_currency: ["JPY", "USD"],
       trip_doc_category: [

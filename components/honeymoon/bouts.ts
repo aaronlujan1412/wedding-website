@@ -63,6 +63,7 @@ export const OUTCOMES: Record<
   both: { verb: "Both stay", hint: "we're doing both of these", key: "↑" },
   neither: { verb: "Cut both", hint: "neither makes the trip", key: "↓" },
   skip: { verb: "Not now", hint: "ask again later", key: "space" },
+  deadlock: { verb: "Held over", hint: "not settling this tonight", key: "d" },
 };
 
 export type Standing = {
@@ -81,7 +82,17 @@ export type Standing = {
   fought: number;
   /** Cut from the basho. Still in its pile on the board, out of the ring. */
   cut: boolean;
+  /** Whose wish protects it. It never enters the ring and it is in the trip. */
+  saved: Planner | null;
+  /** Whose finisher took it out, if a finisher did rather than a bout. */
+  vetoed: Planner | null;
 };
+
+/** Three each, for the whole tournament. Scarcity is the entire mechanic: an
+ *  unlimited "this one matters" button already exists and is called must_do,
+ *  and nobody has ever pressed it. */
+export const WISHES = 3;
+export const FINISHERS = 3;
 
 /**
  * Everything still arguable: an idea in either person's lane that isn't a
@@ -112,6 +123,8 @@ export function standings(items: TripItem[], bouts: TripBout[]): Standing[] {
       losses: 0,
       fought: 0,
       cut: item.cut_at !== null,
+      saved: item.saved_by,
+      vetoed: item.vetoed_by,
     });
   }
 
@@ -121,7 +134,10 @@ export function standings(items: TripItem[], bouts: TripBout[]): Standing[] {
     // A card deleted from the board leaves its bouts behind; they just stop
     // counting for anyone.
     if (!east || !west) return;
-    if (bout.outcome === "skip") return;
+    // Neither settles anything, so neither moves a rating. They differ in what
+    // the matchmaker does next: a skip can come straight back, a deadlock is
+    // held over until you go looking for it.
+    if (bout.outcome === "skip" || bout.outcome === "deadlock") return;
 
     east.fought += 1;
     west.fought += 1;
@@ -160,13 +176,44 @@ export function standings(items: TripItem[], bouts: TripBout[]): Standing[] {
     }
   });
 
+  // A wish is not a good rating, it is a decision, so a wished card sits above
+  // the ranking rather than in it. Ordering them first is also what puts their
+  // hours at the front of the cut line, which is the promise a wish makes.
   return [...by.values()].sort(
-    (a, b) => b.rating - a.rating || a.item.title.localeCompare(b.item.title),
+    (a, b) =>
+      Number(b.saved !== null) - Number(a.saved !== null) ||
+      b.rating - a.rating ||
+      a.item.title.localeCompare(b.item.title),
   );
 }
 
+/** How many of each move that person has left. */
+export function movesLeft(list: Standing[], planner: Planner) {
+  let wishes = WISHES;
+  let finishers = FINISHERS;
+  for (const s of list) {
+    if (s.saved === planner) wishes -= 1;
+    if (s.vetoed === planner) finishers -= 1;
+  }
+  return { wishes: Math.max(0, wishes), finishers: Math.max(0, finishers) };
+}
+
+/**
+ * One person's column on the banzuke.
+ *
+ * Wished cards are deliberately not in it: they are drawn in their own band
+ * above the sheet, because a card that never fought has no rank and putting
+ * it at the top of a ranking would say it earned one.
+ */
 export function standingsOf(list: Standing[], planner: Planner): Standing[] {
-  return list.filter((s) => !s.cut && s.item.added_by === planner);
+  return list.filter(
+    (s) => !s.cut && s.saved === null && s.item.added_by === planner,
+  );
+}
+
+/** The wished cards, in the order they were spent on. */
+export function wished(list: Standing[]): Standing[] {
+  return list.filter((s) => !s.cut && s.saved !== null);
 }
 
 /* ------------------------------------------------------------------ *
@@ -184,6 +231,25 @@ export type Pairing = {
 /** A pair that has already been in the ring, and how recently. */
 function historyKey(a: string, b: string): string {
   return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
+/**
+ * The pairs held over.
+ *
+ * A pair is deadlocked if the LAST thing that happened between those two was
+ * a deadlock, so coming back and settling it clears it with no extra
+ * bookkeeping, and deadlocking it again re-parks it. Derived from the log
+ * like everything else here.
+ */
+export function heldPairs(bouts: TripBout[]): Set<string> {
+  const latest = new Map<string, boolean>();
+  for (const bout of bouts) {
+    if (bout.outcome === "skip") continue;
+    latest.set(historyKey(bout.east_id, bout.west_id), bout.outcome === "deadlock");
+  }
+  return new Set(
+    [...latest.entries()].filter(([, held]) => held).map(([key]) => key),
+  );
 }
 
 /**
@@ -242,10 +308,18 @@ function reasonFor(a: TripItem, b: TripItem): string {
  * because otherwise the same eight cards fight all night and the other
  * hundred never get asked about.
  */
-export function nextBout(list: Standing[], bouts: TripBout[]): Pairing | null {
-  const live = list.filter((s) => !s.cut);
+export function nextBout(
+  list: Standing[],
+  bouts: TripBout[],
+  /** Serve the held-over pairs instead of avoiding them. */
+  held = false,
+): Pairing | null {
+  // A wished card is out of the tournament upward: it has already won, so
+  // putting it back in the ring would be asking a question with one answer.
+  const live = list.filter((s) => !s.cut && s.saved === null);
   if (live.length < 2) return null;
 
+  const parked = heldPairs(bouts);
   const seen = new Map<string, number>();
   bouts.forEach((bout, index) => {
     seen.set(historyKey(bout.east_id, bout.west_id), index);
@@ -259,6 +333,11 @@ export function nextBout(list: Standing[], bouts: TripBout[]): Pairing | null {
     for (let j = i + 1; j < live.length; j++) {
       const a = live[i];
       const b = live[j];
+
+      // The two modes are exclusive: the ordinary ring never serves a pair
+      // you set aside, and the held-over round serves nothing else.
+      const key = historyKey(a.item.id, b.item.id);
+      if (parked.has(key) !== held) continue;
 
       let score = 0;
 
@@ -278,8 +357,10 @@ export function nextBout(list: Standing[], bouts: TripBout[]): Pairing | null {
       score -= 9 * (a.fought + b.fought);
 
       // A rematch only once there is nothing else, and then the oldest one.
-      const met = seen.get(historyKey(a.item.id, b.item.id));
-      if (met !== undefined) score -= 1000 - Math.min(met, 500);
+      // In the held-over round every pair is a rematch by definition, so the
+      // penalty would only cancel out; the oldest deadlock goes first instead.
+      const met = seen.get(key);
+      if (met !== undefined) score -= held ? met : 1000 - Math.min(met, 500);
 
       score += jitter(`${seed}:${a.item.id}:${b.item.id}`);
 

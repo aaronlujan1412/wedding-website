@@ -15,20 +15,28 @@ import { Undo2, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   agreeToItems,
+  finishItem,
+  releaseItem,
   reviveItem,
   settleBout,
   undoLastBout,
+  wishItem,
 } from "@/app/actions/bouts";
 import { Banzuke } from "./Banzuke";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
-import { FLASH_MS, Ring, type Flash } from "./Ring";
+import { FLASH_MS, Pips, Ring, type Flash } from "./Ring";
 import { Festival, Fireball, ManekiNeko, Transformation } from "./RingFx";
 import { useLiveRefresh } from "./useLiveRefresh";
-import { comboTitle, isCritical, secretFor } from "./arcade";
+import { MOVES, comboTitle, isCritical, secretFor } from "./arcade";
+import { PLANNERS } from "./trip";
 import {
+  FINISHERS,
+  WISHES,
   budget as budgetOf,
   cutLine,
   formatHours,
+  heldPairs,
+  movesLeft,
   nextBout,
   standings,
 } from "./bouts";
@@ -39,7 +47,14 @@ import {
   subscribeMuted,
   toggleMuted,
 } from "./ringSound";
-import type { BoutOutcome, Trip, TripBout, TripFlight, TripItem } from "./types";
+import type {
+  BoutOutcome,
+  Planner,
+  Trip,
+  TripBout,
+  TripFlight,
+  TripItem,
+} from "./types";
 
 /**
  * The Ring tab.
@@ -100,6 +115,11 @@ function motionSnapshot() {
   return window.matchMedia(motionQuery).matches;
 }
 
+const NEON: Record<Planner, string> = {
+  savea: "var(--color-neon-savea)",
+  aaron: "var(--color-neon-aaron)",
+};
+
 type Optimistic = { items: TripItem[]; bouts: TripBout[] };
 
 type Egg = "fireball" | "festival" | "neko" | null;
@@ -132,6 +152,10 @@ export function RingView({
   const [combo, setCombo] = useState(0);
   const [egg, setEgg] = useState<Egg>(null);
   const [zen, setZen] = useState(false);
+  // Deliberately going back to the pairs you parked. It also switches itself
+  // on when the ordinary ring runs dry, which is the "come back at the end"
+  // the deadlock promises.
+  const [replaying, setReplaying] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,9 +198,26 @@ export function RingView({
   );
   const standing = useMemo(() => ranked.filter((s) => !s.cut), [ranked]);
   const cut = useMemo(() => ranked.filter((s) => s.cut), [ranked]);
-  const pairing = useMemo(
-    () => nextBout(ranked, live.bouts),
+  const held = useMemo(() => heldPairs(live.bouts), [live.bouts]);
+  const fresh = useMemo(
+    () => nextBout(ranked, live.bouts, false),
     [ranked, live.bouts],
+  );
+  const parked = useMemo(
+    () => nextBout(ranked, live.bouts, true),
+    [ranked, live.bouts],
+  );
+  // Asked for, or forced: with nothing left to serve, the held-over pairs are
+  // the whole remaining tournament.
+  const replay = (replaying || fresh === null) && parked !== null;
+  const pairing = replay ? parked : fresh;
+
+  const moves = useMemo(
+    () => ({
+      savea: movesLeft(ranked, "savea"),
+      aaron: movesLeft(ranked, "aaron"),
+    }),
+    [ranked],
   );
 
   const budget = useMemo(
@@ -227,7 +268,7 @@ export function RingView({
           ? "keep"
           : outcome === "neither"
             ? "cut"
-            : outcome === "skip"
+            : outcome === "skip" || outcome === "deadlock"
               ? "skip"
               : crit
                 ? "crit"
@@ -237,7 +278,7 @@ export function RingView({
       // The streak counts decisions, not presses: walking away from a bout is
       // the one verdict that isn't one.
       const now = Date.now();
-      if (outcome === "skip") {
+      if (outcome === "skip" || outcome === "deadlock") {
         setCombo(0);
       } else {
         const next = now - lastHit.current < COMBO_WINDOW ? combo + 1 : 1;
@@ -248,7 +289,7 @@ export function RingView({
       }
       lastHit.current = now;
 
-      setFlash({ pairing, outcome, crit });
+      setFlash({ kind: "bout", pairing, outcome, crit });
       if (flashTimer.current) clearTimeout(flashTimer.current);
       flashTimer.current = setTimeout(
         () => setFlash(null),
@@ -262,6 +303,49 @@ export function RingView({
       });
     },
     [pairing, flash, trip, applyBout, live.bouts.length, combo, quiet],
+  );
+
+  /**
+   * A wish or a finisher: one person, one card, one of three.
+   *
+   * Nothing goes in the bout log — neither is a bout, and the other card is
+   * untouched — so the animation is driven by a flash of its own and the
+   * state lives on the card. There is no optimistic update: spending one of
+   * three is rare and weighty enough to wait a beat for, and guessing wrong
+   * about a budget the server enforces would be worse than the beat.
+   */
+  const spend = useCallback(
+    (move: "wish" | "finish", on: "east" | "west", by: Planner) => {
+      if (!pairing || flash) return;
+      const target = on === "east" ? pairing.east : pairing.west;
+
+      play(move === "finish" ? "crit" : "keep");
+      setCombo(0);
+      setFlash({ kind: "move", pairing, move, on, planner: by });
+      if (flashTimer.current) clearTimeout(flashTimer.current);
+      flashTimer.current = setTimeout(
+        () => setFlash(null),
+        quiet ? 260 : FLASH_MS,
+      );
+
+      startTransition(async () => {
+        const result =
+          move === "wish"
+            ? await wishItem(target.item.id, by)
+            : await finishItem(target.item.id, by);
+        if (result.error) {
+          setNotice(result.error);
+          return;
+        }
+        const label = PLANNERS[by].label;
+        setNotice(
+          move === "wish"
+            ? `${MOVES.wish.kana} — ${label} wished for "${target.item.title}". ${result.data} left.`
+            : `${MOVES.finish.kana} — ${label} finished "${target.item.title}". ${result.data} left.`,
+        );
+      });
+    },
+    [pairing, flash, quiet],
   );
 
   const undo = useCallback(() => {
@@ -307,6 +391,12 @@ export function RingView({
       if (event.key === "Backspace") {
         event.preventDefault();
         undo();
+        return;
+      }
+
+      if (event.key === "d") {
+        event.preventDefault();
+        settle("deadlock");
         return;
       }
 
@@ -453,6 +543,50 @@ export function RingView({
               ))}
             </nav>
           </div>
+
+          {/* The super meters. Three each, and running low should be legible
+              as a shape without counting. */}
+          <div className="flex w-full flex-wrap items-center gap-x-5 gap-y-1 border-t-2 border-[color:var(--color-arena-line)] pt-2">
+            {(["savea", "aaron"] as Planner[]).map((planner) => (
+              <span
+                key={planner}
+                className="font-dot flex items-center gap-2 text-[0.6rem] tracking-widest"
+                style={{ color: NEON[planner] }}
+              >
+                {PLANNERS[planner].label.toUpperCase()}
+                <Pips
+                  total={WISHES}
+                  left={moves[planner].wishes}
+                  glyph={MOVES.wish.pip}
+                  tone="var(--color-gold)"
+                />
+                <Pips
+                  total={FINISHERS}
+                  left={moves[planner].finishers}
+                  glyph={MOVES.finish.pip}
+                  tone="var(--color-ko)"
+                />
+              </span>
+            ))}
+            {held.size > 0 ? (
+              <button
+                type="button"
+                onClick={() => setReplaying((on) => !on)}
+                className={cn(
+                  "font-dot ml-auto flex min-h-7 items-center gap-2 border-2 px-2 text-[0.6rem] tracking-widest transition-colors",
+                  replay
+                    ? "border-[color:var(--color-chip)] text-[color:var(--color-chip)]"
+                    : "border-white/20 text-white/50 hover:text-white",
+                )}
+              >
+                <span className="font-jp-gothic text-sm leading-none">
+                  {MOVES.held.kana}
+                </span>
+                <span className="tabular-nums">{held.size}</span>
+                <span>{replay ? "SETTLING" : "HELD OVER"}</span>
+              </button>
+            ) : null}
+          </div>
         </header>
 
         {/* The streak, floating over the cabinet's top-right corner. */}
@@ -482,7 +616,11 @@ export function RingView({
                 flash={flash}
                 round={round}
                 quiet={quiet}
+                held={replay}
+                heldCount={held.size}
+                moves={moves}
                 onSettle={settle}
+                onMove={spend}
               />
             ) : (
               <div className="border-2 border-[color:var(--color-arena-line)] bg-[color:var(--color-arena)] px-6 py-20 text-center">
@@ -509,6 +647,14 @@ export function RingView({
                 startTransition(async () => {
                   const result = await reviveItem(id);
                   if (result.error) setNotice(result.error);
+                })
+              }
+              onRelease={(id) =>
+                startTransition(async () => {
+                  const result = await releaseItem(id);
+                  setNotice(
+                    result.error ?? "Wish taken back. It's in the ring again.",
+                  );
                 })
               }
             />

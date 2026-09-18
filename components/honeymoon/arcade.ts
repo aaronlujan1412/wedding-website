@@ -70,12 +70,52 @@ const NEITHER: Sfx[] = [
  *  "ask me later" is. */
 const SKIP: Sfx[] = [{ kana: "待った！", gloss: "MATTA — FALSE START" }];
 
+/** 預かり is a real historical sumo verdict: the bout is held, undecided. */
+const HELD: Sfx[] = [
+  { kana: "預かり", gloss: "HELD OVER — SETTLE IT LATER" },
+  { kana: "引き分け", gloss: "NOBODY IS BUDGING" },
+];
+
 export function sfxFor(outcome: BoutOutcome, seed: string): Sfx {
   if (outcome === "both") return pick(BOTH, seed);
   if (outcome === "neither") return pick(NEITHER, seed);
   if (outcome === "skip") return SKIP[0];
+  if (outcome === "deadlock") return pick(HELD, seed);
   return pick(HITS, seed);
 }
+
+/**
+ * The three moves that aren't a verdict.
+ *
+ * Two of them are budgeted, and the budget is the design: a wish you can spend
+ * on everything is the `must_do` flag, which this board already has and which
+ * nobody has ever pressed. Three is few enough that spending one is an
+ * argument in itself.
+ */
+export const MOVES = {
+  wish: {
+    kana: "願い",
+    roman: "WISH",
+    /** What it does, in the voice of the thing it does it to. */
+    blurb: "straight into the trip, never fights again",
+    pip: "★",
+  },
+  finish: {
+    kana: "必殺",
+    roman: "FINISHER",
+    blurb: "gone. no bout, no appeal",
+    pip: "◆",
+  },
+  held: {
+    kana: "預かり",
+    roman: "HELD OVER",
+    blurb: "park this pair, come back at the end",
+    pip: null,
+  },
+} as const;
+
+/** Shouted over a finisher, which is the one move with no opponent. */
+export const FINISH_SFX: Sfx = { kana: "必殺技！", gloss: "FINISHING MOVE" };
 
 /**
  * A critical hit, about one bout in nine.
