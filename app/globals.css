@@ -7,6 +7,9 @@
   --font-garamond: var(--font-garamond);
   --font-mono: var(--font-geist-mono);
   --font-jp: var(--font-jp-stack);
+  --font-jp-gothic: var(--font-jp-gothic-stack);
+  --font-dela: var(--font-dela);
+  --font-dot: var(--font-dot);
 }
 
 @theme {
@@ -124,6 +127,43 @@
      webfont: a JP family is megabytes, and this page has two readers. */
   --font-jp-stack: "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Noto Serif JP",
     "Songti SC", "Source Han Serif", serif;
+
+  /* The Ring's kana, which is a different job entirely: manga sound effects
+     and arcade shouting, not a place name on a card. Gothic (sans) at the
+     heaviest weight the device has, because ドン!! set in mincho reads as a
+     restaurant sign. Same no-webfont reasoning as the mincho above. */
+  --font-jp-gothic-stack: "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic", YuGothic, "Noto Sans JP", "Source Han Sans", Meiryo,
+    "MS PGothic", sans-serif;
+
+  /* ------------------------------------------------------------------ *
+   * The Ring
+   *
+   * The one tab that is a game, so the one tab with its own palette. It is
+   * deliberately nothing like the rest of the planner: cream paper and a
+   * quiet green are right for a document you read on a train, and wrong for
+   * the screen where two people shout at each other about whether the owl
+   * cafe is happening. The lane colours survive inside it -- her side is
+   * still blue and his is still violet -- so it is still the two of them.
+   * ------------------------------------------------------------------ */
+
+  /* The cabinet. Near-black with the blue in it, so gold and neon sit on it
+     without vibrating the way they do on true black. */
+  --color-arena: #0c0a18;
+  --color-arena-deep: #06050f;
+  --color-arena-line: #2a2350;
+
+  /* Her corner and his, pushed to neon. Same hues as the board's lanes, taken
+     up to where they can glow on near-black. */
+  --color-neon-savea: #3ad2ff;
+  --color-neon-aaron: #cf63ff;
+
+  /* The announcer's gold: VS, ranks, combo counts, the promotion line. */
+  --color-gold: #ffcf4d;
+  /* Damage, K.O., and the clock once the trip has run out of hours. */
+  --color-ko: #ff2f52;
+  /* The drained-but-not-yet-gone part of a health bar. */
+  --color-chip: #ffe08a;
 }
 
 /* Eased transparent -> background ramp. A plain 2/3-stop gradient banks alpha
@@ -249,4 +289,209 @@
   html {
     scroll-behavior: auto;
   }
+}
+
+/* ====================================================================== *
+ * The Ring
+ *
+ * Every animation on the arcade tab. They are all short, all triggered by a
+ * press, and all switched off wholesale by `motion-reduce:animate-none` at
+ * the call site -- the tab still says who won, it just stops shouting.
+ * ====================================================================== */
+
+/* The cabinet takes the hit, not just the card. */
+@keyframes ring-shake {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  10% { transform: translate3d(-8px, 4px, 0) rotate(-0.4deg); }
+  25% { transform: translate3d(7px, -5px, 0) rotate(0.35deg); }
+  40% { transform: translate3d(-5px, -3px, 0) rotate(-0.25deg); }
+  55% { transform: translate3d(4px, 3px, 0) rotate(0.2deg); }
+  70% { transform: translate3d(-2px, 1px, 0); }
+  85% { transform: translate3d(1px, -1px, 0); }
+}
+
+/* The sound effect lands from somewhere behind the screen. */
+@keyframes ring-sfx {
+  0% { transform: scale(2.6) rotate(-14deg); opacity: 0; }
+  18% { transform: scale(0.88) rotate(-7deg); opacity: 1; }
+  30% { transform: scale(1.06) rotate(-9deg); }
+  70% { transform: scale(1) rotate(-8deg); opacity: 1; }
+  100% { transform: scale(1.16) rotate(-8deg); opacity: 0; }
+}
+
+/* 集中線. The lines are drawn once and blown outward through the frame. */
+@keyframes ring-burst {
+  0% { transform: scale(0.35); opacity: 0; }
+  12% { opacity: 0.95; }
+  100% { transform: scale(2.4); opacity: 0; }
+}
+
+/* The loser leaves the ring. */
+@keyframes ring-ko {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; filter: none; }
+  22% { transform: translate3d(0, -14px, 0) rotate(-3deg); }
+  100% {
+    transform: translate3d(0, 62vh, 0) rotate(-22deg) scale(0.82);
+    opacity: 0;
+    filter: grayscale(1);
+  }
+}
+
+/* The winner braces, then holds. */
+@keyframes ring-win {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}
+
+/* Both survive: a shine passes over each of them. */
+@keyframes ring-shine {
+  0% { transform: translateX(-130%) skewX(-18deg); opacity: 0; }
+  25% { opacity: 0.85; }
+  100% { transform: translateX(230%) skewX(-18deg); opacity: 0; }
+}
+
+/* The combo counter, every time it ticks over. */
+@keyframes ring-combo {
+  0% { transform: scale(1.7) rotate(-5deg); opacity: 0; }
+  40% { transform: scale(0.94) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+
+/* A health bar's yellow remainder catching up with the red. */
+@keyframes ring-chip {
+  to { width: var(--chip-to); }
+}
+
+/* Announcements: the round card, the callout, the referee. */
+@keyframes ring-announce {
+  0% { transform: translateY(-0.6rem) scaleY(0.4); opacity: 0; }
+  55% { transform: translateY(0) scaleY(1.06); opacity: 1; }
+  100% { transform: translateY(0) scaleY(1); opacity: 1; }
+}
+
+/* ---- The transformation, for the one moment that matters ------------- */
+
+@keyframes ring-sweep {
+  0% { transform: scale(0); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: scale(3.4); opacity: 0; }
+}
+
+@keyframes ring-ribbon {
+  0% { transform: rotate(0deg) scale(0.2); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: rotate(320deg) scale(1.9); opacity: 0; }
+}
+
+@keyframes ring-sparkle {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  35% { transform: scale(1.25) rotate(60deg); opacity: 1; }
+  100% { transform: scale(0.2) rotate(180deg); opacity: 0; }
+}
+
+@keyframes ring-verdict {
+  0% { transform: scale(3) rotate(8deg); opacity: 0; filter: blur(6px); }
+  35% { transform: scale(0.92) rotate(-2deg); opacity: 1; filter: blur(0); }
+  50% { transform: scale(1.04) rotate(0deg); }
+  85% { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); opacity: 0; }
+}
+
+/* ---- Confetti, petals, and the things that turn up uninvited --------- */
+
+@keyframes ring-fall {
+  0% { transform: translate3d(0, -12vh, 0) rotate(0deg); opacity: 0; }
+  8% { opacity: 1; }
+  100% { transform: translate3d(var(--drift, 2rem), 108vh, 0) rotate(760deg); opacity: 0; }
+}
+
+@keyframes ring-fireball {
+  0% { transform: translateX(0) scale(0.5); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateX(var(--throw, 70vw)) scale(1.35); opacity: 0; }
+}
+
+@keyframes ring-wave {
+  0%, 100% { transform: rotate(-8deg); }
+  50% { transform: rotate(16deg); }
+}
+
+@keyframes ring-peek {
+  0% { transform: translateY(100%); }
+  15%, 85% { transform: translateY(0); }
+  100% { transform: translateY(100%); }
+}
+
+@utility animate-ring-shake { animation: ring-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both; }
+@utility animate-ring-sfx { animation: ring-sfx 680ms cubic-bezier(0.2, 1.4, 0.3, 1) both; }
+@utility animate-ring-burst { animation: ring-burst 560ms cubic-bezier(0.1, 0.7, 0.2, 1) both; }
+@utility animate-ring-ko { animation: ring-ko 680ms cubic-bezier(0.5, 0, 0.75, 0) both; }
+@utility animate-ring-win { animation: ring-win 420ms cubic-bezier(0.2, 0.9, 0.3, 1) both; }
+@utility animate-ring-shine { animation: ring-shine 850ms ease-out both; }
+@utility animate-ring-combo { animation: ring-combo 340ms cubic-bezier(0.2, 1.5, 0.4, 1) both; }
+@utility animate-ring-announce { animation: ring-announce 260ms cubic-bezier(0.2, 1.3, 0.4, 1) both; }
+@utility animate-ring-sweep { animation: ring-sweep 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@utility animate-ring-ribbon { animation: ring-ribbon 1500ms cubic-bezier(0.3, 0.6, 0.2, 1) both; }
+@utility animate-ring-sparkle { animation: ring-sparkle 1100ms ease-in-out infinite; }
+@utility animate-ring-verdict { animation: ring-verdict 2200ms cubic-bezier(0.2, 1.2, 0.3, 1) both; }
+@utility animate-ring-fall { animation: ring-fall var(--fall, 4s) linear both; }
+@utility animate-ring-fireball { animation: ring-fireball 900ms cubic-bezier(0.3, 0.2, 0.6, 1) both; }
+@utility animate-ring-wave { animation: ring-wave 700ms ease-in-out infinite; }
+@utility animate-ring-peek { animation: ring-peek 4200ms ease-in-out both; }
+
+/* ---- 必殺技 — the finisher ------------------------------------------- *
+   One blade across the frame, then the card comes apart along it. The slash
+   is drawn as a skewed bar that grows from nothing and leaves; the two halves
+   are the same element clipped above and below the cut, sliding apart. */
+
+@keyframes ring-slash {
+  0% { transform: translateX(-60%) skewX(-20deg) scaleY(0); opacity: 0; }
+  12% { transform: translateX(-20%) skewX(-20deg) scaleY(1); opacity: 1; }
+  55% { transform: translateX(20%) skewX(-20deg) scaleY(1); opacity: 1; }
+  100% { transform: translateX(70%) skewX(-20deg) scaleY(0.6); opacity: 0; }
+}
+
+@keyframes ring-cut-top {
+  0%, 35% { transform: translate3d(0, 0, 0); opacity: 1; }
+  100% { transform: translate3d(-3rem, -5rem, 0) rotate(-6deg); opacity: 0; }
+}
+
+@keyframes ring-cut-bottom {
+  0%, 35% { transform: translate3d(0, 0, 0); opacity: 1; }
+  100% { transform: translate3d(3rem, 5rem, 0) rotate(-6deg); opacity: 0; }
+}
+
+/* A wish, which is the opposite move and gets the opposite treatment: the
+   card is lifted out rather than destroyed. */
+@keyframes ring-ascend {
+  0% { transform: translate3d(0, 0, 0) scale(1); opacity: 1; }
+  25% { transform: translate3d(0, 0.5rem, 0) scale(0.98); }
+  100% { transform: translate3d(0, -7rem, 0) scale(1.06); opacity: 0; }
+}
+
+@keyframes ring-halo {
+  0% { transform: scale(0.2); opacity: 0; }
+  30% { opacity: 0.9; }
+  100% { transform: scale(2.2); opacity: 0; }
+}
+
+@utility animate-ring-slash { animation: ring-slash 620ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@utility animate-ring-cut-top { animation: ring-cut-top 820ms cubic-bezier(0.4, 0, 0.7, 0.2) both; }
+@utility animate-ring-cut-bottom { animation: ring-cut-bottom 820ms cubic-bezier(0.4, 0, 0.7, 0.2) both; }
+@utility animate-ring-ascend { animation: ring-ascend 820ms cubic-bezier(0.3, 0.8, 0.2, 1) both; }
+@utility animate-ring-halo { animation: ring-halo 820ms cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* The heavy outline that turns any gothic face into manga lettering. Six
+   shadows rather than -webkit-text-stroke, which thins the counters of kana
+   at this weight until ド and ト stop being different letters. */
+@utility text-impact {
+  text-shadow:
+    3px 3px 0 var(--color-arena-deep),
+    -3px 3px 0 var(--color-arena-deep),
+    3px -3px 0 var(--color-arena-deep),
+    -3px -3px 0 var(--color-arena-deep),
+    0 6px 0 var(--color-arena-deep),
+    0 0 28px currentColor;
 }

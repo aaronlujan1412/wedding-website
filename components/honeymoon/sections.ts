@@ -4,6 +4,7 @@ import {
   NotebookPen,
   Plane,
   ScrollText,
+  Swords,
   TramFront,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export type Section = {
 
 export const SECTIONS: Section[] = [
   { href: "/honeymoon", label: "Board", icon: LayoutGrid, exact: true },
+  { href: "/honeymoon/ring", label: "Ring", icon: Swords },
   { href: "/honeymoon/notes", label: "Notes", icon: NotebookPen },
   { href: "/honeymoon/flights", label: "Flights", icon: Plane },
   { href: "/honeymoon/transit", label: "Transit", icon: TramFront },

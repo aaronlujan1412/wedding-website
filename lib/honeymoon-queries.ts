@@ -313,6 +313,43 @@ export async function getNotesPage() {
 }
 
 /**
+ * The Ring: every idea still arguable, and the whole bout log behind them.
+ *
+ * The log is read in full and oldest first, because the standings are replayed
+ * from it — Elo depends on the order, so `created_at, id` is the ranking's
+ * definition, not a nicety. Flights come along for the budget: the hours you
+ * spend in the air are hours the trip does not have.
+ */
+export async function getRingPage() {
+  const trip = await getCurrentTrip();
+  const of = <T>(q: T) =>
+    trip
+      ? (q as { eq: (c: string, v: string) => T }).eq("trip_id", trip.id)
+      : q;
+
+  const [items, bouts, flights, rate] = await Promise.all([
+    of(supabase.from("trip_items").select().order("position")),
+    of(
+      supabase
+        .from("trip_bouts")
+        .select()
+        .order("created_at")
+        .order("id"),
+    ),
+    of(supabase.from("trip_flights").select().order("departs_at")),
+    getRate(),
+  ]);
+
+  return {
+    trip,
+    items: items.data ?? [],
+    bouts: bouts.data ?? [],
+    flights: flights.data ?? [],
+    rate,
+  };
+}
+
+/**
  * The trip a write belongs to.
  *
  * Deliberately resolved on the server rather than taken from the client: a
