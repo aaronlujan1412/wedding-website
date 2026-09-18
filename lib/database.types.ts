@@ -243,6 +243,55 @@ export type Database = {
         }
         Relationships: []
       }
+      trip_bouts: {
+        Row: {
+          created_at: string
+          east_id: string
+          id: string
+          outcome: Database["public"]["Enums"]["trip_bout_outcome"]
+          trip_id: string
+          west_id: string
+        }
+        Insert: {
+          created_at?: string
+          east_id: string
+          id?: string
+          outcome: Database["public"]["Enums"]["trip_bout_outcome"]
+          trip_id: string
+          west_id: string
+        }
+        Update: {
+          created_at?: string
+          east_id?: string
+          id?: string
+          outcome?: Database["public"]["Enums"]["trip_bout_outcome"]
+          trip_id?: string
+          west_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_bouts_east_id_fkey"
+            columns: ["east_id"]
+            isOneToOne: false
+            referencedRelation: "trip_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_bouts_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trip_bouts_west_id_fkey"
+            columns: ["west_id"]
+            isOneToOne: false
+            referencedRelation: "trip_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_checklist_items: {
         Row: {
           created_at: string
@@ -493,6 +542,7 @@ export type Database = {
           cost_amount: number | null
           cost_currency: Database["public"]["Enums"]["trip_currency"]
           created_at: string
+          cut_at: string | null
           duration_min: number | null
           id: string
           kind: Database["public"]["Enums"]["trip_item_kind"]
@@ -527,6 +577,7 @@ export type Database = {
           cost_amount?: number | null
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
+          cut_at?: string | null
           duration_min?: number | null
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
@@ -561,6 +612,7 @@ export type Database = {
           cost_amount?: number | null
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
+          cut_at?: string | null
           duration_min?: number | null
           id?: string
           kind?: Database["public"]["Enums"]["trip_item_kind"]
@@ -1163,6 +1215,7 @@ export type Database = {
       dietary: "restriction" | "preference" | "none"
       table_shape: "round" | "rectangular" | "square"
       trip_booking_status: "idea" | "to_book" | "booked" | "in_hand"
+      trip_bout_outcome: "east" | "west" | "both" | "neither" | "skip"
       trip_cabin: "economy" | "premium" | "business" | "first"
       trip_currency: "JPY" | "USD"
       trip_doc_category:
@@ -1325,6 +1378,7 @@ export const Constants = {
       dietary: ["restriction", "preference", "none"],
       table_shape: ["round", "rectangular", "square"],
       trip_booking_status: ["idea", "to_book", "booked", "in_hand"],
+      trip_bout_outcome: ["east", "west", "both", "neither", "skip"],
       trip_cabin: ["economy", "premium", "business", "first"],
       trip_currency: ["JPY", "USD"],
       trip_doc_category: [

@@ -14,6 +14,7 @@ export type StayProposal =
 /** A proposed route with the stays that make it up, in order. */
 export type ProposedRoute = RouteProposal & { stays: StayProposal[] };
 export type TripTransit = Database["public"]["Tables"]["trip_transit"]["Row"];
+export type TripBout = Database["public"]["Tables"]["trip_bouts"]["Row"];
 export type Notebook = Database["public"]["Tables"]["trip_notebooks"]["Row"];
 export type Note = Database["public"]["Tables"]["trip_notes"]["Row"];
 export type ChecklistItem =
@@ -28,6 +29,7 @@ export type DocCategory = Database["public"]["Enums"]["trip_doc_category"];
 export type Currency = Database["public"]["Enums"]["trip_currency"];
 export type StayPayment = Database["public"]["Enums"]["trip_stay_payment"];
 export type TransitMode = Database["public"]["Enums"]["trip_transit_mode"];
+export type BoutOutcome = Database["public"]["Enums"]["trip_bout_outcome"];
 
 /**
  * Yen per US dollar, and where that number came from. `live` is false when the
