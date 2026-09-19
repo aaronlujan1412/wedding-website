@@ -313,7 +313,14 @@ export function LodgingView({
                   items={block.stay ? itemsFor(block.stay) : []}
                   rate={rate}
                   now={now}
-                  current={current?.stay.id === block.stay?.id}
+                  // Both sides go undefined on a gap block once nothing is
+                  // current — and `undefined === undefined` is true, so every
+                  // night with no bed announced itself as the stay you are
+                  // about to check into. The block has to have a stay before
+                  // the ids are worth comparing.
+                  current={
+                    block.stay !== null && current?.stay.id === block.stay.id
+                  }
                   tonight={current?.tonight === true}
                   expanded={
                     block.stay
@@ -447,13 +454,18 @@ function Block({
     block.stay !== null &&
     new Date(checkOutAt(block.stay)).getTime() < now;
 
-  const mark = current
-    ? tonight
-      ? `tonight, night ${daysBetween(block.check_in_on, utcToZoned(new Date(now).toISOString(), STAY_TZ).date) + 1} of ${block.nights}`
-      : `next · ${countdown(checkInAt(block.stay!), now)}`
-    : done
-      ? "done"
-      : null;
+  // Read off the stay rather than off the flag. `current` should only ever be
+  // true for a block that has one, but this used to assert that with a `!`,
+  // so the moment it wasn't the whole tab went white instead of quietly
+  // dropping one label.
+  const mark =
+    current && block.stay
+      ? tonight
+        ? `tonight, night ${daysBetween(block.check_in_on, utcToZoned(new Date(now).toISOString(), STAY_TZ).date) + 1} of ${block.nights}`
+        : `next · ${countdown(checkInAt(block.stay), now)}`
+      : done
+        ? "done"
+        : null;
 
   return (
     <li
