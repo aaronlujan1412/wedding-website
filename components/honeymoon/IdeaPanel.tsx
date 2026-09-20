@@ -1,6 +1,7 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { nestedIn } from "./blockouts";
 import {
   SortableContext,
   verticalListSortingStrategy,
@@ -60,13 +61,16 @@ export function IdeaPanel({
   const unsorted = pile.filter((i) => i.kind === "unsorted").length;
 
   const needle = query.trim().toLowerCase();
+  // Cards attached to a wander block are drawn inside that block's band, so
+  // they don't also take a row here. Searching overrides it: a card you are
+  // hunting for by name has to turn up, wherever it is currently being drawn.
   const visible = needle
     ? pile.filter((item) =>
         `${item.title} ${item.title_ja ?? ""} ${item.city ?? ""} ${item.notes ?? ""}`
           .toLowerCase()
           .includes(needle),
       )
-    : pile;
+    : pile.filter((item) => nestedIn(item, items) === null);
 
   if (!open) {
     return (
