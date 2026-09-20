@@ -328,10 +328,15 @@ function ItemForm({
               />
             </Field>
             <Field label="Minutes">
+              {/* No `step`. A number input validates against `min + n * step`,
+                  so `min={1} step={15}` accepted 1, 16, 31, 46 and silently
+                  refused every round number anyone would actually type. The
+                  quarter-hour arrows were not worth a field that rejects 20.
+                  Hours snaps drops to SNAP; that is a drag affordance, not a
+                  constraint on the number. */}
               <TextInput
                 type="number"
                 min={1}
-                step={15}
                 value={form.duration_min}
                 onChange={(e) => set("duration_min", e.target.value)}
               />
