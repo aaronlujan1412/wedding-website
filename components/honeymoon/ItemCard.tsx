@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import {
@@ -18,6 +19,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { setWanderItem } from "@/app/actions/honeymoon";
 import { ItemMenu, cardKeys } from "./CardMenu";
 import { Seal, StatusLabel, TONE_INK } from "./Seal";
 import { useRate } from "./RateContext";
@@ -277,6 +279,7 @@ function BlockoutBand({
   const copyTo = copyTarget(item.lane);
   const board = useBoardData();
   const detail = blockoutDetail(item, board);
+  const [, startTransition] = useTransition();
 
   const band = (
     <article
@@ -354,6 +357,60 @@ function BlockoutBand({
             {planner.initial}
           </span>
         </div>
+
+        {/* The block's actual list, drawn inside it. These cards are hidden
+            from the pile while they hang here, so the × is the only way back
+            out — without it an attached card is a card you have to go and
+            find the form for. It writes straight through, the same as the
+            picker in the form does. */}
+        {detail.ideas.length > 0 && !overlay && (
+          <ul className="mt-1.5 space-y-px border-l border-border pl-2">
+            {detail.ideas.map((idea) => {
+              const sub = kindOf(idea.kind);
+              return (
+                <li key={idea.id} className="flex items-center gap-1.5">
+                  <span
+                    aria-hidden="true"
+                    className="h-2.5 w-[2px] flex-none rounded-full"
+                    style={{ backgroundColor: sub.color }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => actions?.onEdit(idea)}
+                    disabled={!actions}
+                    className="min-w-0 flex-1 truncate rounded-sm text-left font-raleway text-[0.7rem] text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:cursor-default"
+                  >
+                    {idea.must_do && (
+                      <Star
+                        className="mr-1 inline h-2.5 w-2.5 fill-current align-baseline"
+                        strokeWidth={2}
+                      />
+                    )}
+                    {idea.title}
+                  </button>
+                  <span className="flex-none font-mono text-[0.55rem] text-muted-foreground tabular-nums">
+                    {formatDuration(itemLength(idea))}
+                  </span>
+                  {actions && (
+                    <button
+                      type="button"
+                      title="Back to the pile"
+                      aria-label={`Detach ${idea.title} from ${item.title}`}
+                      onClick={() =>
+                        startTransition(() => {
+                          void setWanderItem(idea.id, null);
+                        })
+                      }
+                      className="flex-none rounded-sm p-0.5 text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:p-2"
+                    >
+                      <X className="h-2.5 w-2.5" strokeWidth={2} />
+                    </button>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        )}
 
         {actions && !overlay && (
           <CardControls item={item} actions={actions} copyTo={copyTo} />

@@ -72,6 +72,28 @@ export function wanderIdeas(item: TripItem, all: TripItem[]): TripItem[] {
 }
 
 /**
+ * The wander block a card is drawn inside, if it is drawn inside one.
+ *
+ * An attached card is shown in its block's band rather than as its own row in
+ * the pile — the whole point of gathering them is that they stop taking up a
+ * hundred rows of scroll.
+ *
+ * Same lane only. A card can be attached across lanes, and hiding one of those
+ * would take it off the pile it lives in to draw it in a row this view might
+ * not even be showing. A card in two places is a smudge; a card in no place is
+ * a bug report.
+ *
+ * A card with a day of its own is never nested: `wanderIdeas` drops it, because
+ * it is no longer something to do if you feel like it that afternoon.
+ */
+export function nestedIn(item: TripItem, all: TripItem[]): TripItem | null {
+  if (!item.wander_id || item.on_date !== null) return null;
+  const parent = all.find((i) => i.id === item.wander_id);
+  if (!parent || parent.lane !== item.lane) return null;
+  return parent;
+}
+
+/**
  * Cards worth offering in the picker but not attached yet.
  *
  * This is where matching on `city` still earns its place: as a suggestion it
