@@ -146,6 +146,89 @@ export function stripNights(
   return eachDay(starts[0], ends.at(-1)!);
 }
 
+/* ------------------------------------------------------------ the ribbon -- */
+
+export type BedAnswer =
+  | { kind: "bed"; stay: TripStay }
+  | { kind: "plane" }
+  | { kind: "none" };
+
+/** A run of consecutive nights with the same answer. `from`/`to` index the
+ *  strip's days — a night is named by the day you go to sleep on it. */
+export type BedSegment = BedAnswer & {
+  from: number;
+  to: number;
+  nights: number;
+};
+
+export type DayBeds = {
+  /** Last night — where you woke up. Null on the first day of the trip. */
+  woke: BedAnswer | null;
+  /** Tonight. Null on the last day, the one you fly home on. */
+  sleeps: BedAnswer | null;
+  /** You wake up in one place and go to sleep in another. */
+  moving: boolean;
+};
+
+function bedKey(answer: BedAnswer): string {
+  return answer.kind === "bed" ? answer.stay.id : answer.kind;
+}
+
+/**
+ * Where every night of the trip is spent — as runs, and as a lookup per day.
+ *
+ * A night is not a day: it sits between two of them. The night of the 1st is
+ * the one you go to sleep on the 1st and wake up from on the 2nd, so a stay
+ * touches its check-out day for exactly one morning. That half-day offset is
+ * the whole reason beds get their own row on the strip. A day where `woke`
+ * and `sleeps` disagree is a day you travel, and the leg row can never say
+ * so: legs own whole days and are forbidden from overlapping, so the day you
+ * move belongs entirely to wherever you're going.
+ */
+export function bedPlan(
+  days: string[],
+  stays: TripStay[],
+  flights: TripFlight[],
+): { segments: BedSegment[]; byDay: Map<string, DayBeds> } {
+  const decided = staysIn(stays, "decided");
+  const plane = planeNights(flights);
+  // The last day is the one you go home on, so it has no night.
+  const nights = days.slice(0, -1);
+
+  const answers = nights.map((night): BedAnswer => {
+    const stay = decided.find((s) => sleepsOn(s, night));
+    if (stay) return { kind: "bed", stay };
+    return plane.has(night) ? { kind: "plane" } : { kind: "none" };
+  });
+
+  const segments: BedSegment[] = [];
+  for (let i = 0; i < answers.length; ) {
+    let j = i;
+    while (j + 1 < answers.length && bedKey(answers[j + 1]) === bedKey(answers[i]))
+      j++;
+    segments.push({ ...answers[i], from: i, to: j, nights: j - i + 1 });
+    i = j + 1;
+  }
+
+  const byDay = new Map<string, DayBeds>(
+    days.map((date, i) => {
+      const woke = i > 0 ? answers[i - 1] : null;
+      const sleeps = i < answers.length ? answers[i] : null;
+      return [
+        date,
+        {
+          woke,
+          sleeps,
+          moving:
+            woke !== null && sleeps !== null && bedKey(woke) !== bedKey(sleeps),
+        },
+      ];
+    }),
+  );
+
+  return { segments, byDay };
+}
+
 /**
  * One lane's stays stacked into rows so overlapping suggestions sit one above
  * the other instead of on top of each other. Decided never overlaps, so it is
