@@ -1289,6 +1289,7 @@ export function HoneymoonBoard({ board }: { board: TripBoard }) {
                   days={allDays}
                   legs={legs}
                   stays={stays}
+                  flights={board.flights}
                   items={items}
                   laneItems={items.filter((i) => i.lane === headerLane)}
                   spend={spend}

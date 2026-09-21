@@ -6,7 +6,14 @@ import { selectTrip } from "@/app/actions/trips";
 import { RouteStrip } from "./RouteStrip";
 import { TripSummary } from "./TripSummary";
 import { daysBetween, formatLegDates } from "./trip";
-import type { Lane, Trip, TripItem, TripLeg, TripStay } from "./types";
+import type {
+  Lane,
+  Trip,
+  TripFlight,
+  TripItem,
+  TripLeg,
+  TripStay,
+} from "./types";
 
 /**
  * The trip, and the shape of it.
@@ -21,6 +28,7 @@ export function TripBar({
   days,
   legs,
   stays,
+  flights,
   items,
   laneItems,
   spend,
@@ -39,6 +47,8 @@ export function TripBar({
   days: string[];
   legs: TripLeg[];
   stays: TripStay[];
+  /** So the strip's bed row can tell a night in the air from an unbooked one. */
+  flights: TripFlight[];
   /** Every item, so the summary can count Decided's open days. */
   items: TripItem[];
   /** The viewed lane's cards, for the strip's per-day marks. */
@@ -136,6 +146,7 @@ export function TripBar({
         days={days}
         legs={legs}
         stays={stays}
+        flights={flights}
         items={laneItems}
         activeLegId={activeLegId}
         onLeg={onLeg}
