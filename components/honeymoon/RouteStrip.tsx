@@ -34,27 +34,32 @@ export const DAY_DROP_PREFIX = "route-day:";
 /**
  * Half the narrowest a day column is allowed to get.
  *
- * Every bed bar is inset by this at both ends, which is what puts the beds
- * half a day out of step with the dates above them — a bar starts the
- * afternoon you check in and ends the morning you check out. Two bars meeting
- * therefore seam somewhere inside a single day column, and that column is the
- * day you travel.
+ * Every leg is inset by this at both ends, which is what puts the route half
+ * a day out of step with the dates under it — a leg starts the afternoon you
+ * arrive and ends the morning you leave. Two legs meeting therefore seam
+ * somewhere inside a single day column, and that column is the day you
+ * travel.
  */
 const HALF_DAY = "1.25rem";
 
 /**
  * The trip read left to right, once.
  *
- * Three rows over one set of day columns: where you are, what day it is, and
- * where you sleep. The first two used to be the whole strip, and they could
- * not answer the question people actually asked it — "wait, which morning do
- * we leave?" Legs own whole days and can't overlap, so the day you move
- * belongs entirely to wherever you're going, and the strip said you were
- * already there at breakfast.
+ * Two rows over one set of day columns: the route, and what day it is. The
+ * route used to butt whole days against each other, which could not answer
+ * the question people actually asked the strip — "wait, which morning do we
+ * leave?" Legs own whole days and are forbidden from overlapping, so the day
+ * you move belongs entirely to wherever you are going, and the strip said you
+ * were already there at breakfast.
  *
- * The beds fix that by being drawn where they really fall. A night sits
- * between two days, so the bed row is offset half a column from the date row,
- * and a travel day is simply a day with a seam through the middle of it.
+ * A night sits between two days, so a leg is drawn where it really falls:
+ * offset half a column from the dates, midday on the first day to midday on
+ * the day after the last. A travel day is then simply a day with a seam
+ * through the middle of it.
+ *
+ * Where you sleep lives INSIDE the leg rather than on a row of its own (see
+ * `Nights`), because that is the real relationship — a leg holds beds, it
+ * does not sit beside them.
  *
  * The bar under everything is which of the board's columns are on screen
  * right now, out of the whole trip.
@@ -98,7 +103,7 @@ export function RouteStrip({
         className="grid gap-x-0.5"
         style={{
           gridTemplateColumns: `repeat(${days.length}, minmax(2.5rem, 1fr))`,
-          gridTemplateRows: "auto auto auto 0.5rem",
+          gridTemplateRows: "auto auto 0.5rem",
         }}
       >
         {legSegments(legs, "decided", days).map((segment) => (
@@ -106,6 +111,8 @@ export function RouteStrip({
             key={segment.kind === "leg" ? segment.leg.id : `gap-${segment.from}`}
             segment={segment}
             dayCount={days.length}
+            beds={segments}
+            days={days}
             active={segment.kind === "leg" && segment.leg.id === activeLegId}
             onLeg={onLeg}
             onEditLeg={onEditLeg}
@@ -128,30 +135,12 @@ export function RouteStrip({
           />
         ))}
 
-        {segments.map((segment) => (
-          <Bed key={`${segment.from}-${bedId(segment)}`} segment={segment} days={days} />
-        ))}
-
-        {/* The seam itself. Two bars of the same green meeting under a date
-            is easy to miss, and that meeting point is the whole message, so
-            it gets a hairline rather than being left to the gap. */}
-        {days.map((date, i) =>
-          byDay.get(date)?.moving ? (
-            <span
-              key={`seam-${date}`}
-              aria-hidden="true"
-              className="pointer-events-none relative z-10 mt-1 w-px justify-self-center bg-border"
-              style={{ gridRow: 3, gridColumn: i + 1 }}
-            />
-          ) : null,
-        )}
-
         {onScreen && (
           <span
             aria-hidden="true"
             className="mt-1 h-0.5 self-start rounded-full bg-primary"
             style={{
-              gridRow: 4,
+              gridRow: 3,
               gridColumn: `${onScreen.first + 1} / ${onScreen.last + 2}`,
             }}
           />
@@ -186,6 +175,8 @@ function sleepPhrase(answer: BedAnswer): string {
 function Span({
   segment,
   dayCount,
+  beds,
+  days,
   active,
   onLeg,
   onEditLeg,
@@ -193,6 +184,9 @@ function Span({
 }: {
   segment: LegSegment;
   dayCount: number;
+  /** Every run of nights on the strip. The band clips them to this leg. */
+  beds: BedSegment[];
+  days: string[];
   active: boolean;
   onLeg: (id: string | null) => void;
   onEditLeg: (leg: TripLeg) => void;
@@ -226,11 +220,17 @@ function Span({
         style={placement}
         onClick={() => onCreateLeg("decided", segment.from, segment.to)}
         title={`${dates}: nowhere yet. Add a leg for these days.`}
-        className="mb-1 flex min-w-0 flex-col justify-center rounded-md border border-dashed border-border px-2 py-1.5 text-left transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="mb-1 flex min-w-0 flex-col overflow-hidden rounded-md border border-dashed border-border pt-1.5 text-left transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="truncate font-garamond text-sm leading-tight text-muted-foreground italic">
+        <span className="truncate px-2 pb-1 font-garamond text-sm leading-tight text-muted-foreground italic">
           {segment.span === 1 ? "Where?" : "Nowhere yet"}
         </span>
+        <Nights
+          beds={beds}
+          column={segment.column}
+          span={segment.span}
+          days={days}
+        />
       </button>
     );
   }
@@ -241,7 +241,7 @@ function Span({
     <div
       style={placement}
       className={cn(
-        "group/leg relative mb-1 flex min-w-0 rounded-md border transition-colors",
+        "group/leg relative mb-1 flex min-w-0 flex-col overflow-hidden rounded-md border transition-colors",
         active
           ? "border-primary bg-primary/5"
           : "border-border bg-background hover:border-primary/50",
@@ -256,7 +256,7 @@ function Span({
             ? `Showing ${leg.name} only. Click to show the whole trip.`
             : `${leg.name}, ${formatLegDates(leg)}. Click to show just these days.`
         }
-        className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="flex min-w-0 flex-col px-2 pt-1.5 pb-1 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         {/* In a two-day span the Japanese name gives way entirely before the
             English one loses a letter. A weighted shrink can't promise that:
@@ -275,6 +275,13 @@ function Span({
           )}
         </span>
       </button>
+
+      <Nights
+        beds={beds}
+        column={segment.column}
+        span={segment.span}
+        days={days}
+      />
 
       <button
         type="button"
@@ -366,63 +373,120 @@ function Day({
   );
 }
 
+
 /**
- * One run of nights, drawn where those nights actually fall.
+ * The nights of one leg, along the foot of it.
  *
- * The bar covers the stay's own two dates — check-in through check-out — and
- * is then pulled in half a day at each end, which is exactly what those dates
- * mean: you arrive in the afternoon and you leave in the morning. Nothing
- * here needs to say "travel day", because the gap between two bars is one.
+ * A leg bar runs from midday on its first day to midday on the day after its
+ * last, so its width is exactly its own night count — which means one grid
+ * cell per night needs no arithmetic beyond clipping each run of nights to
+ * this leg. The beds sit inside the place they belong to rather than beside
+ * it, because that is the real relationship: you are in Kyoto, and inside
+ * that you sleep at the Yachiyo. Drawn as two rows they read as equals.
+ *
+ * How full the box is is the message. A hotel covering the whole leg fills
+ * it edge to edge; anything missing leaves amber showing on exactly the
+ * nights that have no bed.
  */
-function Bed({ segment, days }: { segment: BedSegment; days: string[] }) {
-  const nights = formatNights(segment.nights);
-  const from = parseDay(days[segment.from]);
-  const to = parseDay(days[segment.to + 1]);
-  const span = `${from.toLocaleDateString("en-US", { month: "short", day: "numeric" })} – ${to.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+function Nights({
+  beds,
+  column,
+  span,
+  days,
+}: {
+  beds: BedSegment[];
+  column: number;
+  span: number;
+  days: string[];
+}) {
+  const inside = beds
+    .map((bed) => ({
+      bed,
+      from: Math.max(bed.from, column),
+      to: Math.min(bed.to, column + span - 1),
+    }))
+    .filter((run) => run.from <= run.to);
+
+  if (inside.length === 0) return null;
+
+  return (
+    <span
+      className="grid gap-px"
+      style={{ gridTemplateColumns: `repeat(${span}, minmax(0, 1fr))` }}
+    >
+      {inside.map(({ bed, from, to }) => (
+        <Bed
+          key={`${from}-${bedId(bed)}`}
+          bed={bed}
+          from={from}
+          to={to}
+          column={column}
+          days={days}
+        />
+      ))}
+    </span>
+  );
+}
+
+/** One run of nights inside its leg. Fills rather than outlines: a border on
+ *  every run would be a second grid inside a box that already has one. */
+function Bed({
+  bed,
+  from,
+  to,
+  column,
+  days,
+}: {
+  bed: BedSegment;
+  from: number;
+  to: number;
+  column: number;
+  days: string[];
+}) {
+  const count = to - from + 1;
+  const short = (iso: string) =>
+    parseDay(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const when = `${short(days[from])} – ${short(days[to + 1] ?? days[to])}`;
+  const nights = formatNights(count);
 
   const face =
-    segment.kind === "bed"
+    bed.kind === "bed"
       ? {
-          text: segment.stay.name,
-          title: `${segment.stay.name} · ${span} · ${nights} · ${BOOKING_STATUSES[segment.stay.booking_status].label.toLowerCase()}`,
+          text: bed.stay.name,
+          title: `${bed.stay.name} · ${when} · ${nights} · ${BOOKING_STATUSES[bed.stay.booking_status].label.toLowerCase()}`,
           className:
-            BOOKING_STATUSES[segment.stay.booking_status].light === "ready"
-              ? "border-ready/60 bg-ready/10 text-foreground"
-              : BOOKING_STATUSES[segment.stay.booking_status].light === "pending"
-                // Amber border, but no wash: the wash below means "nothing
-                // here", and a hotel you still have to book is not nothing.
-                ? "border-pending/70 bg-background text-foreground"
-                : "border-border bg-background text-muted-foreground",
+            BOOKING_STATUSES[bed.stay.booking_status].light === "ready"
+              ? "bg-ready/15 text-foreground"
+              : BOOKING_STATUSES[bed.stay.booking_status].light === "pending"
+                // Amber, but lighter than a hole: a hotel you still have to
+                // book is not the same as having nowhere to sleep.
+                ? "bg-caution/25 text-foreground"
+                : "bg-secondary text-muted-foreground",
         }
-      : segment.kind === "plane"
+      : bed.kind === "plane"
         ? {
             text: "Plane",
-            title: `${nights} in the air · ${span}`,
-            className:
-              "border-dashed border-border bg-transparent text-muted-foreground",
+            title: `${nights} in the air · ${when}`,
+            className: "bg-muted/60 text-muted-foreground",
           }
         : {
-            // The one loud thing down here, in the same amber Lodging uses
-            // for the same hole.
+            // The one loud thing in here, in the amber Lodging uses for the
+            // same hole.
             text: "No bed",
-            title: `${nights} with no bed · ${span}`,
-            className: "border-dashed border-pending bg-caution/25 text-pending",
+            title: `${nights} with no bed · ${when}`,
+            className: "bg-caution/50 text-pending",
           };
 
   return (
     <span
-      style={{
-        gridRow: 3,
-        gridColumn: `${segment.from + 1} / ${segment.to + 3}`,
-        marginInline: HALF_DAY,
-      }}
+      style={{ gridColumn: `${from - column + 1} / ${to - column + 2}` }}
       title={face.title}
       className={cn(
-        "mt-1 flex min-w-0 items-center justify-center overflow-hidden rounded-sm border px-1.5 py-0.5",
+        "flex min-w-0 items-center justify-center overflow-hidden px-1 py-0.5",
         face.className,
       )}
     >
-      <span className="truncate font-garamond text-xs leading-tight">
+      <span className="truncate font-garamond text-[0.65rem] leading-tight">
         {face.text}
       </span>
     </span>
