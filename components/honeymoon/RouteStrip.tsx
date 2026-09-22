@@ -105,6 +105,7 @@ export function RouteStrip({
           <Span
             key={segment.kind === "leg" ? segment.leg.id : `gap-${segment.from}`}
             segment={segment}
+            dayCount={days.length}
             active={segment.kind === "leg" && segment.leg.id === activeLegId}
             onLeg={onLeg}
             onEditLeg={onEditLeg}
@@ -184,20 +185,32 @@ function sleepPhrase(answer: BedAnswer): string {
 
 function Span({
   segment,
+  dayCount,
   active,
   onLeg,
   onEditLeg,
   onCreateLeg,
 }: {
   segment: LegSegment;
+  dayCount: number;
   active: boolean;
   onLeg: (id: string | null) => void;
   onEditLeg: (leg: TripLeg) => void;
   onCreateLeg: (lane: Lane, from: string, to: string) => void;
 }) {
+  // A leg's last day is a day you're still there — the form says "Last day,
+  // inclusive" — so you leave the morning after it. The bar therefore runs
+  // from midday on the first day to midday on the day after the last, which
+  // is the same shape as a stay's check-in to check-out, and lines the two
+  // rows up whenever the route and the beds agree. A leg running to the end
+  // of the trip has no day after, so the end is clamped to the last column.
   const placement = {
     gridRow: 1,
-    gridColumn: `${segment.column + 1} / span ${segment.span}`,
+    gridColumn: `${segment.column + 1} / ${Math.min(
+      segment.column + segment.span + 2,
+      dayCount + 1,
+    )}`,
+    marginInline: HALF_DAY,
   };
 
   // Days inside the trip that no leg covers. Clicking one starts a leg on
@@ -213,7 +226,7 @@ function Span({
         style={placement}
         onClick={() => onCreateLeg("decided", segment.from, segment.to)}
         title={`${dates}: nowhere yet. Add a leg for these days.`}
-        className="flex min-w-0 flex-col justify-center rounded-t-md border border-b-0 border-dashed border-border px-2 py-1.5 text-left transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="mb-1 flex min-w-0 flex-col justify-center rounded-md border border-dashed border-border px-2 py-1.5 text-left transition-colors hover:border-primary hover:text-primary focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         <span className="truncate font-garamond text-sm leading-tight text-muted-foreground italic">
           {segment.span === 1 ? "Where?" : "Nowhere yet"}
@@ -228,7 +241,7 @@ function Span({
     <div
       style={placement}
       className={cn(
-        "group/leg relative flex min-w-0 rounded-t-md border border-b-0 transition-colors",
+        "group/leg relative mb-1 flex min-w-0 rounded-md border transition-colors",
         active
           ? "border-primary bg-primary/5"
           : "border-border bg-background hover:border-primary/50",
@@ -243,7 +256,7 @@ function Span({
             ? `Showing ${leg.name} only. Click to show the whole trip.`
             : `${leg.name}, ${formatLegDates(leg)}. Click to show just these days.`
         }
-        className="flex min-w-0 flex-1 flex-col rounded-t-md px-2 py-1.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         {/* In a two-day span the Japanese name gives way entirely before the
             English one loses a letter. A weighted shrink can't promise that:
@@ -325,7 +338,7 @@ function Day({
       title={`${label}${move ? ` · ${move}` : ""} · ${items.length} planned`}
       style={{ gridRow: 2, gridColumn: column }}
       className={cn(
-        "flex min-w-0 flex-col items-center rounded-b-md border px-0.5 pt-1 pb-1.5 transition-colors",
+        "flex min-w-0 flex-col items-center rounded-md border px-0.5 pt-1 pb-1.5 transition-colors",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
         isOver
           ? "border-primary bg-secondary"
