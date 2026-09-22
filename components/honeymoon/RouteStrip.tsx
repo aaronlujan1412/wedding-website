@@ -32,15 +32,19 @@ const PIP_FILL: Record<BookingLight, string> = {
 export const DAY_DROP_PREFIX = "route-day:";
 
 /**
- * Half the narrowest a day column is allowed to get.
+ * The grid is ruled in HALF days, two columns per date.
  *
- * Every leg is inset by this at both ends, which is what puts the route half
- * a day out of step with the dates under it — a leg starts the afternoon you
- * arrive and ends the morning you leave. Two legs meeting therefore seam
- * somewhere inside a single day column, and that column is the day you
- * travel.
+ * That is what lets a leg start the afternoon you arrive and end the morning
+ * you leave: it spans from the second half of its first day to the first half
+ * of the day after its last. Expressing that as a fixed inset on a whole-day
+ * grid does not work — two neighbouring legs then share a whole column and
+ * overlap by however much wider than the inset that column has grown, which
+ * put the earlier leg's edit button underneath the later leg.
+ *
+ * With half columns the geometry is exact at every width, so the only margin
+ * left is a hairline to keep two boxes from sharing an edge.
  */
-const HALF_DAY = "1.25rem";
+const HAIRLINE = "1px";
 
 /**
  * The trip read left to right, once.
@@ -100,9 +104,9 @@ export function RouteStrip({
   return (
     <div className="rail-scroll overflow-x-auto px-2 pt-2 pb-1.5">
       <div
-        className="grid gap-x-0.5"
+        className="grid"
         style={{
-          gridTemplateColumns: `repeat(${days.length}, minmax(2.5rem, 1fr))`,
+          gridTemplateColumns: `repeat(${days.length * 2}, minmax(1.25rem, 1fr))`,
           gridTemplateRows: "auto auto 0.5rem",
         }}
       >
@@ -124,7 +128,7 @@ export function RouteStrip({
           <Day
             key={date}
             date={date}
-            column={i + 1}
+            column={i}
             items={items.filter((item) => item.on_date === date)}
             beds={byDay.get(date)}
             inScope={
@@ -141,7 +145,7 @@ export function RouteStrip({
             className="mt-1 h-0.5 self-start rounded-full bg-primary"
             style={{
               gridRow: 3,
-              gridColumn: `${onScreen.first + 1} / ${onScreen.last + 2}`,
+              gridColumn: `${onScreen.first * 2 + 1} / ${onScreen.last * 2 + 3}`,
             }}
           />
         )}
@@ -200,11 +204,11 @@ function Span({
   // of the trip has no day after, so the end is clamped to the last column.
   const placement = {
     gridRow: 1,
-    gridColumn: `${segment.column + 1} / ${Math.min(
-      segment.column + segment.span + 2,
-      dayCount + 1,
+    gridColumn: `${segment.column * 2 + 2} / ${Math.min(
+      (segment.column + segment.span) * 2 + 2,
+      dayCount * 2 + 1,
     )}`,
-    marginInline: HALF_DAY,
+    marginInline: HAIRLINE,
   };
 
   // Days inside the trip that no leg covers. Clicking one starts a leg on
@@ -343,7 +347,11 @@ function Day({
       onClick={() => onDay(date)}
       aria-label={`${label}: ${move ? `${move}. ` : ""}${items.length} planned. Scroll the board to this day.`}
       title={`${label}${move ? ` · ${move}` : ""} · ${items.length} planned`}
-      style={{ gridRow: 2, gridColumn: column }}
+      style={{
+        gridRow: 2,
+        gridColumn: `${column * 2 + 1} / ${column * 2 + 3}`,
+        marginInline: HAIRLINE,
+      }}
       className={cn(
         "flex min-w-0 flex-col items-center rounded-md border px-0.5 pt-1 pb-1.5 transition-colors",
         "focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring",
