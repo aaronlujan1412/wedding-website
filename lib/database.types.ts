@@ -928,7 +928,10 @@ export type Database = {
           address: string | null
           address_ja: string | null
           booking_status: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_from: string | null
+          breakfast_note: string | null
           breakfast_time: string | null
+          breakfast_to: string | null
           cancel_by: string | null
           check_in_on: string
           check_in_time: string | null
@@ -940,9 +943,14 @@ export type Database = {
           cost_currency: Database["public"]["Enums"]["trip_currency"]
           created_at: string
           desk_cash_yen: number | null
+          dinner_from: string | null
+          dinner_note: string | null
           dinner_time: string | null
+          dinner_to: string | null
           forward_bags: boolean
           getting_there: string | null
+          has_breakfast: boolean
+          has_dinner: boolean
           id: string
           lane: Database["public"]["Enums"]["trip_lane"]
           map_url: string | null
@@ -962,7 +970,10 @@ export type Database = {
           address?: string | null
           address_ja?: string | null
           booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_from?: string | null
+          breakfast_note?: string | null
           breakfast_time?: string | null
+          breakfast_to?: string | null
           cancel_by?: string | null
           check_in_on: string
           check_in_time?: string | null
@@ -974,9 +985,14 @@ export type Database = {
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           desk_cash_yen?: number | null
+          dinner_from?: string | null
+          dinner_note?: string | null
           dinner_time?: string | null
+          dinner_to?: string | null
           forward_bags?: boolean
           getting_there?: string | null
+          has_breakfast?: boolean
+          has_dinner?: boolean
           id?: string
           lane?: Database["public"]["Enums"]["trip_lane"]
           map_url?: string | null
@@ -996,7 +1012,10 @@ export type Database = {
           address?: string | null
           address_ja?: string | null
           booking_status?: Database["public"]["Enums"]["trip_booking_status"]
+          breakfast_from?: string | null
+          breakfast_note?: string | null
           breakfast_time?: string | null
+          breakfast_to?: string | null
           cancel_by?: string | null
           check_in_on?: string
           check_in_time?: string | null
@@ -1008,9 +1027,14 @@ export type Database = {
           cost_currency?: Database["public"]["Enums"]["trip_currency"]
           created_at?: string
           desk_cash_yen?: number | null
+          dinner_from?: string | null
+          dinner_note?: string | null
           dinner_time?: string | null
+          dinner_to?: string | null
           forward_bags?: boolean
           getting_there?: string | null
+          has_breakfast?: boolean
+          has_dinner?: boolean
           id?: string
           lane?: Database["public"]["Enums"]["trip_lane"]
           map_url?: string | null

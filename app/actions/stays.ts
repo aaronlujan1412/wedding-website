@@ -58,8 +58,14 @@ export type StayInput = {
   phone?: string | null;
   map_url?: string | null;
   getting_there?: string | null;
-  breakfast_time?: string | null;
-  dinner_time?: string | null;
+  has_breakfast?: boolean;
+  breakfast_from?: string | null;
+  breakfast_to?: string | null;
+  breakfast_note?: string | null;
+  has_dinner?: boolean;
+  dinner_from?: string | null;
+  dinner_to?: string | null;
+  dinner_note?: string | null;
   onsen_hours?: string | null;
   tattoos_ok?: boolean | null;
   forward_bags?: boolean;
@@ -91,8 +97,21 @@ function toRow(input: StayInput) {
     phone: blankToNull(input.phone),
     map_url: blankToNull(input.map_url),
     getting_there: blankToNull(input.getting_there),
-    breakfast_time: blankToNull(input.breakfast_time),
-    dinner_time: blankToNull(input.dinner_time),
+    // A meal nobody gets has no window and no description: what the form shows
+    // is what's stored, so unticking it doesn't leave times behind to come back
+    // on the next tick.
+    has_breakfast: input.has_breakfast ?? false,
+    breakfast_from: input.has_breakfast
+      ? blankToNull(input.breakfast_from)
+      : null,
+    breakfast_to: input.has_breakfast ? blankToNull(input.breakfast_to) : null,
+    breakfast_note: input.has_breakfast
+      ? blankToNull(input.breakfast_note)
+      : null,
+    has_dinner: input.has_dinner ?? false,
+    dinner_from: input.has_dinner ? blankToNull(input.dinner_from) : null,
+    dinner_to: input.has_dinner ? blankToNull(input.dinner_to) : null,
+    dinner_note: input.has_dinner ? blankToNull(input.dinner_note) : null,
     onsen_hours: blankToNull(input.onsen_hours),
     tattoos_ok: input.tattoos_ok ?? null,
     forward_bags: input.forward_bags ?? false,

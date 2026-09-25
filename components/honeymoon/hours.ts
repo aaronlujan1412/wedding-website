@@ -1,5 +1,12 @@
 import { flightsOnDay, formatClockIn } from "./flights";
-import { USUAL_CHECK_IN, USUAL_CHECK_OUT, sleepsOn } from "./stays";
+import {
+  MEAL_LABEL,
+  USUAL_CHECK_IN,
+  USUAL_CHECK_OUT,
+  mealOf,
+  sleepsOn,
+  type Meal,
+} from "./stays";
 import { MODES, arrivesClock, departsClock, transitOnDay } from "./transit";
 import {
   WEEKDAYS,
@@ -286,6 +293,18 @@ export type Mark = {
   label: string;
 };
 
+/**
+ * The line sits at the start, so the end is the part it can't draw — and the
+ * end is what you plan around ("breakfast until 09:30" is the one that makes
+ * you leave the room).
+ */
+function mealMark(meal: Meal, place: string): string {
+  const label = meal.to
+    ? `${MEAL_LABEL[meal.kind]} until ${meal.to.slice(0, 5)}`
+    : MEAL_LABEL[meal.kind];
+  return `${label}, ${place}`;
+}
+
 export function marksOnDay(date: string, stays: TripStay[]): Mark[] {
   const out: Mark[] = [];
   for (const stay of stays) {
@@ -305,21 +324,26 @@ export function marksOnDay(date: string, stays: TripStay[]): Mark[] {
         label: `Check in, ${stay.name}`,
       });
     }
-    // Breakfast is the morning after a night there; dinner is the evening of one.
-    if (stay.breakfast_time && sleepsOn(stay, addDays(date, -1))) {
+    // Breakfast is the morning after a night there; dinner is the evening of
+    // one. A meal is only a line on the ruler once it has a start — an
+    // included meal nobody has looked up the time for has no minute to sit at,
+    // and stays a fact on the Lodging tab until it does.
+    const breakfast = mealOf(stay, "breakfast");
+    if (breakfast?.from && sleepsOn(stay, addDays(date, -1))) {
       out.push({
         key: `breakfast-${stay.id}`,
         kind: "breakfast",
-        at: minutesOf(stay.breakfast_time),
-        label: `Breakfast, ${stay.name}`,
+        at: minutesOf(breakfast.from),
+        label: mealMark(breakfast, stay.name),
       });
     }
-    if (stay.dinner_time && sleepsOn(stay, date)) {
+    const dinner = mealOf(stay, "dinner");
+    if (dinner?.from && sleepsOn(stay, date)) {
       out.push({
         key: `dinner-${stay.id}`,
         kind: "dinner",
-        at: minutesOf(stay.dinner_time),
-        label: `Dinner, ${stay.name}`,
+        at: minutesOf(dinner.from),
+        label: mealMark(dinner, stay.name),
       });
     }
   }

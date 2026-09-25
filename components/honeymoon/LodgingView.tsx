@@ -52,6 +52,8 @@ import {
   formatNights,
   formatStayDates,
   isStayAdopted,
+  mealLine,
+  mealsOf,
   nightCount,
   perNightYen,
   stayAdoptEffect,
@@ -741,10 +743,9 @@ function Details({
   const checkOut = checkOutAt(stay);
   const deadline = cancelDeadline(stay);
   const bags = bagsFor(stay, stays);
-  const meals = [
-    stay.breakfast_time && `Breakfast ${stay.breakfast_time.slice(0, 5)}`,
-    stay.dinner_time && `Dinner ${stay.dinner_time.slice(0, 5)}`,
-    stay.onsen_hours && `Onsen ${stay.onsen_hours}`,
+  const meals = mealsOf(stay);
+  const onsen = [
+    stay.onsen_hours && `Open ${stay.onsen_hours}`,
     stay.tattoos_ok !== null && TATTOO_LABEL[`${stay.tattoos_ok}`],
   ].filter(Boolean);
 
@@ -862,9 +863,24 @@ function Details({
         )}
 
         {meals.length > 0 && (
-          <Fact label="Meals and onsen" wide>
+          <Fact label="Meals">
+            {/* One line each: breakfast and dinner are two separate plans for
+                the day, not one run-on sentence about food. */}
+            {meals.map((meal) => (
+              <span
+                key={meal.kind}
+                className="block font-garamond text-lg leading-snug"
+              >
+                {mealLine(meal)}
+              </span>
+            ))}
+          </Fact>
+        )}
+
+        {onsen.length > 0 && (
+          <Fact label="Onsen">
             <span className="font-garamond text-lg leading-snug">
-              {meals.join(" · ")}
+              {onsen.join(" · ")}
             </span>
           </Fact>
         )}
