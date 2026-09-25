@@ -24,7 +24,12 @@ import {
   TextInput,
   Toggle,
 } from "./FormParts";
-import { USUAL_CHECK_IN, USUAL_CHECK_OUT, formatNights } from "./stays";
+import {
+  USUAL_CHECK_IN,
+  USUAL_CHECK_OUT,
+  formatNights,
+  type MealKind,
+} from "./stays";
 import {
   BOOKING_STATUSES,
   LANES,
@@ -71,13 +76,21 @@ type FormState = {
   phone: string;
   map_url: string;
   getting_there: string;
-  breakfast_time: string;
-  dinner_time: string;
+  has_breakfast: boolean;
+  breakfast_from: string;
+  breakfast_to: string;
+  breakfast_note: string;
+  has_dinner: boolean;
+  dinner_from: string;
+  dinner_to: string;
+  dinner_note: string;
   onsen_hours: string;
   tattoos: "unknown" | "yes" | "no";
   forward_bags: boolean;
   notes: string;
 };
+
+type Setter = <K extends keyof FormState>(key: K, value: FormState[K]) => void;
 
 /** A hotel is never "ticket in hand", so stays stop at booked. */
 const STAY_STATUSES: BookingStatus[] = ["idea", "to_book", "booked"];
@@ -122,8 +135,14 @@ function toForm({ stay, lane, from, to }: StayDraft): FormState {
     phone: stay?.phone ?? "",
     map_url: stay?.map_url ?? "",
     getting_there: stay?.getting_there ?? "",
-    breakfast_time: hhmm(stay?.breakfast_time),
-    dinner_time: hhmm(stay?.dinner_time),
+    has_breakfast: stay?.has_breakfast ?? false,
+    breakfast_from: hhmm(stay?.breakfast_from),
+    breakfast_to: hhmm(stay?.breakfast_to),
+    breakfast_note: stay?.breakfast_note ?? "",
+    has_dinner: stay?.has_dinner ?? false,
+    dinner_from: hhmm(stay?.dinner_from),
+    dinner_to: hhmm(stay?.dinner_to),
+    dinner_note: stay?.dinner_note ?? "",
     onsen_hours: stay?.onsen_hours ?? "",
     tattoos:
       stay?.tattoos_ok === true
@@ -447,25 +466,26 @@ function StayForm({
           </Field>
         </Fieldset>
 
-        <Fieldset legend="Meals and onsen">
+        <Fieldset legend="Meals">
+          <Meal
+            meal="breakfast"
+            label="Breakfast is included"
+            noteHint="A Japanese set in the dining room, a buffet, a tray in the room."
+            form={form}
+            set={set}
+          />
+          <Meal
+            meal="dinner"
+            label="Dinner is included"
+            hint="Ryokan serve dinner at a set time and wait for you."
+            noteHint="Kaiseki in the room, shabu-shabu downstairs."
+            form={form}
+            set={set}
+          />
+        </Fieldset>
+
+        <Fieldset legend="Onsen">
           <div className="grid gap-3 sm:grid-cols-2">
-            <Field label="Breakfast">
-              <TextInput
-                type="time"
-                value={form.breakfast_time}
-                onChange={(e) => set("breakfast_time", e.target.value)}
-              />
-            </Field>
-            <Field
-              label="Dinner"
-              hint="Ryokan serve dinner at a set time and wait for you."
-            >
-              <TextInput
-                type="time"
-                value={form.dinner_time}
-                onChange={(e) => set("dinner_time", e.target.value)}
-              />
-            </Field>
             <Field label="Onsen hours">
               <TextInput
                 value={form.onsen_hours}
@@ -553,5 +573,68 @@ function StayForm({
         </DialogFooter>
       </form>
     </>
+  );
+}
+
+/**
+ * A meal the stay either includes or doesn't. The tick is the fact worth
+ * knowing first — a ryokan where dinner is part of the room is a different
+ * evening — and the window and the description only make sense once it's on,
+ * so they aren't on screen until it is.
+ */
+function Meal({
+  meal,
+  label,
+  hint,
+  noteHint,
+  form,
+  set,
+}: {
+  meal: MealKind;
+  label: string;
+  hint?: string;
+  noteHint: string;
+  form: FormState;
+  set: Setter;
+}) {
+  const on = form[`has_${meal}`];
+
+  return (
+    <div className="space-y-3">
+      <Toggle
+        checked={on}
+        onChange={(next) => set(`has_${meal}`, next)}
+        label={label}
+        hint={hint}
+      />
+      {on && (
+        <div className="grid gap-3 border-l border-border pl-4 sm:grid-cols-2">
+          <Field label="Served from">
+            <TextInput
+              type="time"
+              value={form[`${meal}_from`]}
+              onChange={(e) => set(`${meal}_from`, e.target.value)}
+            />
+          </Field>
+          {/* The end is the half that bites — it's what makes you leave the
+              room — so it's a field of its own rather than a note on the start. */}
+          <Field label="Until">
+            <TextInput
+              type="time"
+              value={form[`${meal}_to`]}
+              onChange={(e) => set(`${meal}_to`, e.target.value)}
+            />
+          </Field>
+          <div className="sm:col-span-2">
+            <Field label="What it is" hint={noteHint}>
+              <TextInput
+                value={form[`${meal}_note`]}
+                onChange={(e) => set(`${meal}_note`, e.target.value)}
+              />
+            </Field>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

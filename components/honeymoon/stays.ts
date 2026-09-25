@@ -341,6 +341,73 @@ export function currentStay(
   return next ? { stay: next, tonight: false } : null;
 }
 
+/* ----------------------------------------------------------------- meals -- */
+
+export type MealKind = "breakfast" | "dinner";
+
+export const MEALS: MealKind[] = ["breakfast", "dinner"];
+
+export const MEAL_LABEL: Record<MealKind, string> = {
+  breakfast: "Breakfast",
+  dinner: "Dinner",
+};
+
+export type Meal = {
+  kind: MealKind;
+  from: string | null;
+  to: string | null;
+  note: string | null;
+};
+
+/**
+ * The meal if the stay includes it, else null. Included with no time yet is a
+ * real answer — it's why the boolean is stored rather than inferred from the
+ * times — so every caller has to cope with a meal that can't be drawn on a
+ * clock.
+ */
+export function mealOf(stay: TripStay, kind: MealKind): Meal | null {
+  const on = kind === "breakfast" ? stay.has_breakfast : stay.has_dinner;
+  if (!on) return null;
+  return kind === "breakfast"
+    ? {
+        kind,
+        from: stay.breakfast_from,
+        to: stay.breakfast_to,
+        note: stay.breakfast_note,
+      }
+    : {
+        kind,
+        from: stay.dinner_from,
+        to: stay.dinner_to,
+        note: stay.dinner_note,
+      };
+}
+
+export function mealsOf(stay: TripStay): Meal[] {
+  return MEALS.map((kind) => mealOf(stay, kind)).filter((m) => m !== null);
+}
+
+const clock = (time: string) => time.slice(0, 5);
+
+/**
+ * The window in words. Either end can be unknown: the end is the half that
+ * bites ("breakfast until 09:30"), and a ryokan dinner usually only has a
+ * start, so both are said on their own rather than only as a pair.
+ */
+export function mealWindow(meal: Meal): string | null {
+  if (meal.from && meal.to) return `${clock(meal.from)}–${clock(meal.to)}`;
+  if (meal.from) return `from ${clock(meal.from)}`;
+  if (meal.to) return `until ${clock(meal.to)}`;
+  return null;
+}
+
+/** "Dinner 18:00–20:00 · kaiseki in the room", down to plain "Breakfast". */
+export function mealLine(meal: Meal): string {
+  const when = mealWindow(meal);
+  const head = when ? `${MEAL_LABEL[meal.kind]} ${when}` : MEAL_LABEL[meal.kind];
+  return meal.note ? `${head} · ${meal.note}` : head;
+}
+
 /* ----------------------------------------------------------------- money -- */
 
 export function perNightYen(stay: TripStay, rate: Rate): number | null {
@@ -406,6 +473,6 @@ export function suggestedForStay(stay: TripStay): string[] {
       ? ["Send the bags ahead at the front desk", "Overnight bag packed"]
       : []),
     ...(deskCashYen(stay) > 0 ? ["Cash for the desk"] : []),
-    ...(stay.dinner_time ? ["Tell them if we'll be late for dinner"] : []),
+    ...(stay.has_dinner ? ["Tell them if we'll be late for dinner"] : []),
   ];
 }
