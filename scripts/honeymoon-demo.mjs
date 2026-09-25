@@ -42,6 +42,7 @@ const TABLES = [
   "trip_stays",
   "trip_transit",
   "trip_checklist_items",
+  "trip_papers",
 ];
 /** PostgREST refuses an unfiltered delete; "key is not null" matches every
  *  row and, unlike a sentinel value, does not care what type the key is. */
@@ -54,6 +55,7 @@ const KEYS = {
   trip_stays: "id",
   trip_transit: "id",
   trip_checklist_items: "id",
+  trip_papers: "id",
 };
 const BACKUP_DIR = "supabase/.backups";
 

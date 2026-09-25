@@ -24,6 +24,7 @@ const BUCKETS = [
   { name: "guest-photos", public: true },
   { name: "guest-photo-originals", public: false },
   { name: "backups", public: false },
+  { name: "trip-papers", public: false },
 ];
 
 console.log(`Provisioning buckets on ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);

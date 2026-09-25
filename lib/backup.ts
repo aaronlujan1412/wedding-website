@@ -29,6 +29,10 @@ export const BACKUP_TABLES = [
   "trip_stays",
   "trip_transit",
   "trip_checklist_items",
+  // Rows only: the PDFs themselves live in the `trip-papers` bucket, which a
+  // database dump doesn't reach. Restoring these into an environment whose
+  // bucket was never populated gives you links to nothing.
+  "trip_papers",
 ] as const;
 
 // Deliberately absent: trip_route_proposals and trip_stay_proposals. They are

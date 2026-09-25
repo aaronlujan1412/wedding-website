@@ -465,6 +465,18 @@ export function stayChecklistKey(stay: TripStay): string {
   return `stay:${stay.id}`;
 }
 
+/* ---------------------------------------------------------------- papers -- */
+
+/**
+ * The key a stay's confirmation PDFs hang off. Same shape as the checklist
+ * key, and deliberately so: `trip_papers.owner` and
+ * `trip_checklist_items.list` are the same idea — a generic table that knows
+ * nothing about what it is a list of.
+ */
+export function stayPaperOwner(stay: TripStay): string {
+  return `stay:${stay.id}`;
+}
+
 export function suggestedForStay(stay: TripStay): string[] {
   return [
     // Hotels in Japan copy a foreign guest's passport at check-in. It's law.

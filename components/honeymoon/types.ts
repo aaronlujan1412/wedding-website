@@ -19,6 +19,8 @@ export type Notebook = Database["public"]["Tables"]["trip_notebooks"]["Row"];
 export type Note = Database["public"]["Tables"]["trip_notes"]["Row"];
 export type ChecklistItem =
   Database["public"]["Tables"]["trip_checklist_items"]["Row"];
+/** A confirmation PDF held against the stay, flight or ride it confirms. */
+export type TripPaper = Database["public"]["Tables"]["trip_papers"]["Row"];
 export type Cabin = Database["public"]["Enums"]["trip_cabin"];
 
 export type ItemKind = Database["public"]["Enums"]["trip_item_kind"];
