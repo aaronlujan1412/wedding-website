@@ -20,6 +20,7 @@ import {
 import { sendRouteToLane, sendStayToLane } from "@/app/actions/finder";
 import { adoptStay } from "@/app/actions/stays";
 import { cn } from "@/lib/utils";
+import { bookingSite } from "./booking-sites";
 import { Checklist } from "./Checklist";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { CopyCode, Fact, Missing } from "./Facts";
@@ -614,6 +615,7 @@ function StayCard({
   actions: BlockActions;
 }) {
   const bags = bagsFor(stay, stays);
+  const site = bookingSite(stay.url);
   const deadline = cancelDeadline(stay);
   const closing = cancelIsClose(stay, now);
 
@@ -635,6 +637,7 @@ function StayCard({
               status={stay.booking_status}
               className="font-raleway text-[0.6rem] font-semibold"
             />
+            {site && <span>{site}</span>}
             {stay.confirmation && <CopyCode code={stay.confirmation} size="sm" />}
             {stay.cost_amount !== null && (
               <span
@@ -739,6 +742,7 @@ function Details({
   done: boolean;
   onEdit: () => void;
 }) {
+  const site = bookingSite(stay.url);
   const checkIn = checkInAt(stay);
   const checkOut = checkOutAt(stay);
   const deadline = cancelDeadline(stay);
@@ -826,6 +830,27 @@ function Details({
             <CopyCode code={stay.confirmation} />
           ) : (
             <Missing onAdd={onEdit}>Add the confirmation number</Missing>
+          )}
+          {/* The code and who honours it are one fact: the number is no use
+              until you know whose desk to say it at. */}
+          {site && (
+            <span className="mt-1 block">
+              {stay.url ? (
+                <a
+                  href={stay.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-garamond text-base text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                >
+                  Booked with {site}
+                  <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                </a>
+              ) : (
+                <span className="font-garamond text-base text-muted-foreground">
+                  Booked with {site}
+                </span>
+              )}
+            </span>
           )}
         </Fact>
 
