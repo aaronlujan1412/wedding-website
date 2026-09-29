@@ -34,6 +34,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      brain_login_attempts: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          id?: never
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          id?: never
+        }
+        Relationships: []
+      }
+      brain_users: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          password_hash: string
+          token_version: number
+          totp_secret: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash: string
+          token_version?: number
+          totp_secret?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash?: string
+          token_version?: number
+          totp_secret?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       faq: {
         Row: {
           aaron_take: string | null
