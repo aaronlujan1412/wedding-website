@@ -329,6 +329,251 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_item_prices: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          price_cents: number
+          priced_on: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          price_cents: number
+          priced_on?: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          price_cents?: number
+          priced_on?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_item_prices_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          keeps_days: number | null
+          name: string
+          notes: string | null
+          pack: string | null
+          price_cents: number | null
+          price_includes_markup: boolean
+          priced_on: string | null
+          store: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          keeps_days?: number | null
+          name: string
+          notes?: string | null
+          pack?: string | null
+          price_cents?: number | null
+          price_includes_markup?: boolean
+          priced_on?: string | null
+          store?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          keeps_days?: number | null
+          name?: string
+          notes?: string | null
+          pack?: string | null
+          price_cents?: number | null
+          price_includes_markup?: boolean
+          priced_on?: string | null
+          store?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meal_recipe_items: {
+        Row: {
+          item_id: string
+          notes: string | null
+          optional: boolean
+          quantity: number | null
+          recipe_id: string
+          unit: string | null
+        }
+        Insert: {
+          item_id: string
+          notes?: string | null
+          optional?: boolean
+          quantity?: number | null
+          recipe_id: string
+          unit?: string | null
+        }
+        Update: {
+          item_id?: string
+          notes?: string | null
+          optional?: boolean
+          quantity?: number | null
+          recipe_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_recipe_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "meal_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_recipes: {
+        Row: {
+          batch_friendly: boolean
+          created_at: string
+          id: string
+          kcal: number | null
+          kind: string
+          last_planned_on: string | null
+          method: string | null
+          name: string
+          notes: string | null
+          protein_g: number | null
+          retired: boolean
+          serves: number | null
+          updated_at: string
+          window_when: string
+        }
+        Insert: {
+          batch_friendly?: boolean
+          created_at?: string
+          id?: string
+          kcal?: number | null
+          kind?: string
+          last_planned_on?: string | null
+          method?: string | null
+          name: string
+          notes?: string | null
+          protein_g?: number | null
+          retired?: boolean
+          serves?: number | null
+          updated_at?: string
+          window_when?: string
+        }
+        Update: {
+          batch_friendly?: boolean
+          created_at?: string
+          id?: string
+          kcal?: number | null
+          kind?: string
+          last_planned_on?: string | null
+          method?: string | null
+          name?: string
+          notes?: string | null
+          protein_g?: number | null
+          retired?: boolean
+          serves?: number | null
+          updated_at?: string
+          window_when?: string
+        }
+        Relationships: []
+      }
+      meal_rules: {
+        Row: {
+          active: boolean
+          applies_to: string | null
+          created_at: string
+          detail: string
+          forbidden_term: string | null
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          applies_to?: string | null
+          created_at?: string
+          detail: string
+          forbidden_term?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          applies_to?: string | null
+          created_at?: string
+          detail?: string
+          forbidden_term?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      meal_settings: {
+        Row: {
+          aaron_kcal: number
+          budget_cents: number
+          id: boolean
+          kid_cycle_anchor: string | null
+          kid_cycle_days: number
+          notes: string | null
+          orders_per_month: number
+          savea_kcal: number
+          updated_at: string
+        }
+        Insert: {
+          aaron_kcal?: number
+          budget_cents?: number
+          id?: boolean
+          kid_cycle_anchor?: string | null
+          kid_cycle_days?: number
+          notes?: string | null
+          orders_per_month?: number
+          savea_kcal?: number
+          updated_at?: string
+        }
+        Update: {
+          aaron_kcal?: number
+          budget_cents?: number
+          id?: boolean
+          kid_cycle_anchor?: string | null
+          kid_cycle_days?: number
+          notes?: string | null
+          orders_per_month?: number
+          savea_kcal?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seating_tables: {
         Row: {
           capacity: number | null
