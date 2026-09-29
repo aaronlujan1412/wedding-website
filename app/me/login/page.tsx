@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Panel } from "@/components/me/Panel";
+import { WithSidebar } from "@/components/me/WithSidebar";
 import { BrainLoginForm } from "@/components/me/BrainLoginForm";
 import { currentBrainUser } from "@/lib/brain-user";
 import { safeRedirectPath } from "@/lib/safe-redirect";
@@ -31,12 +32,14 @@ export default async function BrainLoginPage({
   if (await currentBrainUser()) redirect(target);
 
   return (
-    <Panel title="sign in">
+    <WithSidebar>
+      <Panel title="sign in">
       <p className="mb-4 text-[13px] leading-relaxed text-me-ink">
         The notes behind here are the whole vault, so this one is a real
         account rather than the site&apos;s shared passphrase.
       </p>
       <BrainLoginForm next={target} />
-    </Panel>
+      </Panel>
+    </WithSidebar>
   );
 }

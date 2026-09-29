@@ -1,3 +1,4 @@
+import { WithSidebar } from "@/components/me/WithSidebar";
 import Link from "next/link";
 import { Panel } from "@/components/me/Panel";
 import { ME_LINKS, isExternal } from "@/components/me/links";
@@ -20,7 +21,7 @@ const PAGES = [
 
 export default function MePage() {
   return (
-    <>
+    <WithSidebar>
       <Panel title="welcome">
         <div className="me-prose">
           <p>
@@ -82,6 +83,6 @@ export default function MePage() {
           ))}
         </ul>
       </Panel>
-    </>
+    </WithSidebar>
   );
 }

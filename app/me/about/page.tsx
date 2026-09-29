@@ -1,3 +1,4 @@
+import { WithSidebar } from "@/components/me/WithSidebar";
 import type { Metadata } from "next";
 import { Panel } from "@/components/me/Panel";
 
@@ -23,7 +24,7 @@ const STACK: [string, string][] = [
 
 export default function AboutPage() {
   return (
-    <>
+    <WithSidebar>
       <Panel title="about me">
         {/* First draft — written from the outside. Replace it with how you'd
             actually say this. */}
@@ -72,6 +73,6 @@ export default function AboutPage() {
           ))}
         </dl>
       </Panel>
-    </>
+    </WithSidebar>
   );
 }

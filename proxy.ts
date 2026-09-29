@@ -1,59 +1,36 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
-import { BRAIN_COOKIE, readBrainToken } from "@/lib/brain-session";
 
 /**
- * Gate for the back-of-house pages.
+ * Gate for the wedding's back-of-house pages.
  *
  * Next 16 deprecated `middleware.ts`/`middleware()` in favour of
  * `proxy.ts`/`proxy()`, but the matcher export is still named `config` — NOT
  * `proxyConfig`, which some docs claim and which Next silently ignores. Getting
  * that wrong runs this on every route and sends `/hosts` into a redirect loop.
  *
- * Two gates, two sets of credentials, deliberately unconnected: the wedding's
- * shared host passphrase, and the SecondBrain's per-user accounts. A host
- * cookie must not open /me/brain, which is why they are signed with different
- * secrets rather than distinguished by a flag inside one token.
- *
- * Both checks here are signature-and-expiry only — no database, since this runs
- * on every matched request. Whether a brain account still exists, and whether
- * its session has been revoked since, is `lib/brain-user.ts`, which every page
- * and action behind this gate calls anyway. The proxy guards pages; actions
- * guard themselves.
+ * Note what is NOT listed below: /me/brain and the tools that will follow it.
+ * Those pages render for everybody — signed out they are a write-up of what
+ * the tool is, signed in they are the tool — so a redirect at the door would
+ * defeat the point. Their gate is the data layer instead: every function that
+ * reads real rows checks the session itself (`lib/brain-user.ts`), and every
+ * page decides which face to draw BEFORE it fetches anything. That is the same
+ * rule this file has always followed for actions — the proxy guards pages, and
+ * anything that touches data guards itself.
  */
-
-type Gate = {
-  cookie: string;
-  login: string;
-  valid: (token: string | undefined) => Promise<boolean>;
-};
-
-const HOST: Gate = {
-  cookie: HOST_COOKIE,
-  login: "/hosts",
-  valid: isValidSessionToken,
-};
-
-const BRAIN: Gate = {
-  cookie: BRAIN_COOKIE,
-  login: "/me/login",
-  valid: async (token) => (await readBrainToken(token)) !== null,
-};
-
 export async function proxy(request: NextRequest) {
-  const path = request.nextUrl.pathname;
-  const gate = path.startsWith("/me/brain") ? BRAIN : HOST;
+  const token = request.cookies.get(HOST_COOKIE)?.value;
 
-  if (await gate.valid(request.cookies.get(gate.cookie)?.value)) {
+  if (await isValidSessionToken(token)) {
     return NextResponse.next();
   }
 
-  const login = new URL(gate.login, request.url);
-  login.searchParams.set("next", path);
+  const login = new URL("/hosts", request.url);
+  login.searchParams.set("next", request.nextUrl.pathname);
 
   const response = NextResponse.redirect(login);
   // Drop an expired or tampered cookie so the next attempt starts clean.
-  response.cookies.delete(gate.cookie);
+  response.cookies.delete(HOST_COOKIE);
   return response;
 }
 
@@ -66,7 +43,5 @@ export const config = {
     "/honeymoon",
     "/honeymoon/:path*",
     "/first-dance",
-    "/me/brain",
-    "/me/brain/:path*",
   ],
 };
