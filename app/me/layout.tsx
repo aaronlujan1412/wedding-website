@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { BadgeStrip } from "@/components/me/Badge88";
 import { Masthead } from "@/components/me/Masthead";
 import { MeNav } from "@/components/me/MeNav";
+import { ToolTabs } from "@/components/me/ToolTabs";
 import { currentUser } from "@/lib/site-user";
 
 /**
@@ -55,7 +56,12 @@ export default async function MeLayout({
     <div id="me" className="tile-weave min-h-dvh font-forum text-me-ink">
       <div className="mx-auto w-full max-w-5xl space-y-3 px-3 py-4 sm:px-5 sm:py-6">
         <Masthead />
-        <MeNav username={user?.username ?? null} />
+        {/* The two rows are one control, so they sit closer to each other
+            than to anything else on the page. */}
+        <div className="space-y-2">
+          <MeNav username={user?.username ?? null} />
+          <ToolTabs signedIn={Boolean(user)} />
+        </div>
 
         {children}
 
