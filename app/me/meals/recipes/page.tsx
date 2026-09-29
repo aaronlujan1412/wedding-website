@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { Panel } from "@/components/me/Panel";
+import { RecipeForm } from "@/components/me/RecipeForm";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getRecipes } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
@@ -38,6 +40,10 @@ export default async function RecipesPage() {
         </p>
       </Panel>
 
+      <Panel title="add a dish">
+        <RecipeForm />
+      </Panel>
+
       {KINDS.map(([kind, heading]) => {
         const mine = recipes.filter((r) => r.kind === kind);
         if (!mine.length) return null;
@@ -65,7 +71,12 @@ export default async function RecipesPage() {
                   {mine.map((r) => (
                     <tr key={r.id} className="border-t border-me-edge-lo align-top">
                       <td className="py-1.5 pr-3 text-me-ink">
-                        {r.name}
+                        <Link
+                          href={`/me/meals/recipes/${r.id}`}
+                          className="text-me-link underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+                        >
+                          {r.name}
+                        </Link>
                         {r.notes ? (
                           <span className="mt-0.5 block text-[11px] leading-snug text-me-dim">
                             {r.notes}

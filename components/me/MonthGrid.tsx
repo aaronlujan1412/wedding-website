@@ -1,4 +1,5 @@
 import { freshness, type PlanDay } from "@/lib/meal-types";
+import { DinnerPicker } from "@/components/me/DinnerPicker";
 
 /**
  * The month, as a table.
@@ -18,7 +19,13 @@ import { freshness, type PlanDay } from "@/lib/meal-types";
  * thing that decides whether a dinner works. Everything else about a day is
  * text.
  */
-export function MonthGrid({ days }: { days: PlanDay[] }) {
+export function MonthGrid({
+  days,
+  dinnerOptions,
+}: {
+  days: PlanDay[];
+  dinnerOptions: { id: string; name: string }[];
+}) {
   if (!days.length) {
     return (
       <p className="text-[13px] text-me-dim">
@@ -57,7 +64,11 @@ export function MonthGrid({ days }: { days: PlanDay[] }) {
           {weeks.map((week, w) => (
             <tr key={w}>
               {week.map((day, i) =>
-                day ? <DayCell key={day.id} day={day} /> : <td key={`gap-${i}`} />,
+                day ? (
+                  <DayCell key={day.id} day={day} options={dinnerOptions} />
+                ) : (
+                  <td key={`gap-${i}`} />
+                ),
               )}
             </tr>
           ))}
@@ -67,7 +78,13 @@ export function MonthGrid({ days }: { days: PlanDay[] }) {
   );
 }
 
-function DayCell({ day }: { day: PlanDay }) {
+function DayCell({
+  day,
+  options,
+}: {
+  day: PlanDay;
+  options: { id: string; name: string }[];
+}) {
   const arriving = day.delivery_ordinal !== null;
   const fresh = freshness(day.days_out);
   const dayOfMonth = Number(day.on_date.slice(8, 10));
@@ -95,11 +112,13 @@ function DayCell({ day }: { day: PlanDay }) {
         ) : null}
       </p>
 
-      {day.dinner ? (
-        <p className="mt-1.5 text-[12px] leading-snug text-me-ink">{day.dinner}</p>
-      ) : (
-        <p className="mt-1.5 text-[12px] text-me-dim">—</p>
-      )}
+      <div className="mt-1.5">
+        <DinnerPicker
+          dayId={day.id}
+          current={day.dinner_recipe_id}
+          options={options}
+        />
+      </div>
 
       {day.kid_here || day.prep_day ? (
         <p className="mt-1 font-dot text-[10px] text-me-dim">

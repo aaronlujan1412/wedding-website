@@ -142,7 +142,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     supabase
       .from("meal_plan_days")
       .select(
-        "id, on_date, kid_here, prep_day, notes, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
+        "id, on_date, kid_here, prep_day, notes, dinner_recipe_id, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
       )
       .eq("plan_id", plan.id)
       .order("on_date"),
@@ -176,6 +176,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
       id: d.id,
       on_date: d.on_date,
       dinner: dinner?.name ?? null,
+      dinner_recipe_id: d.dinner_recipe_id,
       dinner_window: (dinner?.window_when as Window) ?? null,
       lunch: lunch?.name ?? null,
       kid_here: d.kid_here,
@@ -223,4 +224,81 @@ function daysBetween(from: string, to: string): number {
   const a = Date.UTC(+from.slice(0, 4), +from.slice(5, 7) - 1, +from.slice(8, 10));
   const b = Date.UTC(+to.slice(0, 4), +to.slice(5, 7) - 1, +to.slice(8, 10));
   return Math.round((b - a) / 86_400_000);
+}
+
+export type RecipeDetail = {
+  id: string;
+  name: string;
+  kind: string;
+  serves: number | null;
+  kcal: number | null;
+  protein_g: number | null;
+  method: string | null;
+  window_when: Window;
+  notes: string | null;
+  batch_friendly: boolean;
+  retired: boolean;
+  ingredients: {
+    item_id: string;
+    name: string;
+    pack: string | null;
+    price_cents: number | null;
+    quantity: number | null;
+    unit: string | null;
+    optional: boolean;
+  }[];
+};
+
+/** One dish, with what goes in it. */
+export async function getRecipe(id: string): Promise<RecipeDetail | null> {
+  if (!(await currentUser())) return null;
+
+  const [recipe, links] = await Promise.all([
+    supabase.from("meal_recipes").select("*").eq("id", id).maybeSingle(),
+    supabase
+      .from("meal_recipe_items")
+      .select("item_id, quantity, unit, optional, item:item_id (name, pack, price_cents)")
+      .eq("recipe_id", id),
+  ]);
+
+  if (recipe.error || !recipe.data) return null;
+
+  const ingredients = (links.data ?? [])
+    .map((l) => {
+      const item = l.item as unknown as {
+        name: string;
+        pack: string | null;
+        price_cents: number | null;
+      };
+      return {
+        item_id: l.item_id,
+        name: item?.name ?? "—",
+        pack: item?.pack ?? null,
+        price_cents: item?.price_cents ?? null,
+        quantity: l.quantity === null ? null : Number(l.quantity),
+        unit: l.unit,
+        optional: l.optional,
+      };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    ...recipe.data,
+    window_when: recipe.data.window_when as Window,
+    ingredients,
+  } as RecipeDetail;
+}
+
+/** Every item, trimmed to what an ingredient picker needs. */
+export async function getItemOptions(): Promise<{ id: string; label: string }[]> {
+  if (!(await currentUser())) return [];
+  const { data, error } = await supabase
+    .from("meal_items")
+    .select("id, name, pack")
+    .order("name");
+  if (error || !data) return [];
+  return data.map((i) => ({
+    id: i.id,
+    label: i.pack ? `${i.name} — ${i.pack}` : i.name,
+  }));
 }

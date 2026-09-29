@@ -6,7 +6,7 @@ import { ShoppingList } from "@/components/me/ShoppingList";
 import { PlanControls } from "@/components/me/PlanControls";
 import { NewPlanForm } from "@/components/me/NewPlanForm";
 import { FullWidth, WithSidebar } from "@/components/me/WithSidebar";
-import { getPlan } from "@/lib/meal-queries";
+import { getPlan, getRecipes } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default async function MealsPage() {
     );
   }
 
-  const plan = await getPlan();
+  const [plan, recipes] = await Promise.all([getPlan(), getRecipes()]);
 
   if (!plan) {
     return (
@@ -51,6 +51,12 @@ export default async function MealsPage() {
       </FullWidth>
     );
   }
+
+  // Dinners only: a lunch or a snack in the dinner picker is a wrong answer
+  // offered as if it were a right one.
+  const dinnerOptions = recipes
+    .filter((r) => r.kind === "dinner")
+    .map((r) => ({ id: r.id, name: r.name }));
 
   const warnings = plan.lines.filter((l) => l.coverage_warning);
   const planned = plan.days.filter((d) => d.dinner).length;
@@ -71,7 +77,7 @@ export default async function MealsPage() {
       </Panel>
 
       <Panel title="the month" bodyClassName="p-3">
-        <MonthGrid days={plan.days} />
+        <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} />
         <FreshnessKey />
       </Panel>
 

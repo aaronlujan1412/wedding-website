@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Panel } from "@/components/me/Panel";
+import { ItemForm } from "@/components/me/ItemForm";
+import { PriceRow } from "@/components/me/PriceRow";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getItems } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
@@ -30,6 +32,10 @@ export default async function PricesPage() {
           recorded is never warned about, so a blank there is a gap rather than
           a permission.
         </p>
+      </Panel>
+
+      <Panel title="add an item">
+        <ItemForm categories={categories} />
       </Panel>
 
       {categories.map((category) => {
@@ -65,8 +71,8 @@ export default async function PricesPage() {
                         ) : null}
                       </td>
                       <td className="py-1.5 pr-3 text-me-dim">{i.pack ?? "—"}</td>
-                      <td className="py-1.5 pr-3 text-right font-dot tabular-nums text-me-ink">
-                        {i.price_cents === null ? "—" : money(i.price_cents)}
+                      <td className="py-1.5 pr-3 text-right">
+                        <PriceRow id={i.id} priceCents={i.price_cents} />
                       </td>
                       <td className="py-1.5 pr-3 text-right tabular-nums text-me-dim">
                         {i.keeps_days ? `${i.keeps_days}d` : "—"}

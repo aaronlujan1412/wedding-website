@@ -47,6 +47,7 @@ export type PlanDay = {
   id: string;
   on_date: string;
   dinner: string | null;
+  dinner_recipe_id: string | null;
   dinner_window: Window | null;
   lunch: string | null;
   kid_here: boolean;
