@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Panel, Well } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getNote, resolveLinks } from "@/lib/brain-queries";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ export default async function NotePage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  if (!(await currentBrainUser())) redirect("/me/brain");
+  if (!(await currentUser())) redirect("/me/brain");
 
   const { id } = await params;
   const note = await getNote(id);

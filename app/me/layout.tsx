@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { BadgeStrip } from "@/components/me/Badge88";
 import { Masthead } from "@/components/me/Masthead";
 import { MeNav } from "@/components/me/MeNav";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 
 /**
  * Aaron's own site, parked at /me until it takes over `/`.
@@ -46,7 +46,7 @@ export default async function MeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await currentBrainUser();
+  const user = await currentUser();
 
   return (
     /* #me is the hook globals.css uses to paint the ground on <body>. Painting

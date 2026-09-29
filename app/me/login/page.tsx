@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { Panel } from "@/components/me/Panel";
 import { WithSidebar } from "@/components/me/WithSidebar";
 import { BrainLoginForm } from "@/components/me/BrainLoginForm";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 
 export const metadata: Metadata = {
@@ -29,7 +29,7 @@ export default async function BrainLoginPage({
   const target = safeRedirectPath(next, "/me/brain");
 
   // Already signed in: no reason to show a form. Straight through.
-  if (await currentBrainUser()) redirect(target);
+  if (await currentUser()) redirect(target);
 
   return (
     <WithSidebar>

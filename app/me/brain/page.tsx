@@ -6,7 +6,7 @@ import { SearchBox } from "@/components/me/SearchBox";
 import { SecondBrainCaseStudy } from "@/components/me/SecondBrainCaseStudy";
 import { FullWidth, WithSidebar } from "@/components/me/WithSidebar";
 import { getBrainStats, getRecentNotes } from "@/lib/brain-queries";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = {
   title: "Second Brain",
@@ -52,7 +52,7 @@ function since(iso: string | null): string {
  * one by mistake even if someone forgets this comment.
  */
 export default async function BrainPage() {
-  const user = await currentBrainUser();
+  const user = await currentUser();
 
   if (!user) {
     return (

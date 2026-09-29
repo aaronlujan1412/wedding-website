@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 import { fingerprint } from "./rate-limit";
 
 /**
- * Throttle for SecondBrain sign-ins.
+ * Throttle for /me sign-ins.
  *
  * Callers are identified the same way the RSVP throttle identifies them — an
  * HMAC of the IP, never the IP — so this is something to count against rather
@@ -42,7 +42,7 @@ export async function checkLoginLimit(): Promise<LoginLimit> {
   ).toISOString();
 
   const { data, error } = await supabase
-    .from("brain_login_attempts")
+    .from("login_attempts")
     .select("created_at")
     .eq("fingerprint", caller)
     .gte("created_at", windowStart)
@@ -61,12 +61,12 @@ export async function checkLoginLimit(): Promise<LoginLimit> {
 }
 
 export async function recordLoginFailure(caller: string) {
-  await supabase.from("brain_login_attempts").insert({ fingerprint: caller });
+  await supabase.from("login_attempts").insert({ fingerprint: caller });
 
   // Swept here rather than on a schedule: this only runs on a failed attempt,
   // which should be rare, and it keeps the table from growing without bound.
   await supabase
-    .from("brain_login_attempts")
+    .from("login_attempts")
     .delete()
     .lt(
       "created_at",
@@ -80,7 +80,7 @@ export async function recordLoginFailure(caller: string) {
  */
 export async function clearLoginFailures(caller: string) {
   await supabase
-    .from("brain_login_attempts")
+    .from("login_attempts")
     .delete()
     .eq("fingerprint", caller);
 }

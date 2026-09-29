@@ -4,7 +4,7 @@ import { Panel, Well } from "@/components/me/Panel";
 import { InboxCard } from "@/components/me/InboxCard";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getDecisionLog, getInbox } from "@/lib/brain-queries";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = {
   title: "Inbox",
@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
  * instead of rendering a second face.
  */
 export default async function InboxPage() {
-  if (!(await currentBrainUser())) redirect("/me/brain");
+  if (!(await currentUser())) redirect("/me/brain");
 
   const [queue, log] = await Promise.all([getInbox(), getDecisionLog(20)]);
   const waiting = queue.filter((entry) => !entry.pending);

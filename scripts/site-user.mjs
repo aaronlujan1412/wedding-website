@@ -1,14 +1,14 @@
 /**
- * Create or update a SecondBrain account.
+ * Create or update an account for /me.
  *
  * There is no signup form and no self-service reset, because the set of people
  * who should have an account here is "me" and a public signup page is a
  * strictly larger attack surface than a command.
  *
  * Usage:
- *   node --env-file=.env.local scripts/brain-user.mjs <username>
- *   node --env-file=.env.local scripts/brain-user.mjs <username> --revoke
- *   node --env-file=.env.local scripts/brain-user.mjs --list
+ *   node --env-file=.env.local scripts/site-user.mjs <username>
+ *   node --env-file=.env.local scripts/site-user.mjs <username> --revoke
+ *   node --env-file=.env.local scripts/site-user.mjs --list
  *
  * Against production, add --production (see scripts/db-target.mjs). Setting a
  * password is not destructive in the delete-rows sense, but it silently locks
@@ -132,7 +132,7 @@ console.log(`Database: ${target().url}\n`);
 
 if (flags.has("--list")) {
   const { data, error } = await supabase
-    .from("brain_users")
+    .from("users")
     .select("username, token_version, created_at, last_seen_at")
     .order("username");
 
@@ -142,7 +142,7 @@ if (flags.has("--list")) {
   }
   if (!data.length) {
     console.log("No accounts yet. Make one:");
-    console.log("  node --env-file=.env.local scripts/brain-user.mjs <name>");
+    console.log("  node --env-file=.env.local scripts/site-user.mjs <name>");
     process.exit(0);
   }
   for (const row of data) {
@@ -155,7 +155,7 @@ if (flags.has("--list")) {
 }
 
 if (!username) {
-  console.error("Usage: brain-user.mjs <username> [--revoke] | --list");
+  console.error("Usage: site-user.mjs <username> [--revoke] | --list");
   process.exit(1);
 }
 
@@ -168,7 +168,7 @@ if (!USERNAME_RE.test(username)) {
 }
 
 const { data: existing } = await supabase
-  .from("brain_users")
+  .from("users")
   .select("id, token_version")
   .eq("username", username)
   .maybeSingle();
@@ -184,7 +184,7 @@ if (flags.has("--revoke")) {
   });
 
   const { error } = await supabase
-    .from("brain_users")
+    .from("users")
     .update({ token_version: existing.token_version + 1 })
     .eq("id", existing.id);
 
@@ -235,10 +235,10 @@ const password_hash = await hash(password);
  */
 const { error } = existing
   ? await supabase
-      .from("brain_users")
+      .from("users")
       .update({ password_hash, token_version: existing.token_version + 1 })
       .eq("id", existing.id)
-  : await supabase.from("brain_users").insert({ username, password_hash });
+  : await supabase.from("users").insert({ username, password_hash });
 
 if (error) {
   console.error(`\n${error.message}`);

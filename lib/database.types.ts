@@ -73,31 +73,13 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "brain_decisions_decided_by_fkey"
+            foreignKeyName: "brain_decisions_decided_by_users_fkey"
             columns: ["decided_by"]
             isOneToOne: false
-            referencedRelation: "brain_users"
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
         ]
-      }
-      brain_login_attempts: {
-        Row: {
-          created_at: string
-          fingerprint: string
-          id: number
-        }
-        Insert: {
-          created_at?: string
-          fingerprint: string
-          id?: never
-        }
-        Update: {
-          created_at?: string
-          fingerprint?: string
-          id?: never
-        }
-        Relationships: []
       }
       brain_notes: {
         Row: {
@@ -144,36 +126,6 @@ export type Database = {
           synced_at?: string
           tags?: string[]
           title?: string | null
-        }
-        Relationships: []
-      }
-      brain_users: {
-        Row: {
-          created_at: string
-          id: string
-          last_seen_at: string | null
-          password_hash: string
-          token_version: number
-          totp_secret: string | null
-          username: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          last_seen_at?: string | null
-          password_hash: string
-          token_version?: number
-          totp_secret?: string | null
-          username: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          last_seen_at?: string | null
-          password_hash?: string
-          token_version?: number
-          totp_secret?: string | null
-          username?: string
         }
         Relationships: []
       }
@@ -358,6 +310,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_attempts: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          id?: never
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          id?: never
+        }
+        Relationships: []
       }
       seating_tables: {
         Row: {
@@ -1368,6 +1338,36 @@ export type Database = {
           note?: string | null
           starts_on?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          password_hash: string
+          token_version: number
+          totp_secret: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash: string
+          token_version?: number
+          totp_secret?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash?: string
+          token_version?: number
+          totp_secret?: string | null
+          username?: string
         }
         Relationships: []
       }

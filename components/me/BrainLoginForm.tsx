@@ -2,9 +2,9 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { signInToBrain, type BrainSignInState } from "@/app/actions/auth";
+import { signIn, type SignInState } from "@/app/actions/auth";
 
-const EMPTY: BrainSignInState = { error: null };
+const EMPTY: SignInState = { error: null };
 
 const FIELD =
   "bevel-in w-full bg-me-void px-2.5 py-2 text-[13px] text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold";
@@ -24,7 +24,7 @@ function SubmitButton() {
 }
 
 export function BrainLoginForm({ next }: { next: string }) {
-  const [state, formAction] = useActionState(signInToBrain, EMPTY);
+  const [state, formAction] = useActionState(signIn, EMPTY);
 
   return (
     <form action={formAction} className="space-y-4">

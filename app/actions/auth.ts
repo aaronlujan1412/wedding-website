@@ -3,20 +3,20 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import {
-  BRAIN_COOKIE,
-  BRAIN_SESSION_MAX_AGE,
-  createBrainToken,
-} from "@/lib/brain-session";
+  SITE_COOKIE,
+  SITE_SESSION_MAX_AGE,
+  createSiteToken,
+} from "@/lib/site-session";
 import {
   checkLoginLimit,
   clearLoginFailures,
   recordLoginFailure,
-} from "@/lib/brain-login-limit";
+} from "@/lib/login-limit";
 import { hashPassword, needsRehash, verifyPassword } from "@/lib/password";
 import { safeRedirectPath } from "@/lib/safe-redirect";
 import { supabase } from "@/lib/supabase";
 
-export type BrainSignInState = { error: string | null };
+export type SignInState = { error: string | null };
 
 /** Where a sign-in with no usable `next` lands. */
 const HOME = "/me/brain";
@@ -30,10 +30,10 @@ const HOME = "/me/brain";
  */
 const REJECTED = "That username and password don't match.";
 
-export async function signInToBrain(
-  _previous: BrainSignInState,
+export async function signIn(
+  _previous: SignInState,
   formData: FormData,
-): Promise<BrainSignInState> {
+): Promise<SignInState> {
   const username = String(formData.get("username") ?? "")
     .trim()
     .toLowerCase();
@@ -53,7 +53,7 @@ export async function signInToBrain(
   }
 
   const { data: user } = await supabase
-    .from("brain_users")
+    .from("users")
     .select("id, password_hash, token_version")
     .eq("username", username)
     .maybeSingle();
@@ -76,32 +76,32 @@ export async function signInToBrain(
   // plaintext is in hand. Nobody has to be told to change their password.
   if (needsRehash(stored)) {
     await supabase
-      .from("brain_users")
+      .from("users")
       .update({ password_hash: await hashPassword(password) })
       .eq("id", user.id);
   }
 
   await clearLoginFailures(limit.caller);
   await supabase
-    .from("brain_users")
+    .from("users")
     .update({ last_seen_at: new Date().toISOString() })
     .eq("id", user.id);
 
   const store = await cookies();
-  store.set(BRAIN_COOKIE, await createBrainToken(user.id, user.token_version), {
+  store.set(SITE_COOKIE, await createSiteToken(user.id, user.token_version), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: BRAIN_SESSION_MAX_AGE,
+    maxAge: SITE_SESSION_MAX_AGE,
   });
 
   redirect(safeRedirectPath(formData.get("next"), HOME));
 }
 
-export async function signOutOfBrain() {
+export async function signOut() {
   const store = await cookies();
-  store.delete(BRAIN_COOKIE);
+  store.delete(SITE_COOKIE);
   redirect("/me");
 }
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ME_NAV } from "@/components/me/nav";
-import { signOutOfBrain } from "@/app/actions/auth";
+import { signOut } from "@/app/actions/auth";
 
 /**
  * The tabs, and who you are.
@@ -62,7 +62,7 @@ export function MeNav({ username }: { username: string | null }) {
             {/* A form, not a link: signing out is a write, and a GET that logs
                 you out can be triggered by anything able to make your browser
                 fetch a URL. */}
-            <form action={signOutOfBrain}>
+            <form action={signOut}>
               <button
                 type="submit"
                 className={`${TAB} bevel-out bg-me-bar text-me-ink hover:bg-me-edge-hi`}

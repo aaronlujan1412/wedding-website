@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
-import { currentBrainUser } from "@/lib/brain-user";
+import { currentUser } from "@/lib/site-user";
 import { DESTINATIONS } from "@/lib/brain-types";
 
 /**
@@ -49,7 +49,7 @@ export async function approveNote(
   _previous: DecisionState,
   formData: FormData,
 ): Promise<DecisionState> {
-  const user = await currentBrainUser();
+  const user = await currentUser();
   if (!user) return DENIED;
 
   const path = stagedPath(formData.get("path"));
@@ -90,7 +90,7 @@ export async function rejectNote(
   _previous: DecisionState,
   formData: FormData,
 ): Promise<DecisionState> {
-  const user = await currentBrainUser();
+  const user = await currentUser();
   if (!user) return DENIED;
 
   const path = stagedPath(formData.get("path"));
@@ -127,7 +127,7 @@ export async function undoDecision(
   _previous: DecisionState,
   formData: FormData,
 ): Promise<DecisionState> {
-  if (!(await currentBrainUser())) return DENIED;
+  if (!(await currentUser())) return DENIED;
 
   const id = String(formData.get("id") ?? "");
   if (!id) return { error: "Nothing to undo." };
