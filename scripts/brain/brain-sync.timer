@@ -1,0 +1,15 @@
+[Unit]
+Description=Publish the SecondBrain vault every minute
+
+[Timer]
+# A minute is affordable because a no-op costs one small request: the publisher
+# sends a single fingerprint, and only ships the 300KB manifest when that
+# fingerprint disagrees with the mirror's.
+OnBootSec=2min
+OnUnitActiveSec=1min
+# Without this a laptop that was asleep runs every missed tick on wake.
+AccuracySec=15s
+Persistent=false
+
+[Install]
+WantedBy=timers.target

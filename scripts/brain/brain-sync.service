@@ -1,0 +1,20 @@
+[Unit]
+# Publishes the SecondBrain vault to the website's mirror.
+#
+# A systemd USER unit, not a system one, and not cron: this box is Arch-based
+# and ships no cron daemon at all -- the same trap that left scan-secondbrain
+# silently not running for months. `loginctl enable-linger aaron` is what keeps
+# a user timer alive without a login session; it is already set.
+Description=Publish the SecondBrain vault to the site mirror
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# The URL and the token. Kept out of this unit so the file can be read by
+# anything without handing over the token.
+EnvironmentFile=%h/.config/brain-sync.env
+ExecStart=/usr/bin/python3 %h/bin/publish_vault.py --reconcile
+# A failed publish is not worth waking anyone over: the next tick retries, and
+# the site keeps serving the last good mirror in the meantime.
+SuccessExitStatus=0
