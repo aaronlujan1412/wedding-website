@@ -164,6 +164,157 @@
   --color-ko: #ff2f52;
   /* The drained-but-not-yet-gone part of a health bar. */
   --color-chip: #ffe08a;
+
+  /* ------------------------------------------------------------------ *
+   * Aaron's site (/me)
+   *
+   * A second site that happens to live in this repo -- not a section of
+   * the wedding. It is a deliberate period piece: the dark jewel-toned
+   * forum skin of about 2004, back when a personal site was a place you
+   * decorated rather than a landing page you converted on.
+   *
+   * Everything here is saturated. The generic dark site is a tinted
+   * near-black with one acid accent; a Gaia skin was plum and indigo with
+   * real gold on it, and the difference is the whole point.
+   *
+   * Namespaced --color-me-* so none of it can wander onto a guest page by
+   * autocomplete, and so the guest palette keeps meaning what it means
+   * when this route eventually becomes `/`.
+   * ------------------------------------------------------------------ */
+
+  /* The page under everything, and the second tone of the tiled weave on
+     it. Plum-indigo rather than a tinted black: a forum skin was a colour
+     you chose, and you could tell whose board you were on from across the
+     room. */
+  --color-me-void: #150d2b;
+  --color-me-panel: #211647;
+  /* Panel title bars. One step up again, so a stack of modules reads as a
+     stack rather than as one long box. */
+  --color-me-bar: #38246e;
+
+  /* The bevel. Two tones, light on the top-left and dark on the
+     bottom-right, which is the entire visual grammar of this era -- every
+     panel, button and well is the same four borders in one order or the
+     other. `bevel-out` raises, `bevel-in` sinks. */
+  --color-me-edge-hi: #6a4fc0;
+  --color-me-edge-lo: #0b0718;
+
+  /* Lavender-white, never #fff: pure white on a saturated violet buzzes. */
+  --color-me-ink: #ece7fb;
+  /* Secondary copy, 5.7:1 on panel. Readable, not decoration. */
+  --color-me-dim: #9c8fd0;
+
+  /* Three accents, one job each, which is what keeps this from turning
+     into a ransom note.
+     Gold is value: rank, headings, the number that matters. 10.8:1. */
+  --color-me-gold: #ffc93c;
+  /* Link is links. Bright cyan because a 2004 link was bright and blue and
+     nobody had to be told it was a link. 10.8:1. */
+  --color-me-link: #5ce1ff;
+  /* Live is presence: the status dot, and nothing else. 5.9:1. */
+  --color-me-live: #ff5fa8;
+
+  /* Verdana, because that is what a message board was set in from about
+     1998 to about 2008 -- the single most accurate typographic signal for
+     "forum" there is, and a system font, so it costs nothing. DejaVu Sans
+     is the Linux stand-in; it is wider, which the layout tolerates. */
+  --font-forum: Verdana, Geneva, Tahoma, "DejaVu Sans", sans-serif;
+}
+
+/* The CRT's ink, and the one place on the site that shows you a machine
+   talking — the pipeline diagram is drawn on the same screen as the avatar,
+   in the same phosphor.
+   These are plain custom properties rather than @theme tokens on purpose:
+   Tailwind only emits a theme variable that some utility references, and the
+   sprite reads these by name from TSX. As theme tokens they were dropped from
+   the bundle, every var() in the sprite resolved to nothing, and an
+   unparseable fill paints black — the whole monitor came out a dark blob.
+   The three hexes that shadow palette tokens are repeated deliberately; the
+   sprite must not go dark because a utility stopped being used. */
+:root {
+  --me-outline: #0b0718; /* = --color-me-edge-lo */
+  --me-case: #d8cdb8;
+  --me-screen: #0e2b20;
+  --me-phosphor: #5ef08f;
+  --me-cursor: #ece7fb; /* = --color-me-ink */
+  --me-led: #ff5fa8; /* = --color-me-live */
+}
+
+/* Body copy on /me. The interior pages are documents rather than layouts, so
+   their paragraphs, lists and inline code all want one measure and one rhythm.
+   Setting it here means a page added later cannot quietly invent its own. */
+@utility me-prose {
+  & > * + * {
+    margin-top: 0.9rem;
+  }
+  & p,
+  & li {
+    color: var(--color-me-ink);
+    font-size: 0.8125rem;
+    line-height: 1.7;
+  }
+  & strong {
+    color: var(--color-me-gold);
+    font-weight: 700;
+  }
+  & a {
+    color: var(--color-me-link);
+    text-decoration: underline;
+  }
+}
+
+/* The bevel, both directions. Four borders in one order raise a box and in
+   the other sink it, which is how every panel, button, tab and well on a
+   2004 forum was drawn -- no radius, no blur, no shadow colour that isn't
+   already in the palette. */
+@utility bevel-out {
+  border: 2px solid;
+  border-color: var(--color-me-edge-hi) var(--color-me-edge-lo)
+    var(--color-me-edge-lo) var(--color-me-edge-hi);
+}
+
+@utility bevel-in {
+  border: 2px solid;
+  border-color: var(--color-me-edge-lo) var(--color-me-edge-hi)
+    var(--color-me-edge-hi) var(--color-me-edge-lo);
+}
+
+/* The tiled background. Every site of this era sat on a repeating image;
+   this is the same idea at a contrast low enough to read text over. */
+@utility tile-weave {
+  background-color: var(--color-me-void);
+  background-image: repeating-linear-gradient(
+    45deg,
+    color-mix(in srgb, var(--color-me-edge-hi) 14%, transparent) 0 1px,
+    transparent 1px 7px
+  );
+}
+
+/* The news ticker. The page's ONE piece of motion, so it earns its keep by
+   carrying content rather than decorating a section entrance. The track
+   holds the items twice and travels exactly half its width, which is what
+   makes the loop seamless. */
+@keyframes me-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@utility me-ticker {
+  animation: me-ticker 38s linear infinite;
+}
+
+/* /me is a dark page inside an otherwise cream site. Painting the ground on
+   the page's own container leaves white in the overscroll gutter, behind a
+   rubber-band bounce, and under the phone's URL bar -- so it goes on the body,
+   through the same `:has` hook the itinerary uses to white the page for print.
+   `color-scheme` follows it, or the scrollbar arrives in light grey. */
+body:has(#me) {
+  background: var(--color-me-void);
+  color-scheme: dark;
 }
 
 /* Eased transparent -> background ramp. A plain 2/3-stop gradient banks alpha
