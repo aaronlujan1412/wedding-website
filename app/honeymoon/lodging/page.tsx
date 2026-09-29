@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function LodgingPage() {
-  const { stays, legs, flights, checklist, routes, rate } =
+  const { stays, legs, flights, checklist, papers, routes, rate } =
     await getLodgingPage();
   // eslint-disable-next-line react-hooks/purity -- a dynamic page's render time is exactly what's wanted
   const renderedAt = Date.now();
@@ -21,6 +21,7 @@ export default async function LodgingPage() {
       legs={legs}
       flights={flights}
       checklist={checklist}
+      papers={papers}
       routes={routes}
       rate={rate}
       renderedAt={renderedAt}

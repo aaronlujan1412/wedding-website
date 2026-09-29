@@ -804,6 +804,44 @@ export type Database = {
           },
         ]
       }
+      trip_papers: {
+        Row: {
+          bytes: number
+          id: string
+          name: string
+          owner: string
+          storage_path: string
+          trip_id: string
+          uploaded_at: string
+        }
+        Insert: {
+          bytes: number
+          id?: string
+          name: string
+          owner: string
+          storage_path: string
+          trip_id: string
+          uploaded_at?: string
+        }
+        Update: {
+          bytes?: number
+          id?: string
+          name?: string
+          owner?: string
+          storage_path?: string
+          trip_id?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trip_papers_trip_id_fkey"
+            columns: ["trip_id"]
+            isOneToOne: false
+            referencedRelation: "trips"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_route_proposals: {
         Row: {
           created_at: string

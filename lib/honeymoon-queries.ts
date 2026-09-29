@@ -213,7 +213,7 @@ export async function getLodgingPage() {
       ? (q as { eq: (c: string, v: string) => T }).eq("trip_id", trip.id)
       : q;
 
-  const [stays, legs, flights, checklist, routes, proposals, rate] =
+  const [stays, legs, flights, checklist, papers, routes, proposals, rate] =
     await Promise.all([
       of(supabase.from("trip_stays").select().order("check_in_on")),
       of(supabase.from("trip_legs").select().order("starts_on")),
@@ -224,6 +224,13 @@ export async function getLodgingPage() {
           .select()
           .like("list", "stay:%")
           .order("position"),
+      ),
+      of(
+        supabase
+          .from("trip_papers")
+          .select()
+          .like("owner", "stay:%")
+          .order("uploaded_at"),
       ),
       of(supabase.from("trip_route_proposals").select().order("position")),
       // No trip of their own — they belong to a route proposal, which has one,
@@ -244,6 +251,7 @@ export async function getLodgingPage() {
     legs: legs.data ?? [],
     flights: flights.data ?? [],
     checklist: checklist.data ?? [],
+    papers: papers.data ?? [],
     routes: (routes.data ?? []).map((route) => ({
       ...route,
       stays: byRoute.get(route.id) ?? [],

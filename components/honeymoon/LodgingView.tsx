@@ -20,6 +20,7 @@ import {
 import { sendRouteToLane, sendStayToLane } from "@/app/actions/finder";
 import { adoptStay } from "@/app/actions/stays";
 import { cn } from "@/lib/utils";
+import { bookingSite } from "./booking-sites";
 import { Checklist } from "./Checklist";
 import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { CopyCode, Fact, Missing } from "./Facts";
@@ -35,6 +36,7 @@ import {
   type StayOption,
 } from "./lodging";
 import { NightsStrip } from "./NightsStrip";
+import { PaperSlips } from "./PaperSlips";
 import { RateProvider } from "./RateContext";
 import { Seal, StatusLabel } from "./Seal";
 import { StayDialog, type StayDraft } from "./StayDialog";
@@ -58,6 +60,7 @@ import {
   perNightYen,
   stayAdoptEffect,
   stayChecklistKey,
+  stayPaperOwner,
   staysIn,
   stripNights,
   suggestedForStay,
@@ -84,6 +87,7 @@ import type {
   StayProposal,
   TripFlight,
   TripLeg,
+  TripPaper,
   TripStay,
 } from "./types";
 
@@ -109,6 +113,7 @@ export function LodgingView({
   legs,
   flights,
   checklist,
+  papers,
   routes,
   rate,
   renderedAt,
@@ -117,6 +122,8 @@ export function LodgingView({
   legs: TripLeg[];
   flights: TripFlight[];
   checklist: ChecklistItem[];
+  /** Confirmation PDFs for every stay, keyed `stay:<id>` by `owner`. */
+  papers: TripPaper[];
   /** The lodging finder's published routes, cheapest first. */
   routes: ProposedRoute[];
   rate: Rate;
@@ -144,6 +151,8 @@ export function LodgingView({
   const tonight = utcToZoned(new Date(now).toISOString(), STAY_TZ).date;
   const itemsFor = (stay: TripStay) =>
     checklist.filter((i) => i.list === stayChecklistKey(stay));
+  const papersFor = (stay: TripStay) =>
+    papers.filter((p) => p.owner === stayPaperOwner(stay));
 
   const create = (lane: Lane, from?: string, to?: string) =>
     setDraft({ stay: null, lane, from, to });
@@ -313,6 +322,7 @@ export function LodgingView({
                   legs={legs}
                   stays={stays}
                   items={block.stay ? itemsFor(block.stay) : []}
+                  papers={block.stay ? papersFor(block.stay) : []}
                   rate={rate}
                   now={now}
                   // Both sides go undefined on a gap block once nothing is
@@ -434,6 +444,7 @@ function Block({
   stays,
   items,
   rate,
+  papers,
   now,
   current,
   tonight,
@@ -444,6 +455,7 @@ function Block({
   legs: TripLeg[];
   stays: TripStay[];
   items: ChecklistItem[];
+  papers: TripPaper[];
   rate: Rate;
   now: number;
   current: boolean;
@@ -494,6 +506,7 @@ function Block({
               stay={block.stay}
               stays={stays}
               items={items}
+              papers={papers}
               rate={rate}
               now={now}
               current={current}
@@ -594,6 +607,7 @@ function StayCard({
   stay,
   stays,
   items,
+  papers,
   rate,
   now,
   current,
@@ -605,6 +619,7 @@ function StayCard({
   stay: TripStay;
   stays: TripStay[];
   items: ChecklistItem[];
+  papers: TripPaper[];
   rate: Rate;
   now: number;
   current: boolean;
@@ -614,6 +629,7 @@ function StayCard({
   actions: BlockActions;
 }) {
   const bags = bagsFor(stay, stays);
+  const site = bookingSite(stay.url);
   const deadline = cancelDeadline(stay);
   const closing = cancelIsClose(stay, now);
 
@@ -635,6 +651,7 @@ function StayCard({
               status={stay.booking_status}
               className="font-raleway text-[0.6rem] font-semibold"
             />
+            {site && <span>{site}</span>}
             {stay.confirmation && <CopyCode code={stay.confirmation} size="sm" />}
             {stay.cost_amount !== null && (
               <span
@@ -682,6 +699,7 @@ function StayCard({
           stay={stay}
           stays={stays}
           items={items}
+          papers={papers}
           rate={rate}
           now={now}
           current={current}
@@ -722,6 +740,7 @@ function Details({
   stay,
   stays,
   items,
+  papers,
   rate,
   now,
   current,
@@ -732,6 +751,7 @@ function Details({
   stay: TripStay;
   stays: TripStay[];
   items: ChecklistItem[];
+  papers: TripPaper[];
   rate: Rate;
   now: number;
   current: boolean;
@@ -739,6 +759,7 @@ function Details({
   done: boolean;
   onEdit: () => void;
 }) {
+  const site = bookingSite(stay.url);
   const checkIn = checkInAt(stay);
   const checkOut = checkOutAt(stay);
   const deadline = cancelDeadline(stay);
@@ -827,6 +848,27 @@ function Details({
           ) : (
             <Missing onAdd={onEdit}>Add the confirmation number</Missing>
           )}
+          {/* The code and who honours it are one fact: the number is no use
+              until you know whose desk to say it at. */}
+          {site && (
+            <span className="mt-1 block">
+              {stay.url ? (
+                <a
+                  href={stay.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 font-garamond text-base text-muted-foreground underline-offset-4 hover:text-primary hover:underline"
+                >
+                  Booked with {site}
+                  <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
+                </a>
+              ) : (
+                <span className="font-garamond text-base text-muted-foreground">
+                  Booked with {site}
+                </span>
+              )}
+            </span>
+          )}
         </Fact>
 
         <Fact label="Paying">
@@ -911,16 +953,14 @@ function Details({
             // under every bed on the list.
             suggestions={current ? suggestedForStay(stay) : undefined}
           />
-          {stay.url && (
-            <a
-              href={stay.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-primary underline-offset-4 hover:underline"
-            >
-              The booking <ExternalLink className="h-3 w-3" strokeWidth={1.5} />
-            </a>
-          )}
+          {/* The booking link used to sit here as well. It is the Confirmation
+              cell's "Booked with …" now — the same URL, said once, next to the
+              number it belongs to. */}
+          <PaperSlips
+            owner={stayPaperOwner(stay)}
+            papers={papers}
+            hint="The confirmation, so you have it with no signal."
+          />
         </div>
       )}
     </>

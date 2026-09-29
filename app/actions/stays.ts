@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
 import { currentTripId } from "@/lib/honeymoon-queries";
+import { clearPapers } from "@/lib/trip-papers";
 import type {
   BookingStatus,
   Currency,
@@ -177,6 +178,9 @@ export async function deleteStay(id: string) {
   if (!(await isHost())) return DENIED;
 
   await supabase.from("trip_checklist_items").delete().eq("list", `stay:${id}`);
+  // The paper rows go with the stay on a trigger; the files in the bucket
+  // need clearing here, while there is still something pointing at them.
+  await clearPapers(`stay:${id}`);
 
   const { error } = await supabase.from("trip_stays").delete().eq("id", id);
   if (error) return { data: null, error: error.message };

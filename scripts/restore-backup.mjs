@@ -56,6 +56,7 @@ const ORDER = [
   "trip_stays",
   "trip_transit",
   "trip_checklist_items",
+  "trip_papers",
 ];
 
 const KEY_OF = { trip_days: "on_date" };
