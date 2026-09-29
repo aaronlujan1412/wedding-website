@@ -29,12 +29,20 @@ export function fromBase64Url(value: string) {
   return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
 }
 
-export function createSigner(variable: string) {
+/**
+ * `variables` may name more than one environment variable, and the first one
+ * set wins. That exists so a secret can be RENAMED without a window where
+ * every sign-in throws: the new name is tried first, the old one keeps working
+ * until it is removed from the host.
+ */
+export function createSigner(variable: string | string[]) {
+  const names = Array.isArray(variable) ? variable : [variable];
+
   async function key() {
-    const secret = process.env[variable];
+    const secret = names.map((name) => process.env[name]).find(Boolean);
     if (!secret) {
       throw new Error(
-        `${variable} is not set — those tokens cannot be signed or verified.`,
+        `${names.join(" or ")} is not set — those tokens cannot be signed or verified.`,
       );
     }
     return crypto.subtle.importKey(

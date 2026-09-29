@@ -25,8 +25,11 @@ const RETENTION_MINUTES = WINDOW_MINUTES * 4;
 /**
  * An HMAC of the caller's IP rather than the IP itself: enough to count
  * against, not enough to be a log of who visited the site.
+ *
+ * Exported for `login-limit.ts`, which throttles a different gate with
+ * different settings but wants callers identified the same way.
  */
-async function fingerprint() {
+export async function fingerprint() {
   const list = await headers();
   const forwarded = list.get("x-forwarded-for")?.split(",")[0]?.trim();
   const ip = forwarded || list.get("x-real-ip") || "unknown";

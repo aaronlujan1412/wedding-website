@@ -34,6 +34,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      brain_decisions: {
+        Row: {
+          applied_at: string | null
+          decided_at: string
+          decided_by: string | null
+          decision: string
+          destination: string | null
+          error: string | null
+          id: string
+          note_title: string | null
+          path: string
+          state: string
+        }
+        Insert: {
+          applied_at?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision: string
+          destination?: string | null
+          error?: string | null
+          id?: string
+          note_title?: string | null
+          path: string
+          state?: string
+        }
+        Update: {
+          applied_at?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision?: string
+          destination?: string | null
+          error?: string | null
+          id?: string
+          note_title?: string | null
+          path?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_decisions_decided_by_users_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brain_notes: {
+        Row: {
+          body: string
+          bucket: string
+          confidence: string | null
+          content_hash: string
+          file_mtime: string | null
+          id: string
+          path: string
+          search: unknown
+          source: string | null
+          staged: boolean | null
+          synced_at: string
+          tags: string[]
+          title: string | null
+        }
+        Insert: {
+          body: string
+          bucket: string
+          confidence?: string | null
+          content_hash: string
+          file_mtime?: string | null
+          id?: string
+          path: string
+          search?: unknown
+          source?: string | null
+          staged?: boolean | null
+          synced_at?: string
+          tags?: string[]
+          title?: string | null
+        }
+        Update: {
+          body?: string
+          bucket?: string
+          confidence?: string | null
+          content_hash?: string
+          file_mtime?: string | null
+          id?: string
+          path?: string
+          search?: unknown
+          source?: string | null
+          staged?: boolean | null
+          synced_at?: string
+          tags?: string[]
+          title?: string | null
+        }
+        Relationships: []
+      }
       faq: {
         Row: {
           aaron_take: string | null
@@ -215,6 +310,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      login_attempts: {
+        Row: {
+          created_at: string
+          fingerprint: string
+          id: number
+        }
+        Insert: {
+          created_at?: string
+          fingerprint: string
+          id?: never
+        }
+        Update: {
+          created_at?: string
+          fingerprint?: string
+          id?: never
+        }
+        Relationships: []
       }
       seating_tables: {
         Row: {
@@ -1228,6 +1341,36 @@ export type Database = {
         }
         Relationships: []
       }
+      users: {
+        Row: {
+          created_at: string
+          id: string
+          last_seen_at: string | null
+          password_hash: string
+          token_version: number
+          totp_secret: string | null
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash: string
+          token_version?: number
+          totp_secret?: string | null
+          username: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_seen_at?: string | null
+          password_hash?: string
+          token_version?: number
+          totp_secret?: string | null
+          username?: string
+        }
+        Relationships: []
+      }
       verification_attempts: {
         Row: {
           created_at: string
@@ -1257,6 +1400,34 @@ export type Database = {
         Returns: number
       }
       adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
+      brain_bucket_counts: {
+        Args: never
+        Returns: {
+          bucket: string
+          note_count: number
+        }[]
+      }
+      brain_fingerprint: { Args: never; Returns: string }
+      brain_note_search: {
+        Args: { p_body: string; p_tags: string[]; p_title: string }
+        Returns: unknown
+      }
+      brain_reconcile: { Args: { p_manifest: Json }; Returns: Json }
+      brain_tag_counts: {
+        Args: { p_limit?: number }
+        Returns: {
+          note_count: number
+          tag: string
+        }[]
+      }
+      brain_totals: {
+        Args: never
+        Returns: {
+          last_synced: string
+          staged: number
+          total: number
+        }[]
+      }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number
