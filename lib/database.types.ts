@@ -329,6 +329,444 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_item_prices: {
+        Row: {
+          created_at: string
+          id: string
+          item_id: string
+          price_cents: number
+          priced_on: string
+          source: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_id: string
+          price_cents: number
+          priced_on?: string
+          source?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_id?: string
+          price_cents?: number
+          priced_on?: string
+          source?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_item_prices_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_items: {
+        Row: {
+          category: string | null
+          created_at: string
+          id: string
+          keeps_days: number | null
+          name: string
+          notes: string | null
+          pack: string | null
+          price_cents: number | null
+          price_includes_markup: boolean
+          priced_on: string | null
+          store: string | null
+          tier: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          keeps_days?: number | null
+          name: string
+          notes?: string | null
+          pack?: string | null
+          price_cents?: number | null
+          price_includes_markup?: boolean
+          priced_on?: string | null
+          store?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string
+          id?: string
+          keeps_days?: number | null
+          name?: string
+          notes?: string | null
+          pack?: string | null
+          price_cents?: number | null
+          price_includes_markup?: boolean
+          priced_on?: string | null
+          store?: string | null
+          tier?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meal_plan_days: {
+        Row: {
+          dinner_recipe_id: string | null
+          eaters: number
+          id: string
+          kid_here: boolean
+          lunch_recipe_id: string | null
+          notes: string | null
+          on_date: string
+          plan_id: string
+          prep_day: boolean
+        }
+        Insert: {
+          dinner_recipe_id?: string | null
+          eaters?: number
+          id?: string
+          kid_here?: boolean
+          lunch_recipe_id?: string | null
+          notes?: string | null
+          on_date: string
+          plan_id: string
+          prep_day?: boolean
+        }
+        Update: {
+          dinner_recipe_id?: string | null
+          eaters?: number
+          id?: string
+          kid_here?: boolean
+          lunch_recipe_id?: string | null
+          notes?: string | null
+          on_date?: string
+          plan_id?: string
+          prep_day?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_days_dinner_recipe_id_fkey"
+            columns: ["dinner_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "meal_recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_days_lunch_recipe_id_fkey"
+            columns: ["lunch_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "meal_recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_days_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_items: {
+        Row: {
+          coverage_warning: string | null
+          generated: boolean
+          id: string
+          item_id: string
+          order_id: string
+          plan_id: string
+          quantity: number
+          quantity_is_a_guess: boolean
+          tier: string
+          unit_price_cents: number
+          used_for: string | null
+        }
+        Insert: {
+          coverage_warning?: string | null
+          generated?: boolean
+          id?: string
+          item_id: string
+          order_id: string
+          plan_id: string
+          quantity?: number
+          quantity_is_a_guess?: boolean
+          tier?: string
+          unit_price_cents: number
+          used_for?: string | null
+        }
+        Update: {
+          coverage_warning?: string | null
+          generated?: boolean
+          id?: string
+          item_id?: string
+          order_id?: string
+          plan_id?: string
+          quantity?: number
+          quantity_is_a_guess?: boolean
+          tier?: string
+          unit_price_cents?: number
+          used_for?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plan_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_plan_items_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plan_orders: {
+        Row: {
+          delivers_on: string
+          id: string
+          notes: string | null
+          ordinal: number
+          plan_id: string
+          store: string | null
+        }
+        Insert: {
+          delivers_on: string
+          id?: string
+          notes?: string | null
+          ordinal: number
+          plan_id: string
+          store?: string | null
+        }
+        Update: {
+          delivers_on?: string
+          id?: string
+          notes?: string | null
+          ordinal?: number
+          plan_id?: string
+          store?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_plan_orders_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "meal_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_plans: {
+        Row: {
+          budget_cents: number
+          created_at: string
+          ends_on: string
+          id: string
+          name: string
+          notes: string | null
+          starts_on: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          budget_cents: number
+          created_at?: string
+          ends_on: string
+          id?: string
+          name: string
+          notes?: string | null
+          starts_on: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          budget_cents?: number
+          created_at?: string
+          ends_on?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          starts_on?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      meal_recipe_items: {
+        Row: {
+          item_id: string
+          notes: string | null
+          optional: boolean
+          quantity: number | null
+          recipe_id: string
+          unit: string | null
+        }
+        Insert: {
+          item_id: string
+          notes?: string | null
+          optional?: boolean
+          quantity?: number | null
+          recipe_id: string
+          unit?: string | null
+        }
+        Update: {
+          item_id?: string
+          notes?: string | null
+          optional?: boolean
+          quantity?: number | null
+          recipe_id?: string
+          unit?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_recipe_items_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "meal_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "meal_recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "meal_recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_recipes: {
+        Row: {
+          batch_friendly: boolean
+          created_at: string
+          id: string
+          kcal: number | null
+          kind: string
+          last_planned_on: string | null
+          method: string | null
+          name: string
+          notes: string | null
+          protein_g: number | null
+          retired: boolean
+          serves: number | null
+          updated_at: string
+          window_when: string
+        }
+        Insert: {
+          batch_friendly?: boolean
+          created_at?: string
+          id?: string
+          kcal?: number | null
+          kind?: string
+          last_planned_on?: string | null
+          method?: string | null
+          name: string
+          notes?: string | null
+          protein_g?: number | null
+          retired?: boolean
+          serves?: number | null
+          updated_at?: string
+          window_when?: string
+        }
+        Update: {
+          batch_friendly?: boolean
+          created_at?: string
+          id?: string
+          kcal?: number | null
+          kind?: string
+          last_planned_on?: string | null
+          method?: string | null
+          name?: string
+          notes?: string | null
+          protein_g?: number | null
+          retired?: boolean
+          serves?: number | null
+          updated_at?: string
+          window_when?: string
+        }
+        Relationships: []
+      }
+      meal_rules: {
+        Row: {
+          active: boolean
+          applies_to: string | null
+          created_at: string
+          detail: string
+          forbidden_term: string | null
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          applies_to?: string | null
+          created_at?: string
+          detail: string
+          forbidden_term?: string | null
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          applies_to?: string | null
+          created_at?: string
+          detail?: string
+          forbidden_term?: string | null
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      meal_settings: {
+        Row: {
+          aaron_kcal: number
+          budget_cents: number
+          id: boolean
+          kid_cycle_anchor: string | null
+          kid_cycle_days: number
+          notes: string | null
+          orders_per_month: number
+          savea_kcal: number
+          updated_at: string
+        }
+        Insert: {
+          aaron_kcal?: number
+          budget_cents?: number
+          id?: boolean
+          kid_cycle_anchor?: string | null
+          kid_cycle_days?: number
+          notes?: string | null
+          orders_per_month?: number
+          savea_kcal?: number
+          updated_at?: string
+        }
+        Update: {
+          aaron_kcal?: number
+          budget_cents?: number
+          id?: boolean
+          kid_cycle_anchor?: string | null
+          kid_cycle_days?: number
+          notes?: string | null
+          orders_per_month?: number
+          savea_kcal?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       seating_tables: {
         Row: {
           capacity: number | null
@@ -1428,9 +1866,19 @@ export type Database = {
           total: number
         }[]
       }
+      fill_meal_plan_days: { Args: { p_plan: string }; Returns: number }
+      generate_meal_plan_list: { Args: { p_plan: string }; Returns: Json }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number
+      }
+      schedule_meal_plan: {
+        Args: {
+          p_max_repeats?: number
+          p_min_gap_days?: number
+          p_plan: string
+        }
+        Returns: Json
       }
       send_trip_route_proposal: {
         Args: {

@@ -17,6 +17,12 @@ const PAGES = [
     blurb:
       "3,400 notes and the search service I wrote to get at them. The longest thing on this site, and the one I'd read.",
   },
+  {
+    href: "/me/meals",
+    label: "Meals",
+    blurb:
+      "A month of dinners on $800, delivered twice. The hard part isn't the food, it's that everything arrives twice a month and starts going off immediately.",
+  },
 ];
 
 export default function MePage() {
