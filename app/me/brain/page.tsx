@@ -135,19 +135,19 @@ export default async function BrainPage() {
                   let into the brain.
                 </p>
                 <Link
-                  href="/me/brain/notes?staged=1"
+                  href="/me/brain/inbox"
                   className="mt-2 inline-block text-[12px] text-me-link underline"
                 >
                   <span aria-hidden className="text-me-gold">
                     &raquo;
                   </span>{" "}
-                  read them
+                  review them
                 </Link>
               </Well>
             ) : (
               <p className="text-[13px] text-me-dim">
-                Nothing waiting. Approving and rejecting from here comes next —
-                for now the queue is read-only.
+                Nothing staged. Notes land here when the workstation files them
+                or an agent writes one.
               </p>
             )}
           </Panel>

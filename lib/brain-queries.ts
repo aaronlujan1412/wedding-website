@@ -2,6 +2,16 @@ import "server-only";
 
 import { supabase } from "./supabase";
 import { currentBrainUser } from "./brain-user";
+import type {
+  Decision,
+  InboxEntry,
+  Note,
+  NoteSummary,
+} from "./brain-types";
+
+// Re-exported so a server component can take everything from one module.
+export type { Decision, InboxEntry, Note, NoteSummary } from "./brain-types";
+export { DESTINATIONS, type Destination } from "./brain-types";
 
 /**
  * Reads of the mirrored vault.
@@ -21,25 +31,6 @@ import { currentBrainUser } from "./brain-user";
  * Signed out, each of these returns empty rather than throwing. A public page
  * showing nothing is correct; a 500 is a worse answer to the same question.
  */
-
-/** Trimmed for lists — bodies are up to 12KB and 50 of them is a page nobody reads. */
-export type NoteSummary = {
-  id: string;
-  path: string;
-  bucket: string;
-  title: string | null;
-  tags: string[];
-  confidence: string | null;
-  file_mtime: string | null;
-  excerpt: string;
-};
-
-export type Note = NoteSummary & {
-  body: string;
-  source: string | null;
-  content_hash: string;
-  synced_at: string;
-};
 
 /** Enough of the body to recognise the note, cut on a word. */
 function excerpt(body: string, length = 180): string {
@@ -288,4 +279,62 @@ export async function getTags(limit = 40): Promise<{ tag: string; count: number 
   if (error || !data) return [];
 
   return data.map((row) => ({ tag: row.tag, count: Number(row.note_count) }));
+}
+
+/**
+ * The review queue: every note in a staging directory, with its full body.
+ *
+ * Bodies and not excerpts, because deciding whether a note belongs in the brain
+ * means reading it. The queue is single digits in practice — one note today —
+ * so the cost of that is nothing.
+ */
+export async function getInbox(): Promise<InboxEntry[]> {
+  if (!(await currentBrainUser())) return [];
+
+  const [notes, decisions] = await Promise.all([
+    supabase
+      .from("brain_notes")
+      .select("*")
+      .eq("staged", true)
+      .order("file_mtime", { ascending: true, nullsFirst: true }),
+    supabase
+      .from("brain_decisions")
+      .select("*")
+      .in("state", ["queued", "failed"]),
+  ]);
+
+  if (notes.error || !notes.data) return [];
+
+  const open = new Map(
+    (decisions.data ?? []).map((d) => [d.path, d as Decision]),
+  );
+
+  type FullRow = Row & {
+    source: string | null;
+    content_hash: string;
+    synced_at: string;
+  };
+
+  return (notes.data as FullRow[]).map((row) => ({
+    ...toSummary(row),
+    body: row.body,
+    source: row.source,
+    content_hash: row.content_hash,
+    synced_at: row.synced_at,
+    pending: open.get(row.path) ?? null,
+  }));
+}
+
+/** What has been decided lately, for the log under the queue. */
+export async function getDecisionLog(limit = 25): Promise<Decision[]> {
+  if (!(await currentBrainUser())) return [];
+
+  const { data, error } = await supabase
+    .from("brain_decisions")
+    .select("*")
+    .order("decided_at", { ascending: false })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as Decision[];
 }

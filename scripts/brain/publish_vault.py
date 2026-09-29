@@ -9,12 +9,18 @@ write notes, which is a far smaller thing to lose than the database key.
 The vault stays canonical. Nothing in this script writes to it; it reads files
 and posts their contents.
 
-Two ways to run it:
+What it does, in one run:
+
+    publish_vault.py                  apply any decisions waiting on the site,
+                                      then reconcile. This is what the timer
+                                      runs, and the order matters -- applying
+                                      first means the reconcile in the same run
+                                      reports the moved files.
 
     publish_vault.py --reconcile      compare every path against the mirror,
                                       send what differs, delete what is gone.
-                                      This is the first load and the periodic
-                                      catch-up.
+
+    publish_vault.py --decisions      carry out approvals and rejections only.
 
     publish_vault.py --watch          block, wait for the vault to change, and
                                       send just the notes that changed. This is
@@ -26,6 +32,9 @@ Environment:
     BRAIN_SYNC_URL      https://<site>/api/brain/sync
     BRAIN_SYNC_SECRET   the bearer token, matching the site's env var
     VAULT_ROOT          defaults to the usual vault path
+
+The decisions endpoint is derived from BRAIN_SYNC_URL, so there is one URL to
+get wrong instead of two.
 """
 from __future__ import annotations
 
@@ -48,7 +57,18 @@ SECRET = os.environ.get("BRAIN_SYNC_SECRET", "")
 # _inbox -- the review queue is the point of putting this on a website. NOT
 # mirrored: the machinery directories, which hold proposals and raw source
 # material rather than notes.
-SKIP_DIRS = {".git", ".obsidian", ".trash", "_revisions", "_sources", "_inbox_work"}
+SKIP_DIRS = {
+    ".git", ".obsidian", ".trash", "_revisions", "_sources", "_inbox_work",
+    # Turned-away notes. Kept on disk rather than deleted, but they are not the
+    # brain and they are not the queue, so they are not mirrored either -- the
+    # decision log on the site records what was rejected and why.
+    "_rejected",
+}
+
+# Where an approved note may be filed. Checked here as well as in the database,
+# because a destination arriving over the network is never trusted twice: this
+# is the process that can actually write to the vault.
+BUCKETS = {"Reference", "Personal", "Work"}
 
 # Matches the endpoint's cap, so a batch is never rejected for being too big.
 BATCH = 200
@@ -265,13 +285,132 @@ def watch() -> None:
 def poll(seconds: int = 60) -> None:
     """Check on a timer. Cheap, because of the fingerprint exchange above."""
     while True:
+        apply_decisions()
         reconcile(quiet=True)
         time.sleep(seconds)
+
+
+def decisions_url() -> str:
+    """Derived from the sync URL so there is only one address to configure."""
+    return URL.rsplit("/", 1)[0] + "/decisions"
+
+
+def get_decisions() -> list[dict]:
+    if not URL or not SECRET:
+        sys.exit("BRAIN_SYNC_URL and BRAIN_SYNC_SECRET must both be set.")
+
+    request = urllib.request.Request(
+        decisions_url(),
+        headers={"Authorization": f"Bearer {SECRET}"},
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            return json.loads(response.read()).get("decisions", [])
+    except urllib.error.HTTPError as exc:
+        body = exc.read().decode("utf-8", "replace")[:300]
+        sys.exit(f"could not read decisions: HTTP {exc.code} {body}")
+    except urllib.error.URLError as exc:
+        sys.exit(f"could not read decisions: {exc.reason}")
+
+
+def carry_out(decision: dict) -> str | None:
+    """Move one file. Returns None on success, or a sentence saying why not.
+
+    EVERY path here is re-derived rather than trusted. The site got these from
+    this box in the first place, but this is the one process in the loop that
+    can write to the vault, so a value that arrived over a network does not get
+    to name a destination: the basename is taken, the directory is chosen from a
+    fixed set, and the result is proved to be inside the vault before anything
+    moves.
+    """
+    raw_path = str(decision.get("path", ""))
+    if not raw_path.startswith("_inbox/") or ".." in raw_path:
+        return "not a staged note"
+
+    source = (VAULT / raw_path).resolve()
+    inbox = (VAULT / "_inbox").resolve()
+    if not source.is_relative_to(inbox):
+        return "path escapes the inbox"
+    if not source.is_file():
+        return "the file is no longer there"
+
+    verdict = decision.get("decision")
+    if verdict == "approve":
+        bucket = str(decision.get("destination", ""))
+        if bucket not in BUCKETS:
+            return f"unknown destination {bucket!r}"
+        target_dir = (VAULT / bucket).resolve()
+    elif verdict == "reject":
+        target_dir = (VAULT / "_rejected").resolve()
+    else:
+        return f"unknown decision {verdict!r}"
+
+    if not target_dir.is_relative_to(VAULT.resolve()):
+        return "destination escapes the vault"
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    # Never overwrite. A name collision means two different notes, and the
+    # second one silently replacing the first is the one outcome worth more
+    # than a suffix.
+    target = target_dir / source.name
+    if target.exists():
+        stem, suffix = source.stem, source.suffix
+        for n in range(2, 100):
+            candidate = target_dir / f"{stem}-{n}{suffix}"
+            if not candidate.exists():
+                target = candidate
+                break
+        else:
+            return "a hundred files already have that name"
+
+    try:
+        source.rename(target)
+    except OSError as exc:
+        return str(exc)
+    return None
+
+
+def apply_decisions() -> int:
+    """Carry out everything waiting, and report each result back."""
+    pending = get_decisions()
+    if not pending:
+        return 0
+
+    results = []
+    for decision in pending:
+        problem = carry_out(decision)
+        results.append(
+            {"id": decision["id"], "ok": problem is None, "error": problem}
+        )
+        name = decision.get("path", "?")
+        print(f"  {'ok  ' if problem is None else 'FAIL'} {name}"
+              + (f" — {problem}" if problem else ""))
+
+    request = urllib.request.Request(
+        decisions_url(),
+        data=json.dumps({"results": results}).encode("utf-8"),
+        headers={
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {SECRET}",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            json.loads(response.read())
+    except (urllib.error.HTTPError, urllib.error.URLError) as exc:
+        # The moves already happened. Saying so matters more than exiting: the
+        # next run reconciles the files either way, and these rows stay queued
+        # until a report gets through.
+        print(f"  moves done, but reporting back failed: {exc}", file=sys.stderr)
+
+    return len(results)
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reconcile", action="store_true", help="full compare and catch-up")
+    parser.add_argument("--decisions", action="store_true", help="apply approvals and rejections")
     parser.add_argument("--watch", action="store_true", help="block and push on change")
     parser.add_argument("--poll", type=int, metavar="SECONDS", help="reconcile on a timer")
     parser.add_argument("--paths", nargs="+", metavar="PATH", help="send these vault-relative paths")
@@ -282,11 +421,19 @@ def main() -> int:
 
     if args.paths:
         print(f"sent {send([VAULT / p for p in args.paths])}")
+    elif args.decisions:
+        print(f"applied {apply_decisions()}")
     elif args.watch:
         watch()
     elif args.poll:
         poll(args.poll)
     else:
+        # Decisions first: the files move, and the reconcile in the same run
+        # then reports them at their new paths instead of leaving the mirror a
+        # tick behind.
+        applied = apply_decisions()
+        if applied:
+            print(f"applied {applied}")
         reconcile()
     return 0
 

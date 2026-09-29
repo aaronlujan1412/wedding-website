@@ -34,6 +34,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      brain_decisions: {
+        Row: {
+          applied_at: string | null
+          decided_at: string
+          decided_by: string | null
+          decision: string
+          destination: string | null
+          error: string | null
+          id: string
+          note_title: string | null
+          path: string
+          state: string
+        }
+        Insert: {
+          applied_at?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision: string
+          destination?: string | null
+          error?: string | null
+          id?: string
+          note_title?: string | null
+          path: string
+          state?: string
+        }
+        Update: {
+          applied_at?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision?: string
+          destination?: string | null
+          error?: string | null
+          id?: string
+          note_title?: string | null
+          path?: string
+          state?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brain_decisions_decided_by_fkey"
+            columns: ["decided_by"]
+            isOneToOne: false
+            referencedRelation: "brain_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_login_attempts: {
         Row: {
           created_at: string
