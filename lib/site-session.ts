@@ -48,14 +48,19 @@ export const SITE_COOKIE = "me_session";
 export const SITE_SESSION_MAX_AGE = 60 * 60 * 24 * 14;
 
 /**
- * Domain separator, so no other signed value can be replayed as a session.
+ * Domain separator, so no other value signed with this key can be replayed as
+ * a session.
  *
- * Still `brain:` rather than `me:`. The prefix is baked into every cookie that
- * has already been issued, and changing it would sign everyone out for no gain
- * — it only has to be unique among the things this key signs, not descriptive.
+ * It only has to be unique, but it may as well also be true: this is the site's
+ * session, not one tool's, and a stale prefix is the kind of thing someone
+ * later has to stop and work out whether it means anything.
+ *
+ * Changing it invalidates every token already issued, since the signature
+ * covers this string — so it is a sign-everyone-out change, cheap here and not
+ * cheap later.
  */
 const scope = (userId: string, version: number, expiresAt: string) =>
-  `brain:${userId}:${version}:${expiresAt}`;
+  `me:${userId}:${version}:${expiresAt}`;
 
 export type SessionToken = { userId: string; version: number };
 
