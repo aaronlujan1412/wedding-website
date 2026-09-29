@@ -73,6 +73,13 @@ BUCKETS = {"Reference", "Personal", "Work"}
 # Matches the endpoint's cap, so a batch is never rejected for being too big.
 BATCH = 200
 
+# Cloudflare fronts the site and blocks urllib's default `Python-urllib/3.x`
+# agent outright -- 403 with Cloudflare error 1010, which reads as an auth
+# failure and is not one. The same request with any ordinary agent string is
+# fine. Naming the tool also means these requests are identifiable in a log
+# rather than being indistinguishable from a scraper.
+USER_AGENT = "secondbrain-publisher/1.0 (+homelab)"
+
 FRONTMATTER = re.compile(r"\A---\r?\n(.*?)\r?\n---\r?\n", re.S)
 TAGS_LINE = re.compile(r"^tags:\s*\[(.*?)\]\s*$", re.M)
 FIELD = re.compile(r"^(source|confidence|vault):\s*(.*?)\s*$", re.M)
@@ -153,6 +160,7 @@ def post(payload: dict) -> dict:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {SECRET}",
+            "User-Agent": USER_AGENT,
         },
         method="POST",
     )
@@ -301,7 +309,10 @@ def get_decisions() -> list[dict]:
 
     request = urllib.request.Request(
         decisions_url(),
-        headers={"Authorization": f"Bearer {SECRET}"},
+        headers={
+            "Authorization": f"Bearer {SECRET}",
+            "User-Agent": USER_AGENT,
+        },
     )
     try:
         with urllib.request.urlopen(request, timeout=60) as response:
@@ -392,6 +403,7 @@ def apply_decisions() -> int:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {SECRET}",
+            "User-Agent": USER_AGENT,
         },
         method="POST",
     )
