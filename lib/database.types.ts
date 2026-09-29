@@ -1872,6 +1872,14 @@ export type Database = {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number
       }
+      schedule_meal_plan: {
+        Args: {
+          p_max_repeats?: number
+          p_min_gap_days?: number
+          p_plan: string
+        }
+        Returns: Json
+      }
       send_trip_route_proposal: {
         Args: {
           p_lane: Database["public"]["Enums"]["trip_lane"]

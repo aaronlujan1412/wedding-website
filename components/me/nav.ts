@@ -15,4 +15,5 @@ export const ME_NAV: MeNavItem[] = [
   { label: "Index", href: "/me" },
   { label: "About", href: "/me/about" },
   { label: "Second Brain", href: "/me/brain" },
+  { label: "Meals", href: "/me/meals" },
 ];
