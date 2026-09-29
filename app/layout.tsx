@@ -41,7 +41,8 @@ const raleway = Raleway({
 });
 
 /**
- * The Ring's two faces, and nowhere else on the site.
+ * The Ring's two faces on the wedding site -- and DotGothic16 again on /me,
+ * which is a different site in the same repo and is set in it throughout.
  *
  * Dela Gothic is the chunky Japanese poster face that every anime title and
  * every arcade cabinet is set in; DotGothic16 is a pixel face for the HUD, so
