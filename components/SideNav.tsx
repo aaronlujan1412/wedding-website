@@ -81,7 +81,15 @@ export function SideNav() {
           <RsvpButton variant="sidenav" onClick={handleRsvp} />
         </div>
 
-        <SheetFooter>
+        <SheetFooter className="items-center gap-3">
+          <SheetClose asChild>
+            <Link
+              href="/hosts"
+              className="rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.25em] text-muted-foreground/70 underline-offset-4 transition-colors hover:text-primary hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Hosts
+            </Link>
+          </SheetClose>
           <p className="text-center font-raleway text-xs uppercase tracking-[0.2em] text-muted-foreground">
             12 · 01 · 2026
           </p>
