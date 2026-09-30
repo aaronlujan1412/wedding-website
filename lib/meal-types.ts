@@ -29,6 +29,8 @@ export type Recipe = {
   notes: string | null;
   batch_friendly: boolean;
   ingredient_count: number;
+  /** Categories the household made up. A chip exists because a dish has it. */
+  tags: string[];
 };
 
 export type Item = {

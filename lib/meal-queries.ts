@@ -56,9 +56,11 @@ export async function getRecipes(): Promise<Recipe[]> {
   const [recipes, links] = await Promise.all([
     supabase
       .from("meal_recipes")
-      .select("id, name, kind, serves, kcal, protein_g, method, window_when, notes, batch_friendly")
+      .select("id, name, kind, serves, kcal, protein_g, method, window_when, notes, batch_friendly, tags")
       .eq("retired", false)
-      .order("kind")
+      // Alphabetical, full stop. Kind used to be the page's four headings and
+      // is now one chip among several, so ordering by it would impose a
+      // grouping the page no longer draws.
       .order("name"),
     supabase.from("meal_recipe_items").select("recipe_id"),
   ]);
@@ -74,6 +76,7 @@ export async function getRecipes(): Promise<Recipe[]> {
     ...r,
     window_when: r.window_when as Window,
     ingredient_count: counts.get(r.id) ?? 0,
+    tags: r.tags ?? [],
   })) as Recipe[];
 }
 
@@ -276,6 +279,7 @@ export type RecipeDetail = {
   notes: string | null;
   batch_friendly: boolean;
   retired: boolean;
+  tags: string[];
   ingredients: {
     item_id: string;
     name: string;

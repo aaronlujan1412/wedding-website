@@ -782,6 +782,7 @@ export type Database = {
           protein_g: number | null
           retired: boolean
           serves: number | null
+          tags: string[]
           updated_at: string
           window_when: string
         }
@@ -798,6 +799,7 @@ export type Database = {
           protein_g?: number | null
           retired?: boolean
           serves?: number | null
+          tags?: string[]
           updated_at?: string
           window_when?: string
         }
@@ -814,6 +816,7 @@ export type Database = {
           protein_g?: number | null
           retired?: boolean
           serves?: number | null
+          tags?: string[]
           updated_at?: string
           window_when?: string
         }
@@ -1996,6 +1999,7 @@ export type Database = {
         Args: { p_category: string; p_description: string }
         Returns: unknown
       }
+      meal_tags_sane: { Args: { p_tags: string[] }; Returns: boolean }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number

@@ -41,6 +41,27 @@ function int(raw: FormDataEntryValue | null): number | null {
 
 const text = (raw: FormDataEntryValue | null) => String(raw ?? "").trim() || null;
 
+/**
+ * "High Protein, quick , quick" -> ["high protein", "quick"].
+ *
+ * Lowercased and de-duplicated because tags are compared as written: "High
+ * Protein" and "high protein" would otherwise be two chips that look like one
+ * bug, and the chip rail would grow a near-duplicate every time somebody typed
+ * with the shift key down.
+ *
+ * Order is kept as typed rather than sorted — the chips are sorted at the point
+ * they are drawn, and a dish's own list reading back in the order somebody
+ * wrote it is less startling when they return to the form.
+ */
+function tags(raw: FormDataEntryValue | null): string[] {
+  const seen = new Set<string>();
+  for (const part of String(raw ?? "").split(",")) {
+    const tag = part.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40);
+    if (tag) seen.add(tag);
+  }
+  return [...seen];
+}
+
 /* ---------------------------------------------------------------- items -- */
 
 export async function saveItem(
@@ -188,6 +209,7 @@ export async function saveRecipe(
     method: text(formData.get("method")),
     notes: text(formData.get("notes")),
     batch_friendly: formData.get("batch_friendly") === "on",
+    tags: tags(formData.get("tags")),
     updated_at: new Date().toISOString(),
   };
 
