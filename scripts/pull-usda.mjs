@@ -101,6 +101,32 @@ function nutrients(food) {
 }
 
 /**
+ * The same four numbers, from the food's own record.
+ *
+ * Search returns an ABRIDGED nutrient list, and on some foods it is empty. That
+ * is why olive oil came back as 0 kcal: nothing to read, so Atwater added up
+ * three absent macros and got zero, which looks like a measurement. A second
+ * request per match is worth it to not invent numbers.
+ *
+ * The detail response nests differently — `nutrient.name` and `amount`, rather
+ * than `nutrientName` and `value` — which is its own small trap.
+ */
+async function detailNutrients(fdcId) {
+  const response = await fetch(`${API}/food/${fdcId}?api_key=${KEY}`);
+  if (!response.ok) return null;
+  const food = await response.json();
+
+  const out = {};
+  for (const n of food.foodNutrients ?? []) {
+    const key = NUTRIENT[n.nutrient?.name];
+    if (!key) continue;
+    if (key === "kcal" && String(n.nutrient?.unitName).toUpperCase() !== "KCAL") continue;
+    if (out[key] === undefined && n.amount !== undefined) out[key] = Number(n.amount);
+  }
+  return out;
+}
+
+/**
  * Foundation and SR Legacy only, and in that order of preference.
  *
  * Branded is deliberately excluded. It is a catalogue of packages — every
@@ -194,14 +220,29 @@ for (const item of items) {
     continue;
   }
 
-  const n = nutrients(hit.food);
+  // Search first, then the food's own record wherever search came back thin.
+  let n = nutrients(hit.food);
+  if (n.protein === undefined || n.fat === undefined || n.carbs === undefined) {
+    const full = await detailNutrients(hit.food.fdcId);
+    if (full) n = { ...full, ...n };
+  }
   // Foundation Foods are measured, and many carry no Energy at all. Atwater
   // (4/9/4) reconstructs it from the macros to within a couple of percent,
   // which beats leaving the field empty on the best entries in the database.
+  /*
+   * Only derive from macros that are actually there. Summing three absent
+   * numbers gives a confident 0 kcal, which is how olive oil — pure fat, 884
+   * kcal — came back as nothing at all. No macros means no calories, said as
+   * null rather than as zero.
+   */
+  const haveMacros =
+    n.protein !== undefined || n.fat !== undefined || n.carbs !== undefined;
   const derived = n.kcal === undefined;
-  const kcal = derived
-    ? Math.round((n.protein ?? 0) * 4 + (n.fat ?? 0) * 9 + (n.carbs ?? 0) * 4)
-    : Math.round(n.kcal);
+  const kcal = !derived
+    ? Math.round(n.kcal)
+    : haveMacros
+      ? Math.round((n.protein ?? 0) * 4 + (n.fat ?? 0) * 9 + (n.carbs ?? 0) * 4)
+      : null;
 
   const record = { item, food: hit.food, score: hit.score, n, kcal, derived };
   const sure = hit.score >= CONFIDENT;
@@ -210,7 +251,7 @@ for (const item of items) {
   console.log(
     `  ${sure ? "ok " : "?? "}${hit.score.toFixed(2)} ${item.name}\n` +
       `       -> ${hit.food.description}\n` +
-      `          ${kcal} kcal${derived ? " (derived)" : ""}, ` +
+      `          ${kcal === null ? "no kcal" : kcal + " kcal"}${derived && kcal !== null ? " (derived)" : ""}, ` +
       `${n.protein ?? "?"}g protein per 100g`,
   );
 
@@ -260,7 +301,7 @@ for (const m of toWrite) {
       protein_per_100g: m.n.protein ?? null,
       fat_per_100g: m.n.fat ?? null,
       carbs_per_100g: m.n.carbs ?? null,
-      kcal_is_derived: m.derived,
+      kcal_is_derived: m.derived && m.kcal !== null,
       nutrition_updated_at: new Date().toISOString(),
     })
     .eq("id", m.item.id);

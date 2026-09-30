@@ -56,5 +56,32 @@ for (const [item, desc] of [
 const wrong = score("Kefir milk", "Cheese, ricotta, whole milk");
 check(`kefir does not match ricotta (${wrong.toFixed(2)})`, wrong < 0.5);
 
+/*
+ * A part, a state or a derivative is a different food. Every pair below was
+ * marked CONFIDENT on a full run of the price book, which is the dangerous
+ * bucket: uncertain gets read, confident gets written.
+ */
+for (const [item, desc] of [
+  ["Sweet potatoes", "Sweet potato leaves, raw"],
+  ["Eggs, large", "Eggs, Grade A, Large, egg white"],
+  ["Bacon", "Bacon, meatless"],
+  ["Lemons", "Lemon juice from concentrate, bottled, REAL LEMON"],
+  ["Rotisserie chicken", "Chicken, broiler, rotisserie, BBQ, skin"],
+  ["Quinoa", "Flour, quinoa"],
+  ["Whole milk (cooking)", "Milk, buttermilk, fluid, whole"],
+]) {
+  const s = score(item, desc);
+  check(`${item} is NOT confident for "${desc.slice(0, 34)}" (${s.toFixed(2)})`, s < CONFIDENT);
+}
+
+// And the right answers for those same items still clear the bar.
+for (const [item, desc] of [
+  ["Sweet potatoes", "Sweet potato, raw, unprepared"],
+  ["Bacon", "Bacon, pork, cured, raw"],
+]) {
+  const s = score(item, desc);
+  check(`${item} -> "${desc}" is confident (${s.toFixed(2)})`, s >= CONFIDENT);
+}
+
 console.log(failed ? `\n${failed} failed.` : "\nAll good.");
 process.exit(failed ? 1 : 0);

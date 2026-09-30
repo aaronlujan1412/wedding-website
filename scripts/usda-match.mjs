@@ -39,6 +39,45 @@ const PACKAGING = new Set([
   "singles", "single", "cups", "cup", "bulk", "set", "jar", "bottle",
 ]);
 
+const stem = (w) =>
+  w
+    .replace(/(ies)$/, "y")
+    .replace(/(es|s|d)$/, "")
+    // And the trailing e, or the two halves of a pair disagree: "crumbles"
+    // reduces to "crumbl" and "crumbled" to "crumble", which scored a correct
+    // feta match at 0.35.
+    .replace(/e$/, "");
+
+/**
+ * Words that make it a DIFFERENT FOOD.
+ *
+ * A full run put "Sweet potato leaves" against sweet potatoes at 1.00, egg
+ * white against eggs, meatless bacon against bacon, lemon juice against lemons,
+ * rotisserie chicken SKIN against the chicken, and quinoa flour against quinoa
+ * — all marked confident, all wrong, and all wrong in the same way: the
+ * description names a part, a state or a derivative that the shopping name
+ * never asked for.
+ *
+ * The first-two-terms rule cannot catch these. "Sweet potato leaves" leads with
+ * the two words that do match. So any of these appearing in the description and
+ * not in the item is a heavy penalty, wherever it sits.
+ *
+ * This demotes some correct matches to uncertain — "Sauce, salsa" for "Salsa"
+ * loses on "sauce". That is the right way to be wrong: uncertain is reviewed,
+ * confident is written.
+ */
+const FORM = new Set(
+  [
+    "leaves", "leaf", "skin", "white", "yolk", "juice", "flour", "powder",
+    "meatless", "concentrate", "dehydrated", "baby", "overripe", "unripe",
+    "sprouted", "canned", "paste", "syrup", "extract", "buttermilk", "sauce",
+  ]
+    // Through the same stemmer the descriptions go through, or they never
+    // match: "meatless" reduces to "meatles", and a hand-written "meatless" in
+    // this list silently never fires. That left "Bacon, meatless" confident.
+    .map(stem),
+);
+
 /**
  * State words: they help when they agree and are not required when they don't.
  * Frozen broccoli really is nutritionally close to raw broccoli, and FDC has no
@@ -53,14 +92,7 @@ const SOFT = new Set(["frozen", "fresh", "raw", "large", "small", "boneless", "s
  * real stemmer — this is a vocabulary of a few hundred nouns, and anything
  * cleverer would be more code than the problem.
  */
-const stem = (w) =>
-  w
-    .replace(/(ies)$/, "y")
-    .replace(/(es|s|d)$/, "")
-    // And the trailing e, or the two halves of a pair disagree: "crumbles"
-    // reduces to "crumbl" and "crumbled" to "crumble", which scored a correct
-    // feta match at 0.35.
-    .replace(/e$/, "");
+
 
 const words = (s) =>
   s
@@ -104,11 +136,17 @@ function score(itemName, description) {
    * correct match, the other ricotta being offered as milk. The second term
    * separates them: feta is in the item's name and ricotta is not.
    */
-  const identity = words(description).slice(0, 2);
+  const said = words(description);
+  const identity = said.slice(0, 2);
   const penalty = identity.filter((w) => !want.includes(w)).length * 0.15;
 
-  return Math.max(0, Math.min(1, hits / target.length + bonus - penalty));
+  // A part, state or derivative the shopping name never asked for.
+  const form = said.filter((w) => FORM.has(w) && !want.includes(w)).length * 0.3;
+
+  return Math.max(0, Math.min(1, hits / target.length + bonus - penalty - form));
 }
+
+
 
 
 export { queryFor, score, stem, words, PACKAGING, SOFT };
