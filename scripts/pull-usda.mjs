@@ -29,6 +29,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { assertSafeTarget, target } from "./db-target.mjs";
+import { queryFor, score } from "./usda-match.mjs";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
@@ -54,13 +55,12 @@ const API = "https://api.nal.usda.gov/fdc/v1";
  *
  * Branded is deliberately excluded. It is a catalogue of packages — every
  * supermarket's own-brand chicken thigh is in there separately — so searching
- * it for "chicken thighs" returns a hundred near-identical rows whose
- * differences are packaging, not food. Generic datasets are smaller, curated,
- * and the right answer for a price book.
+ * it returns a hundred near-identical rows whose differences are packaging,
+ * not food.
  */
 async function search(query) {
   const url =
-    `${API}/foods/search?query=${encodeURIComponent(query)}` +
+    `${API}/foods/search?query=${encodeURIComponent(queryFor(query))}` +
     `&dataType=Foundation,SR%20Legacy&pageSize=8&api_key=${KEY}`;
 
   const response = await fetch(url);
@@ -86,8 +86,8 @@ const NUTRIENT = {
  * The four numbers, from a search result.
  *
  * Energy appears twice on many foods, once in kJ and once in kcal, so the unit
- * has to be checked rather than the name — taking the first Energy gives a
- * number four times too large on about half the database.
+ * is checked rather than the name — taking the first Energy gives a number four
+ * times too large on about half the database.
  */
 function nutrients(food) {
   const out = {};
@@ -100,46 +100,15 @@ function nutrients(food) {
   return out;
 }
 
-/* ------------------------------------------------------------------ *
- * Matching
- * ------------------------------------------------------------------ */
-
-/** Words that say how a thing is sold, not what it is. */
-const PACKAGING = new Set([
-  "pack", "bag", "box", "ct", "count", "lb", "lbs", "oz", "singles", "single",
-  "cups", "cup", "large", "small", "bulk", "set", "jar", "bottle", "frozen",
-  "fresh", "light", "plain", "whole", "ground", "shredded", "crumbles",
-]);
-
-const words = (s) =>
-  s
-    .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, " ")
-    .split(/\s+/)
-    .filter((w) => w.length > 2);
-
 /**
- * How well a FDC description answers a shopping-list name.
+ * Foundation and SR Legacy only, and in that order of preference.
  *
- * Scored on the SHOPPING name's words, not the description's: FDC descriptions
- * are long and qualified ("Chicken, thigh, boneless, skinless, raw") and
- * dividing by their length would punish the most precise matches. Packaging
- * words are dropped from the requirement but still count when they land, so
- * "frozen" helps and its absence does not hurt.
+ * Branded is deliberately excluded. It is a catalogue of packages — every
+ * supermarket's own-brand chicken thigh is in there separately — so searching
+ * it for "chicken thighs" returns a hundred near-identical rows whose
+ * differences are packaging, not food. Generic datasets are smaller, curated,
+ * and the right answer for a price book.
  */
-function score(itemName, description) {
-  const want = words(itemName);
-  const have = new Set(words(description));
-  if (!want.length) return 0;
-
-  const core = want.filter((w) => !PACKAGING.has(w));
-  const target = core.length ? core : want;
-  const hits = target.filter((w) => have.has(w)).length;
-  const bonus = want.filter((w) => PACKAGING.has(w) && have.has(w)).length * 0.05;
-
-  return Math.min(1, hits / target.length + bonus);
-}
-
 /** The best generic food for a shopping-list name, or null. */
 async function bestFood(itemName) {
   const foods = await search(itemName);
@@ -157,8 +126,19 @@ async function bestFood(itemName) {
     }
   }
 
-  return best && bestScore >= MIN_SCORE ? { food: best, score: bestScore } : null;
+  return best ? { food: best, score: bestScore } : null;
 }
+
+/*
+ * Three answers, not two.
+ *
+ * A wrong nutrition figure is worse than a missing one — it looks like data and
+ * it is silently false — so anything short of confident is reported for a human
+ * rather than written. "Whole milk (cooking)" scoring 0.57 against "Cheese,
+ * ricotta, whole milk" is exactly the case: two words agree and the food is not
+ * the same food.
+ */
+const CONFIDENT = Number(value("--confident", "0.8"));
 
 /* ------------------------------------------------------------------ */
 
@@ -192,6 +172,7 @@ console.log(`Key: ${KEY === "DEMO_KEY" ? "DEMO_KEY (30 requests an hour)" : "set
 console.log();
 
 const matched = [];
+const uncertain = [];
 const missed = [];
 let looked = 0;
 
@@ -207,7 +188,7 @@ for (const item of items) {
     break;
   }
 
-  if (!hit) {
+  if (!hit || hit.score < MIN_SCORE) {
     missed.push(item);
     console.log(`  —    ${item.name}`);
     continue;
@@ -222,9 +203,12 @@ for (const item of items) {
     ? Math.round((n.protein ?? 0) * 4 + (n.fat ?? 0) * 9 + (n.carbs ?? 0) * 4)
     : Math.round(n.kcal);
 
-  matched.push({ item, food: hit.food, score: hit.score, n, kcal, derived });
+  const record = { item, food: hit.food, score: hit.score, n, kcal, derived };
+  const sure = hit.score >= CONFIDENT;
+  (sure ? matched : uncertain).push(record);
+
   console.log(
-    `  ${hit.score.toFixed(2)} ${item.name}\n` +
+    `  ${sure ? "ok " : "?? "}${hit.score.toFixed(2)} ${item.name}\n` +
       `       -> ${hit.food.description}\n` +
       `          ${kcal} kcal${derived ? " (derived)" : ""}, ` +
       `${n.protein ?? "?"}g protein per 100g`,
@@ -234,11 +218,26 @@ for (const item of items) {
   await new Promise((r) => setTimeout(r, 120));
 }
 
-console.log(`\n${matched.length} matched, ${missed.length} not found.`);
+console.log(
+  `\n${matched.length} confident, ${uncertain.length} uncertain, ${missed.length} not found.`,
+);
+
+if (uncertain.length) {
+  console.log(
+    `\nUncertain — NOT written. Two words agreeing is not the same food.\n` +
+      `Check these, then --include-uncertain to accept them, or fix the item name:`,
+  );
+  for (const u of uncertain) {
+    console.log(`  ${u.score.toFixed(2)} ${u.item.name}\n       -> ${u.food.description}`);
+  }
+}
+
 if (missed.length) {
-  console.log("Not in the generic datasets (usually branded):");
+  console.log("\nNot in the generic datasets (usually branded):");
   for (const m of missed) console.log(`  ${m.name}`);
 }
+
+const toWrite = flags.has("--include-uncertain") ? [...matched, ...uncertain] : matched;
 
 if (DRY) {
   console.log("\n--dry-run: nothing written.");
@@ -251,7 +250,7 @@ assertSafeTarget("write nutrition onto the price book", {
 });
 
 let written = 0;
-for (const m of matched) {
+for (const m of toWrite) {
   const { error: writeError } = await supabase
     .from("meal_items")
     .update({
