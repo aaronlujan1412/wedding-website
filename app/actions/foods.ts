@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/site-user";
 import { searchFoods } from "@/lib/food-queries";
@@ -283,4 +284,69 @@ export async function setPackFood(
  */
 export async function findFoods(query: string): Promise<FoodHit[]> {
   return searchFoods(String(query ?? "").slice(0, 120), 8);
+}
+
+/**
+ * Start a custom food from a pack you already have.
+ *
+ * THE POINT OF THIS. USDA's generic datasets do not carry branded things, so
+ * the branded half of a price book needs foods typed by hand — and typing
+ * "Babybel Light" into the price book and then again into the food database is
+ * the duplication that makes two tabs feel like two filing cabinets. This
+ * carries the name across, links the two, and lands you on the one form where
+ * the numbers go.
+ *
+ * It deliberately creates the food EMPTY of nutrition. Copying a guess across
+ * would be worse than a blank: a blank says "nobody has read the label yet",
+ * and a guess says 240 kcal.
+ */
+export async function createFoodFromPack(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const itemId = text(formData.get("item_id"));
+  if (!itemId) return fail("No item.");
+
+  const { data: item } = await supabase
+    .from("meal_items")
+    .select("id, name, category, food_id")
+    .eq("id", itemId)
+    .maybeSingle();
+
+  if (!item) return fail("No such item.");
+  if (item.food_id) return fail("That pack already has a food on it.");
+
+  const { data: food, error } = await supabase
+    .from("meal_foods")
+    .insert({
+      source: "custom",
+      fdc_id: null,
+      description: item.name,
+      category: item.category,
+      kcal_is_derived: false,
+    } as never)
+    .select("id")
+    .single();
+
+  if (error) {
+    if (error.code === "23505") {
+      return fail(`A food called "${item.name}" already exists — search for it instead.`);
+    }
+    return fail(error.message);
+  }
+
+  const { error: linkError } = await supabase
+    .from("meal_items")
+    .update({ food_id: food.id })
+    .eq("id", itemId);
+
+  if (linkError) return fail(linkError.message);
+
+  refresh();
+  // Straight to the form where the label's numbers go, because a food with no
+  // nutrition on it is a job half done and the next step should not need
+  // finding.
+  redirect(`/me/meals/foods/${food.id}`);
 }

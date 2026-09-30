@@ -472,6 +472,7 @@ export type Database = {
           name: string
           notes: string | null
           pack: string | null
+          pack_grams: number | null
           price_cents: number | null
           price_includes_markup: boolean
           priced_on: string | null
@@ -488,6 +489,7 @@ export type Database = {
           name: string
           notes?: string | null
           pack?: string | null
+          pack_grams?: number | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
@@ -504,6 +506,7 @@ export type Database = {
           name?: string
           notes?: string | null
           pack?: string | null
+          pack_grams?: number | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null

@@ -5,6 +5,7 @@ import { Panel } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { FoodPortion } from "@/components/me/FoodPortion";
 import { PortionEditor } from "@/components/me/PortionEditor";
+import { CustomFoodEditor } from "@/components/me/CustomFoodEditor";
 import { getFood } from "@/lib/food-queries";
 import { currentUser } from "@/lib/site-user";
 
@@ -48,6 +49,12 @@ export default async function FoodPage({
           <FoodPortion food={food} />
         </div>
       </Panel>
+
+      {food.source === "custom" ? (
+        <Panel title="the numbers">
+          <CustomFoodEditor food={food} />
+        </Panel>
+      ) : null}
 
       {/* Foundation and SR Legacy carry no portions for some foods, and every
           custom food starts with none. Saying so — and offering the fix in the

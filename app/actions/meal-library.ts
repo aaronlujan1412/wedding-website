@@ -32,6 +32,14 @@ function cents(raw: FormDataEntryValue | null): number | null {
   return Math.round(value * 100);
 }
 
+/** A weight in grams: any positive number, or null for "nobody has weighed it". */
+function grams(raw: FormDataEntryValue | null): number | null {
+  const value = String(raw ?? "").replace(/[,\s]/g, "");
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
+}
+
 function int(raw: FormDataEntryValue | null): number | null {
   const text = String(raw ?? "").trim();
   if (!text) return null;
@@ -86,6 +94,10 @@ export async function saveItem(
     category: text(formData.get("category")) ?? "other",
     tier: String(formData.get("tier") ?? "core"),
     keeps_days: int(formData.get("keeps_days")),
+    // Not int(): a pack can weigh 453.6 g, and rounding a weight to reuse an
+    // existing helper would quietly bias every cost-per-gram figure derived
+    // from it.
+    pack_grams: grams(formData.get("pack_grams")),
     price_cents: price,
     priced_on: price === null ? null : new Date().toISOString().slice(0, 10),
     notes: text(formData.get("notes")),

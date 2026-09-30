@@ -91,7 +91,7 @@ export async function getItems(): Promise<Item[]> {
       // whose food is unknown is the thing this page is for fixing, so the
       // answer has to be visible on every row.
       .select(
-        "id, name, pack, category, tier, price_cents, keeps_days, notes, food_id, meal_foods(description)",
+        "id, name, pack, category, tier, price_cents, keeps_days, notes, food_id, pack_grams, meal_foods(description, kcal, protein_g)",
       )
       .order("category")
       .order("name"),
@@ -109,6 +109,18 @@ export async function getItems(): Promise<Item[]> {
     ...i,
     used_by: counts.get(i.id) ?? 0,
     food_description: meal_foods?.description ?? null,
+    // Flattened onto the row, because every figure the price book derives
+    // needs the price and the nutrition in the same place. Numbers, not
+    // strings: PostgREST hands `numeric` back either way and `packValue`
+    // multiplies them.
+    kcal_per_100g: meal_foods?.kcal === null || meal_foods?.kcal === undefined
+      ? null
+      : Number(meal_foods.kcal),
+    protein_per_100g:
+      meal_foods?.protein_g === null || meal_foods?.protein_g === undefined
+        ? null
+        : Number(meal_foods.protein_g),
+    pack_grams: i.pack_grams === null ? null : Number(i.pack_grams),
   })) as Item[];
 }
 

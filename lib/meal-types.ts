@@ -46,7 +46,47 @@ export type Item = {
   /** Which food is in it, once somebody has said. Null is the normal start. */
   food_id: string | null;
   food_description: string | null;
+  /** Per 100 g, from the linked food. Null when nothing is linked. */
+  kcal_per_100g: number | null;
+  protein_per_100g: number | null;
+  /** What the whole pack weighs. Null until somebody weighs it. */
+  pack_grams: number | null;
 };
+
+/**
+ * What a pack costs per 100 g, and per gram of protein.
+ *
+ * Both need three facts at once — a price, a weight, and a linked food — and
+ * any of the three may be missing, which is the normal state of a price book.
+ * Null rather than zero every time, because "we have not weighed it" and "it
+ * is free" are not the same claim, and only one of them is ever true.
+ */
+export function packValue(item: Item): {
+  centsPer100g: number | null;
+  centsPerProteinGram: number | null;
+} {
+  const { price_cents, pack_grams, protein_per_100g } = item;
+  if (!price_cents || !pack_grams || pack_grams <= 0) {
+    return { centsPer100g: null, centsPerProteinGram: null };
+  }
+
+  const centsPer100g = (price_cents / pack_grams) * 100;
+  const proteinGrams =
+    protein_per_100g === null ? null : (protein_per_100g * pack_grams) / 100;
+
+  return {
+    centsPer100g,
+    centsPerProteinGram:
+      proteinGrams && proteinGrams > 0 ? price_cents / proteinGrams : null,
+  };
+}
+
+/** '8.7¢' / '$1.79' — cents get the cent sign until they stop being pennies. */
+export function centsText(cents: number | null): string {
+  if (cents === null) return "—";
+  if (cents < 100) return `${Math.round(cents * 10) / 10}¢`;
+  return money(Math.round(cents));
+}
 
 export type PlanDay = {
   id: string;
