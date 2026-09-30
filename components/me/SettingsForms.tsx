@@ -66,8 +66,14 @@ export function RuleList({ rules }: { rules: Rule[] }) {
           key={rule.id}
           className={`bevel-in bg-me-void p-3 ${rule.active ? "" : "opacity-60"}`}
         >
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="min-w-0">
+          {/* No flex-wrap, and the text takes the slack.
+              With wrapping on, a rule whose detail ran to two lines pushed the
+              button onto its own row, where justify-between put it hard left —
+              so the control sat top-right on short rules and bottom-left on
+              long ones. `flex-1` makes the text absorb the width and wrap
+              inside itself, which is what it should have been doing. */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
               <p className="font-dot text-[13px] leading-snug text-me-gold">{rule.label}</p>
               <p className="mt-1.5 text-[12px] leading-relaxed text-me-ink">{rule.detail}</p>
               {rule.forbidden_term ? (
