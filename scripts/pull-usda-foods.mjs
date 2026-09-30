@@ -297,14 +297,32 @@ for (let i = 0; i < wanted.length; i += 20) {
   if (!DRY && rows.length) {
     // Upserting on fdc_id is what makes a re-run an update rather than a
     // duplicate, and it is why the column carries a unique constraint.
-    const { data: saved, error } = await supabase
+    const attempt = await supabase
       .from("meal_foods")
       .upsert(rows, { onConflict: "fdc_id" })
       .select("id, fdc_id");
 
-    if (error) {
-      note(`writing ${rows.length} foods: ${error.message}`);
-      continue;
+    /*
+     * A batch is one statement, so ONE refused row loses the other nineteen.
+     * That is how a single carbohydrate of -0.14 cost twenty foods on the
+     * first run. Falling back to one at a time keeps the batch's worth and
+     * names the food that is actually wrong -- which a statement-level error
+     * message never does, because it reports the constraint, not the row.
+     */
+    let saved;
+    if (!attempt.error) {
+      saved = attempt.data ?? [];
+    } else {
+      note(`a batch of ${rows.length} was refused (${attempt.error.message}); retrying singly`);
+      saved = [];
+      for (const row of rows) {
+        const one = await supabase
+          .from("meal_foods")
+          .upsert(row, { onConflict: "fdc_id" })
+          .select("id, fdc_id");
+        if (one.error) note(`${row.description}: ${one.error.message}`);
+        else saved.push(...(one.data ?? []));
+      }
     }
 
     /*
@@ -313,7 +331,7 @@ for (let i = 0; i < wanted.length; i += 20) {
      * accumulate every wording FDC ever shipped and leave no way to tell which
      * is current.
      */
-    const ids = (saved ?? []).map((r) => r.id);
+    const ids = saved.map((r) => r.id);
     if (ids.length) {
       const { error: clearError } = await supabase
         .from("meal_food_portions")
@@ -323,7 +341,7 @@ for (let i = 0; i < wanted.length; i += 20) {
     }
 
     const fresh = [];
-    for (const row of saved ?? []) {
+    for (const row of saved) {
       for (const portion of byFdcId.get(row.fdc_id) ?? []) {
         fresh.push({ food_id: row.id, ...portion });
       }
@@ -334,11 +352,14 @@ for (let i = 0; i < wanted.length; i += 20) {
       if (portionError) note(`writing portions: ${portionError.message}`);
       else portions += fresh.length;
     }
+
+    // What LANDED, not what was attempted -- otherwise the closing count
+    // reports a mirror more complete than the one in the database.
+    foods += saved.length;
   } else {
     for (const list of byFdcId.values()) portions += list.length;
+    foods += rows.length;
   }
-
-  foods += rows.length;
   process.stdout.write(
     `\r  ${foods} foods, ${portions} portions${problems.length ? `, ${problems.length} problems` : ""}`,
   );

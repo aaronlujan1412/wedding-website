@@ -57,6 +57,31 @@ function field(n) {
   };
 }
 
+/**
+ * How far below zero a macro may go and still be believed as zero.
+ *
+ * Carbohydrate is reported "by difference": 100 minus water, protein, fat and
+ * ash. On a food with essentially no carbohydrate, the measurement errors on
+ * those four accumulate straight past zero. Foundation reports exactly that for
+ * seven foods -- bison, lamb, halibut and four cuts of chicken -- between
+ * -0.48 and -0.06 g.
+ *
+ * So a small negative is not bad data, it is the method showing its working,
+ * and zero is the true value within measurement error. A LARGE negative is not
+ * an artifact of subtraction; it is a parse problem, and it becomes null rather
+ * than a number somebody might count.
+ *
+ * This matters beyond tidiness: the database rejects negatives outright
+ * (meal_foods_macros_sane), and rows are written in batches, so one unclamped
+ * -0.14 took nineteen good foods down with it.
+ */
+const BY_DIFFERENCE_SLACK = 2;
+
+function sane(value) {
+  if (value >= 0) return value;
+  return value > -BY_DIFFERENCE_SLACK ? 0 : null;
+}
+
 /** The eight numbers, per 100 g, plus whether the calories were calculated. */
 function readNutrients(food) {
   const out = {};
@@ -70,12 +95,12 @@ function readNutrients(food) {
       // Guard the unit even though the number should imply it. A kJ figure
       // arriving under 208 would otherwise quadruple every calorie on the page.
       if (unit && unit !== "KCAL") continue;
-      if (energy[number] === undefined) energy[number] = Number(value);
+      if (energy[number] === undefined) energy[number] = sane(Number(value));
       continue;
     }
 
     const column = NUTRIENTS[number];
-    if (column && out[column] === undefined) out[column] = Number(value);
+    if (column && out[column] === undefined) out[column] = sane(Number(value));
   }
 
   for (const [number, derived] of Object.entries(ENERGY)) {
@@ -94,7 +119,7 @@ function readNutrients(food) {
    * null rather than as zero.
    */
   const macros = ["protein_g", "fat_g", "carbs_g"];
-  if (!macros.some((m) => out[m] !== undefined)) {
+  if (!macros.some((m) => out[m] !== undefined && out[m] !== null)) {
     return { ...out, kcal: null, kcal_is_derived: false };
   }
 
