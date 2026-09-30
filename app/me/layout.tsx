@@ -53,7 +53,15 @@ export default async function MeLayout({
     /* #me is the hook globals.css uses to paint the ground on <body>. Painting
        only this box leaves the tile short in the overscroll gutter and under
        the phone's URL bar. */
-    <div id="me" className="tile-weave min-h-dvh font-forum text-me-ink">
+    /* overflow-x-hidden is the rule, enforced rather than trusted: no page here
+       scrolls sideways, and anything legitimately wider than the screen — the
+       month grid, the wide tables — carries its own scroller.
+
+       It is here because a table inside overflow-x:auto still leaked ~97px to
+       the document on the plan page. The scroller measured correctly at every
+       level and the page scrolled anyway, which is a browser corner not worth
+       out-arguing when the invariant can just be stated once. */
+    <div id="me" className="tile-weave min-h-dvh overflow-x-hidden font-forum text-me-ink">
       <div className="mx-auto w-full max-w-5xl space-y-3 px-3 py-4 sm:px-5 sm:py-6">
         <Masthead />
         {/* The two rows are one control, so they sit closer to each other

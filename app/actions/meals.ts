@@ -119,3 +119,52 @@ export async function buildList(
         : "."),
   );
 }
+
+/**
+ * Tick a line off, or put it back.
+ *
+ * Takes the intended state rather than flipping what it finds: two taps on a
+ * bad connection should land on the same answer, and a toggle would leave the
+ * basket disagreeing with the screen.
+ */
+export async function setBought(
+  _previous: MealState,
+  formData: FormData,
+): Promise<MealState> {
+  if (!(await currentUser())) return DENIED;
+
+  const id = String(formData.get("line_id") ?? "");
+  if (!id) return { error: "No line.", note: null };
+
+  const bought = formData.get("bought") === "true";
+  const { error } = await supabase
+    .from("meal_plan_items")
+    .update({ bought_at: bought ? new Date().toISOString() : null })
+    .eq("id", id);
+
+  if (error) return { error: error.message, note: null };
+
+  refresh();
+  return ok(bought ? "In the basket." : "Put back.");
+}
+
+/** Clear every tick on an order, for the next time you shop it. */
+export async function clearBought(
+  _previous: MealState,
+  formData: FormData,
+): Promise<MealState> {
+  if (!(await currentUser())) return DENIED;
+
+  const orderId = String(formData.get("order_id") ?? "");
+  if (!orderId) return { error: "No order.", note: null };
+
+  const { error } = await supabase
+    .from("meal_plan_items")
+    .update({ bought_at: null })
+    .eq("order_id", orderId);
+
+  if (error) return { error: error.message, note: null };
+
+  refresh();
+  return ok("Ticks cleared.");
+}

@@ -155,7 +155,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     supabase
       .from("meal_plan_items")
       .select(
-        "id, quantity, unit_price_cents, tier, used_for, coverage_warning, quantity_is_a_guess, item:item_id (name, pack), order:order_id (ordinal)",
+        "id, quantity, unit_price_cents, tier, used_for, notes, coverage_warning, quantity_is_a_guess, bought_at, item:item_id (name, pack, store), order:order_id (ordinal, store)",
       )
       .eq("plan_id", plan.id),
   ]);
@@ -195,17 +195,26 @@ export async function getPlan(id?: string): Promise<Plan | null> {
 
   const lineList: PlanLine[] = (lines.data ?? [])
     .map((l) => {
-      const item = l.item as unknown as { name: string; pack: string | null };
-      const order = l.order as unknown as { ordinal: number };
+      const item = l.item as unknown as {
+        name: string;
+        pack: string | null;
+        store: string | null;
+      };
+      const order = l.order as unknown as { ordinal: number; store: string | null };
       return {
         id: l.id,
         order_ordinal: order?.ordinal ?? 1,
         item_name: item?.name ?? "—",
         pack: item?.pack ?? null,
+        // The item's own store wins: a line is bought where that thing is sold,
+        // and the order's store is only the default for everything else on it.
+        store: item?.store ?? order?.store ?? null,
+        bought_at: l.bought_at,
         tier: l.tier as PlanLine["tier"],
         quantity: Number(l.quantity),
         unit_price_cents: l.unit_price_cents,
         used_for: l.used_for,
+        notes: l.notes,
         coverage_warning: l.coverage_warning,
         quantity_is_a_guess: l.quantity_is_a_guess,
       };

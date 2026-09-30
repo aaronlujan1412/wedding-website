@@ -581,6 +581,7 @@ export type Database = {
       }
       meal_plan_items: {
         Row: {
+          bought_at: string | null
           coverage_warning: string | null
           generated: boolean
           id: string
@@ -595,6 +596,7 @@ export type Database = {
           used_for: string | null
         }
         Insert: {
+          bought_at?: string | null
           coverage_warning?: string | null
           generated?: boolean
           id?: string
@@ -609,6 +611,7 @@ export type Database = {
           used_for?: string | null
         }
         Update: {
+          bought_at?: string | null
           coverage_warning?: string | null
           generated?: boolean
           id?: string

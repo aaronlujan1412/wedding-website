@@ -67,10 +67,16 @@ export type PlanLine = {
   order_ordinal: number;
   item_name: string;
   pack: string | null;
+  /** Where it's bought. Null means nobody has said. */
+  store: string | null;
+  /** When it went in the basket, or null if it hasn't. */
+  bought_at: string | null;
   tier: Tier;
   quantity: number;
   unit_price_cents: number;
   used_for: string | null;
+  /** What to do with it on arrival: portion, freeze, label. */
+  notes: string | null;
   coverage_warning: string | null;
   quantity_is_a_guess: boolean;
 };
