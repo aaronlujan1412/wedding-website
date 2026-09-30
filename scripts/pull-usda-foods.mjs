@@ -26,7 +26,7 @@
  * Usage:
  *   node --env-file=.env.local  scripts/pull-usda-foods.mjs
  *   node --env-file=.env.local  scripts/pull-usda-foods.mjs --dry-run --limit 40
- *   node --env-file=.env.remote scripts/pull-usda-foods.mjs --production --force
+ *   node --env-file=.env.remote scripts/pull-usda-foods.mjs --production
  *   ... --dataset Foundation    just one dataset
  *   ... --refresh               re-read foods already mirrored
  */
@@ -66,29 +66,67 @@ const API = "https://api.nal.usda.gov/fdc/v1";
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 /**
- * One request, with a backoff on 429.
+ * How long to wait on one request before giving up on it.
  *
- * A real key allows 3,600 an hour and this run needs about 450, so hitting the
- * limit means something else on the same key is busy -- worth waiting out
- * rather than dying 300 foods in and making the whole thing start over.
+ * THE REASON THIS EXISTS. `fetch` has no default timeout, so a connection the
+ * far end quietly drops hangs forever. A first run of this import stopped dead
+ * at food 140 of 8,187 with the process alive, no error, and no output --
+ * indistinguishable from slow. Over ~450 requests a stall is not an edge case,
+ * it is a matter of time.
+ */
+const REQUEST_TIMEOUT = 30_000;
+
+/**
+ * One request, retried on a rate limit, a stall or a server error.
+ *
+ * A real key allows 3,600 an hour and this run needs about 450, so a 429 means
+ * something else on the same key is busy -- worth waiting out rather than dying
+ * 300 foods in and making the whole thing start over.
+ *
+ * A 4xx is not retried: the request itself is wrong, and asking again five
+ * times only burns quota to get the same answer.
  */
 async function ask(path, init) {
   const url = `${API}${path}${path.includes("?") ? "&" : "?"}api_key=${KEY}`;
+  let last = null;
 
   for (let attempt = 0; attempt < 5; attempt += 1) {
-    const response = await fetch(url, init);
+    try {
+      const response = await fetch(url, {
+        ...init,
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT),
+      });
 
-    if (response.status === 429) {
-      const wait = 2 ** attempt * 15;
-      console.log(`    rate limited, waiting ${wait}s`);
+      if (response.status === 429) {
+        const wait = 2 ** attempt * 15;
+        console.log(`\n    rate limited, waiting ${wait}s`);
+        await sleep(wait * 1000);
+        continue;
+      }
+
+      if (!response.ok) {
+        // Never include the URL in the message: it carries the key.
+        const error = new Error(
+          `FDC answered HTTP ${response.status} for ${path.split("?")[0]}`,
+        );
+        error.retryable = response.status >= 500;
+        throw error;
+      }
+
+      return await response.json();
+    } catch (exc) {
+      if (exc.retryable === false) throw exc;
+      last = exc;
+      if (attempt === 4) break;
+
+      const wait = 2 ** attempt * 5;
+      const why = exc.name === "TimeoutError" ? `no answer in ${REQUEST_TIMEOUT / 1000}s` : exc.message;
+      console.log(`\n    ${why}; retrying in ${wait}s`);
       await sleep(wait * 1000);
-      continue;
     }
-    // Never include the URL in the message: it carries the key.
-    if (!response.ok) throw new Error(`FDC answered HTTP ${response.status} for ${path.split("?")[0]}`);
-    return response.json();
   }
-  throw new Error("still rate limited after five tries — try again later");
+
+  throw last ?? new Error("request failed after five tries");
 }
 
 /** Every fdcId in a dataset, 200 at a time. */
@@ -221,6 +259,17 @@ let portions = 0;
 let skipped = 0;
 const problems = [];
 
+/**
+ * Say it when it happens, not only in the summary.
+ *
+ * A run this long is watched, not waited for, and a fault that only surfaces
+ * after 8,000 foods is a fault discovered too late to do anything about.
+ */
+function note(problem) {
+  problems.push(problem);
+  console.log(`\n  ! ${problem}`);
+}
+
 for (let i = 0; i < wanted.length; i += 20) {
   const batch = wanted.slice(i, i + 20);
 
@@ -228,7 +277,7 @@ for (let i = 0; i < wanted.length; i += 20) {
   try {
     records = await foodsByIds(batch);
   } catch (exc) {
-    problems.push(`ids ${batch[0]}…: ${exc.message}`);
+    note(`ids ${batch[0]}…: ${exc.message}`);
     continue;
   }
 
@@ -254,7 +303,7 @@ for (let i = 0; i < wanted.length; i += 20) {
       .select("id, fdc_id");
 
     if (error) {
-      problems.push(`writing ${rows.length} foods: ${error.message}`);
+      note(`writing ${rows.length} foods: ${error.message}`);
       continue;
     }
 
@@ -270,7 +319,7 @@ for (let i = 0; i < wanted.length; i += 20) {
         .from("meal_food_portions")
         .delete()
         .in("food_id", ids);
-      if (clearError) problems.push(`clearing portions: ${clearError.message}`);
+      if (clearError) note(`clearing portions: ${clearError.message}`);
     }
 
     const fresh = [];
@@ -282,7 +331,7 @@ for (let i = 0; i < wanted.length; i += 20) {
 
     if (fresh.length) {
       const { error: portionError } = await supabase.from("meal_food_portions").insert(fresh);
-      if (portionError) problems.push(`writing portions: ${portionError.message}`);
+      if (portionError) note(`writing portions: ${portionError.message}`);
       else portions += fresh.length;
     }
   } else {
