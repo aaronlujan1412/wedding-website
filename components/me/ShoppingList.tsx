@@ -1,7 +1,13 @@
 "use client";
 
 import { useActionState, useMemo, useOptimistic, useState, useTransition } from "react";
-import { addExtrasTab, clearBought, removeFromTab, setBought } from "@/app/actions/meals";
+import {
+  addExtrasTab,
+  clearBought,
+  removeFromTab,
+  setBought,
+  setLineQuantity,
+} from "@/app/actions/meals";
 import { TabItems } from "@/components/me/TabItems";
 import { EMPTY_MEAL, FIELD, Submit } from "@/components/me/form-bits";
 import { money, type Item, type PlanLine, type PlanOrder } from "@/lib/meal-types";
@@ -55,6 +61,29 @@ export function ShoppingList({
   );
 
   /*
+   * Quantities are optimistic for the same reason ticks are: the buttons are
+   * tapped in a shop, and a round trip per press would make them feel stuck.
+   * The base is the server's own numbers, so once a write lands the overlay
+   * falls away rather than having to be cleared.
+   */
+  const [quantities, bump] = useOptimistic(
+    new Map(lines.map((l) => [l.id, l.quantity])),
+    (current: Map<string, number>, change: { id: string; quantity: number }) =>
+      new Map(current).set(change.id, change.quantity),
+  );
+
+  /*
+   * One list with the optimistic numbers already in it, so every subtotal on
+   * the page is computed from the same figures the rows are showing. Threading
+   * a `quantityOf()` helper through four components instead would have left
+   * four chances for one of them to use the stale number.
+   */
+  const shown = useMemo(
+    () => lines.map((l) => ({ ...l, quantity: quantities.get(l.id) ?? l.quantity })),
+    [lines, quantities],
+  );
+
+  /*
    * Which tab is open is local state, not a URL parameter. Every tick is a
    * server action and a revalidate, so the URL would be rewritten under the
    * shopper several times a minute; local state rides through a re-render
@@ -63,11 +92,11 @@ export function ShoppingList({
   const [openId, setOpenId] = useState<string | null>(orders[0]?.id ?? null);
   const open = orders.find((o) => o.id === openId) ?? orders[0] ?? null;
 
-  const counted = useMemo(() => lines.filter((l) => l.tier !== "optional"), [lines]);
+  const counted = useMemo(() => shown.filter((l) => l.tier !== "optional"), [shown]);
   const total = counted.reduce((n, l) => n + l.unit_price_cents * l.quantity, 0);
   const over = total > budgetCents;
   const left = counted.filter((l) => !ticked.has(l.id)).length;
-  const guesses = lines.filter((l) => l.quantity_is_a_guess).length;
+  const guesses = shown.filter((l) => l.quantity_is_a_guess).length;
 
   if (!lines.length && orders.length <= 2) {
     return (
@@ -99,9 +128,9 @@ export function ShoppingList({
         </p>
         {guesses > 0 ? (
           <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
-            {guesses === lines.length
+            {guesses === shown.length
               ? "Every line is"
-              : `${guesses} of ${lines.length} lines are`}{" "}
+              : `${guesses} of ${shown.length} lines are`}{" "}
             one pack, unchecked — the recipes don&apos;t record amounts yet, so
             the total is a floor rather than a forecast.
           </p>
@@ -111,7 +140,7 @@ export function ShoppingList({
       <TabStrip
         planId={planId}
         orders={orders}
-        lines={lines}
+        lines={shown}
         ticked={ticked}
         openId={open?.id ?? null}
         onOpen={setOpenId}
@@ -121,10 +150,11 @@ export function ShoppingList({
         <TabPanel
           key={open.id}
           order={open}
-          lines={lines.filter((l) => l.order_id === open.id)}
+          lines={shown.filter((l) => l.order_id === open.id)}
           items={items}
           ticked={ticked}
           tick={tick}
+          bump={bump}
         />
       ) : null}
     </div>
@@ -240,12 +270,14 @@ function TabPanel({
   items,
   ticked,
   tick,
+  bump,
 }: {
   order: PlanOrder;
   lines: PlanLine[];
   items: Item[];
   ticked: Set<string>;
   tick: (change: { ids: string[]; bought: boolean }) => void;
+  bump: (change: { id: string; quantity: number }) => void;
 }) {
   const [, clear] = useActionState(clearBought, EMPTY_MEAL);
   const [, start] = useTransition();
@@ -292,7 +324,7 @@ function TabPanel({
       </header>
 
       {counted.length ? (
-        <ByStore lines={counted} ticked={ticked} tick={tick} />
+        <ByStore lines={counted} ticked={ticked} tick={tick} bump={bump} />
       ) : order.kind === "extras" ? null : (
         <p className="mt-2 text-[13px] text-me-dim">Nothing on this order.</p>
       )}
@@ -307,7 +339,7 @@ function TabPanel({
             actually needs.
           </p>
           <div className="mt-2">
-            <ByStore lines={optional} ticked={ticked} tick={tick} />
+            <ByStore lines={optional} ticked={ticked} tick={tick} bump={bump} />
           </div>
         </section>
       ) : null}
@@ -324,10 +356,12 @@ function ByStore({
   lines,
   ticked,
   tick,
+  bump,
 }: {
   lines: PlanLine[];
   ticked: Set<string>;
   tick: (change: { ids: string[]; bought: boolean }) => void;
+  bump: (change: { id: string; quantity: number }) => void;
 }) {
   const stores = [...new Set(lines.map((l) => l.store ?? ""))].sort((a, b) =>
     a === "" ? 1 : b === "" ? -1 : a.localeCompare(b),
@@ -344,6 +378,7 @@ function ByStore({
             lines={lines.filter((l) => (l.store ?? "") === store)}
             ticked={ticked}
             tick={tick}
+            bump={bump}
           />
         </div>
       ))}
@@ -355,14 +390,27 @@ function Lines({
   lines,
   ticked,
   tick,
+  bump,
 }: {
   lines: PlanLine[];
   ticked: Set<string>;
   tick: (change: { ids: string[]; bought: boolean }) => void;
+  bump: (change: { id: string; quantity: number }) => void;
 }) {
   const [, toggle] = useActionState(setBought, EMPTY_MEAL);
   const [, drop] = useActionState(removeFromTab, EMPTY_MEAL);
+  const [, setQuantity] = useActionState(setLineQuantity, EMPTY_MEAL);
   const [, start] = useTransition();
+
+  function nudge(line: PlanLine, quantity: number) {
+    start(() => {
+      bump({ id: line.id, quantity });
+      const data = new FormData();
+      data.set("line_id", line.id);
+      data.set("quantity", String(quantity));
+      setQuantity(data);
+    });
+  }
 
   return (
     <ul>
@@ -395,7 +443,7 @@ function Lines({
                     done ? "text-me-dim line-through" : "text-me-ink"
                   }`}
                 >
-                  {line.quantity !== 1 ? (
+                  {line.quantity !== 1 && line.generated ? (
                     <span className="font-dot text-me-gold">{line.quantity}×</span>
                   ) : null}
                   {line.item_name}
@@ -425,31 +473,92 @@ function Lines({
                 {money(line.unit_price_cents * line.quantity)}
               </span>
 
-              {/* Only on lines somebody put there. A generated line removed
-                  here would come back the next time the list is built, which
-                  reads as the button being broken — those go by changing the
-                  menu. The control is absent rather than disabled: a greyed
-                  button invites a click and explains nothing. */}
+              {/* Only on lines somebody put there. A generated line's amount
+                  is recomputed from the menu on every rebuild, so a number
+                  typed here would vanish with nothing to say it had — and a
+                  generated line removed here would simply come back, which
+                  reads as the button being broken. Both controls are absent
+                  rather than disabled: a greyed button invites a click and
+                  explains nothing. */}
               {!line.generated ? (
-                <button
-                  type="button"
-                  aria-label={`Remove ${line.item_name}`}
-                  onClick={(event) => {
-                    event.preventDefault();
-                    const data = new FormData();
-                    data.set("line_id", line.id);
-                    start(() => drop(data));
-                  }}
-                  className="shrink-0 rounded-xs px-1 font-dot text-[13px] leading-none text-me-dim hover:text-me-live focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
-                >
-                  ×
-                </button>
+                <span className="flex shrink-0 items-center gap-0.5">
+                  {/* Stops at one. Zero is "take it off the list", which is
+                      what × is for — and it would fail the quantity-positive
+                      constraint, giving a database error where somebody
+                      expected a shopping list. */}
+                  <Step
+                    label={`One fewer ${line.item_name}`}
+                    disabled={line.quantity <= 1}
+                    onPress={() => nudge(line, line.quantity - 1)}
+                  >
+                    −
+                  </Step>
+                  <span className="min-w-[1.6rem] text-center font-dot text-[13px] tabular-nums text-me-gold">
+                    {line.quantity}
+                  </span>
+                  <Step
+                    label={`One more ${line.item_name}`}
+                    onPress={() => nudge(line, line.quantity + 1)}
+                  >
+                    +
+                  </Step>
+                  <button
+                    type="button"
+                    aria-label={`Remove ${line.item_name}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      const data = new FormData();
+                      data.set("line_id", line.id);
+                      start(() => drop(data));
+                    }}
+                    className="ml-1 rounded-xs px-1 font-dot text-[13px] leading-none text-me-dim hover:text-me-live focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+                  >
+                    ×
+                  </button>
+                </span>
               ) : null}
             </label>
           </li>
         );
       })}
     </ul>
+  );
+}
+
+/**
+ * One press of a quantity control.
+ *
+ * `preventDefault` because every row is a <label> wrapping its checkbox, so a
+ * click anywhere inside it — these buttons included — would otherwise tick the
+ * item off as well as change its amount.
+ *
+ * 28px square: these are tapped in a shop, one-handed, and a 16px target is
+ * one you miss.
+ */
+function Step({
+  children,
+  label,
+  onPress,
+  disabled = false,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={(event) => {
+        event.preventDefault();
+        onPress();
+      }}
+      className="bevel-out size-7 bg-me-bar font-dot text-[13px] leading-none text-me-ink hover:bg-me-edge-hi focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold active:bevel-in disabled:opacity-35"
+    >
+      {children}
+    </button>
   );
 }
 

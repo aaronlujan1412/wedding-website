@@ -231,10 +231,21 @@ export async function getPlan(id?: string): Promise<Plan | null> {
         quantity_is_a_guess: l.quantity_is_a_guess,
       };
     })
+    /*
+     * By UNIT price, not by line total.
+     *
+     * The total moves when you change a quantity, so a row would jump out from
+     * under the finger that was pressing − on it — in a shop, one-handed, which
+     * is exactly where this list gets used. The unit price answers the same
+     * question ("what are the expensive things") and holds still while you
+     * shop. Name breaks the tie, so the order is total and never depends on
+     * which rows happened to cost the same.
+     */
     .sort(
       (a, b) =>
         a.order_ordinal - b.order_ordinal ||
-        b.unit_price_cents * b.quantity - a.unit_price_cents * a.quantity,
+        b.unit_price_cents - a.unit_price_cents ||
+        a.item_name.localeCompare(b.item_name),
     );
 
   return {

@@ -19,7 +19,7 @@ import { currentUser } from "@/lib/site-user";
 export type MealState = { error: string | null; note: string | null };
 
 const DENIED: MealState = { error: "Not signed in.", note: null };
-const ok = (note: string): MealState => ({ error: null, note });
+const ok = (note: string | null): MealState => ({ error: null, note });
 
 function refresh() {
   revalidatePath("/me/meals", "layout");
@@ -344,4 +344,52 @@ export async function removeFromTab(
 
   refresh();
   return ok("Removed.");
+}
+
+/**
+ * How many of a thing you want.
+ *
+ * Replaces "click add again": adding twice to mean two is fine as a shortcut
+ * and hopeless as the only control, because there was no way back down short
+ * of deleting the row and starting over.
+ *
+ * Hand-added lines only, for the same reason `removeFromTab` is. A generated
+ * line's quantity is recomputed from the menu every time the list is built, so
+ * a number typed here would vanish at the next rebuild with nothing to say it
+ * had — worse than not offering it.
+ */
+export async function setLineQuantity(
+  _previous: MealState,
+  formData: FormData,
+): Promise<MealState> {
+  if (!(await currentUser())) return DENIED;
+
+  const id = String(formData.get("line_id") ?? "");
+  if (!id) return { error: "No line.", note: null };
+
+  const wanted = Number(String(formData.get("quantity") ?? "").trim());
+  if (!Number.isFinite(wanted)) return { error: "That isn't a number.", note: null };
+
+  /*
+   * Floor of one. Zero is "take it off the list", which is what the × does —
+   * and a zero-quantity line would violate meal_plan_items_quantity_positive
+   * anyway, so the alternative is a constraint error where a person expected a
+   * shopping list.
+   */
+  const quantity = Math.max(1, Math.min(999, Math.round(wanted * 100) / 100));
+
+  const { data, error } = await supabase
+    .from("meal_plan_items")
+    .update({ quantity, quantity_is_a_guess: false })
+    .eq("id", id)
+    .eq("generated", false)
+    .select("id");
+
+  if (error) return { error: error.message, note: null };
+  if (!data?.length) {
+    return { error: "That line comes from the menu — its amount is computed.", note: null };
+  }
+
+  refresh();
+  return ok(null);
 }
