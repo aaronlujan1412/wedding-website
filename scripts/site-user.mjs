@@ -5,8 +5,13 @@
  * who should have an account here is "me" and a public signup page is a
  * strictly larger attack surface than a command.
  *
+ * An account is `owner` unless told otherwise. `--role meals` makes one that
+ * reaches the meal planner and nothing else -- not the vault, not the inbox,
+ * not even a tab pointing at them. What that means is in the migration
+ * 20260930012218_user_roles.sql.
+ *
  * Usage:
- *   node --env-file=.env.local scripts/site-user.mjs <username>
+ *   node --env-file=.env.local scripts/site-user.mjs <username> [--role meals]
  *   node --env-file=.env.local scripts/site-user.mjs <username> --revoke
  *   node --env-file=.env.local scripts/site-user.mjs --list
  *
@@ -75,21 +80,30 @@ const rl = interactive
   ? createInterface({ input: stdin, output: stdout, terminal: true })
   : null;
 
-/** Lines from a pipe, consumed in order by askSecret. */
-const piped = interactive
-  ? []
-  : (await new Promise((resolve) => {
-      let buffer = "";
-      stdin.setEncoding("utf8");
-      stdin.on("data", (chunk) => (buffer += chunk));
-      stdin.on("end", () => resolve(buffer));
-    }))
-      .split("\n")
-      .map((line) => line.replace(/\r$/, ""));
+/**
+ * Lines from a pipe, read only when a prompt actually needs one.
+ *
+ * Lazily, because reading stdin at module load blocks forever on a run that
+ * never prompts: `--list` and `--revoke` sat waiting for input nobody was
+ * going to send, which looks exactly like the database hanging.
+ */
+let piped = null;
+
+async function pipedLines() {
+  if (piped) return piped;
+  const buffer = await new Promise((resolve) => {
+    let text = "";
+    stdin.setEncoding("utf8");
+    stdin.on("data", (chunk) => (text += chunk));
+    stdin.on("end", () => resolve(text));
+  });
+  piped = buffer.split("\n").map((line) => line.replace(/\r$/, ""));
+  return piped;
+}
 
 /** Reads a line with the terminal's echo turned off. */
-function askSecret(prompt) {
-  if (!interactive) return Promise.resolve(piped.shift() ?? "");
+async function askSecret(prompt) {
+  if (!interactive) return (await pipedLines()).shift() ?? "";
 
   return new Promise((resolve) => {
     stdout.write(prompt);
@@ -125,7 +139,16 @@ function client() {
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
-const username = args.find((a) => !a.startsWith("--"))?.toLowerCase();
+const positional = args.filter((a) => !a.startsWith("--"));
+const username = positional[0]?.toLowerCase();
+
+// `--role meals`, with the value as the next argument.
+const roleIndex = args.indexOf("--role");
+const ROLE = roleIndex === -1 ? "owner" : (args[roleIndex + 1] ?? "").toLowerCase();
+if (!["owner", "meals"].includes(ROLE)) {
+  console.error(`Unknown role "${ROLE}". Use owner or meals.`);
+  process.exit(1);
+}
 
 const supabase = client();
 console.log(`Database: ${target().url}\n`);
@@ -133,7 +156,7 @@ console.log(`Database: ${target().url}\n`);
 if (flags.has("--list")) {
   const { data, error } = await supabase
     .from("users")
-    .select("username, token_version, created_at, last_seen_at")
+    .select("username, role, token_version, created_at, last_seen_at")
     .order("username");
 
   if (error) {
@@ -147,7 +170,7 @@ if (flags.has("--list")) {
   }
   for (const row of data) {
     console.log(
-      `${row.username.padEnd(20)} v${row.token_version}  ` +
+      `${row.username.padEnd(16)} ${String(row.role).padEnd(6)} v${row.token_version}  ` +
         `last seen ${row.last_seen_at ?? "never"}`,
     );
   }
@@ -206,9 +229,12 @@ assertSafeTarget(
 
 console.log(
   existing
-    ? `Setting a new password for "${username}".`
-    : `Creating "${username}".`,
+    ? `Setting a new password for "${username}" (role: ${ROLE}).`
+    : `Creating "${username}" with the ${ROLE} role.`,
 );
+if (ROLE === "meals") {
+  console.log("  Reaches the meal planner. Not the vault, not the inbox.");
+}
 
 const password = await askSecret("Password: ");
 if (password.length < MIN_PASSWORD) {
@@ -236,9 +262,13 @@ const password_hash = await hash(password);
 const { error } = existing
   ? await supabase
       .from("users")
-      .update({ password_hash, token_version: existing.token_version + 1 })
+      .update({
+        password_hash,
+        role: ROLE,
+        token_version: existing.token_version + 1,
+      })
       .eq("id", existing.id)
-  : await supabase.from("users").insert({ username, password_hash });
+  : await supabase.from("users").insert({ username, password_hash, role: ROLE });
 
 if (error) {
   console.error(`\n${error.message}`);

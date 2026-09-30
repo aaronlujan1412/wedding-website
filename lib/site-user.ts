@@ -20,9 +20,12 @@ import { SITE_COOKIE, readSiteToken } from "./site-session";
  * session has been revoked since.
  */
 
+export type Role = "owner" | "meals";
+
 export type SiteUser = {
   id: string;
   username: string;
+  role: Role;
 };
 
 /**
@@ -39,7 +42,7 @@ export async function currentUser(): Promise<SiteUser | null> {
 
   const { data, error } = await supabase
     .from("users")
-    .select("id, username, token_version")
+    .select("id, username, role, token_version")
     .eq("id", token.userId)
     .maybeSingle();
 
@@ -49,7 +52,7 @@ export async function currentUser(): Promise<SiteUser | null> {
   // still cryptographically valid — this is what makes it stop working.
   if (data.token_version !== token.version) return null;
 
-  return { id: data.id, username: data.username };
+  return { id: data.id, username: data.username, role: data.role as Role };
 }
 
 /**
@@ -62,4 +65,23 @@ export async function touchUser(userId: string) {
     .from("users")
     .update({ last_seen_at: new Date().toISOString() })
     .eq("id", userId);
+}
+
+/**
+ * The signed-in user, but only if they own the place.
+ *
+ * Returns null for a `meals` account, which makes every owner-only surface
+ * behave for them exactly as it does for a stranger: the public face of a tool,
+ * and a redirect off its inner pages. That is deliberate — a "you do not have
+ * permission" screen tells someone precisely what they are missing and where,
+ * and there is nothing here worth announcing.
+ *
+ * Used instead of `currentUser` by everything that reads the vault. The check
+ * belongs in the query layer for the same reason the session check does: these
+ * pages render for signed-out visitors too, so "the page will remember" is not
+ * a guarantee.
+ */
+export async function currentOwner(): Promise<SiteUser | null> {
+  const user = await currentUser();
+  return user?.role === "owner" ? user : null;
 }

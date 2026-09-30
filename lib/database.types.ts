@@ -1788,6 +1788,7 @@ export type Database = {
           id: string
           last_seen_at: string | null
           password_hash: string
+          role: string
           token_version: number
           totp_secret: string | null
           username: string
@@ -1797,6 +1798,7 @@ export type Database = {
           id?: string
           last_seen_at?: string | null
           password_hash: string
+          role?: string
           token_version?: number
           totp_secret?: string | null
           username: string
@@ -1806,6 +1808,7 @@ export type Database = {
           id?: string
           last_seen_at?: string | null
           password_hash?: string
+          role?: string
           token_version?: number
           totp_secret?: string | null
           username?: string

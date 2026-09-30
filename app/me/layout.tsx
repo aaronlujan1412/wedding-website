@@ -59,8 +59,8 @@ export default async function MeLayout({
         {/* The two rows are one control, so they sit closer to each other
             than to anything else on the page. */}
         <div className="space-y-2">
-          <MeNav username={user?.username ?? null} />
-          <ToolTabs signedIn={Boolean(user)} />
+          <MeNav username={user?.username ?? null} role={user?.role ?? null} />
+          <ToolTabs role={user?.role ?? null} />
         </div>
 
         {children}

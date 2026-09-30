@@ -2,9 +2,15 @@ import { WithSidebar } from "@/components/me/WithSidebar";
 import Link from "next/link";
 import { Panel } from "@/components/me/Panel";
 import { ME_LINKS, isExternal } from "@/components/me/links";
+import { currentUser } from "@/lib/site-user";
 
 /** The rest of the site, said in the order you'd want to read it. */
-const PAGES = [
+const PAGES: {
+  href: string;
+  label: string;
+  blurb: string;
+  ownerOnly?: boolean;
+}[] = [
   {
     href: "/me/about",
     label: "About me",
@@ -25,7 +31,13 @@ const PAGES = [
   },
 ];
 
-export default function MePage() {
+export default async function MePage() {
+  // The site map is the other place that names the tools, so it hides the ones
+  // this viewer cannot open. Otherwise the nav is careful and the front page
+  // quietly undoes it.
+  const user = await currentUser();
+  const pages = PAGES.filter((p) => !p.ownerOnly || user?.role === "owner");
+
   return (
     <WithSidebar>
       <Panel title="welcome">
@@ -47,7 +59,7 @@ export default function MePage() {
 
       <Panel title="what's here">
         <ul className="space-y-3">
-          {PAGES.map((page) => (
+          {pages.map((page) => (
             <li key={page.href}>
               <Link
                 href={page.href}

@@ -12,15 +12,17 @@ import { TOOL_TABS, toolFor } from "@/components/me/nav";
  * of one, so a second row of identical buttons would read as eight equal
  * destinations rather than four inside one.
  *
- * Renders nothing when signed out or outside a tool, which is why it takes the
- * session rather than reading it — a row of tabs that all redirect to the page
- * you are on is a menu of locked doors.
+ * Renders nothing when signed out, outside a tool, or inside one this account
+ * cannot open — which is why it takes the role rather than reading it. A row of
+ * tabs that all redirect to the page you are on is a menu of locked doors.
  */
-export function ToolTabs({ signedIn }: { signedIn: boolean }) {
+export function ToolTabs({ role }: { role: "owner" | "meals" | null }) {
   const pathname = usePathname();
   const root = toolFor(pathname);
 
-  if (!signedIn || !root) return null;
+  if (!role || !root) return null;
+  // The brain is the owner's; its sections are too.
+  if (root === "/me/brain" && role !== "owner") return null;
   const tabs = TOOL_TABS[root];
 
   return (
