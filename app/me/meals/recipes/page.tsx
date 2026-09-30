@@ -50,7 +50,7 @@ export default async function RecipesPage() {
 
         return (
           <Panel key={kind} title={heading.toLowerCase()} bodyClassName="p-3">
-            <div className="rail-scroll overflow-x-auto">
+            <div className="rail-scroll relative overflow-x-auto">
               <table className="w-full min-w-[620px] text-[12px]">
                 <thead>
                   <tr className="text-me-dim">

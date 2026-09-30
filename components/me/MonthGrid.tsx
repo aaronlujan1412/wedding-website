@@ -44,8 +44,24 @@ export function MonthGrid({
   const weeks: (PlanDay | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
+  /*
+   * `relative` on the scroller below is load-bearing, not decoration.
+   *
+   * Every dinner cell carries an `sr-only` label, and `sr-only` is
+   * `position: absolute`. An absolutely positioned element is clipped by its
+   * CONTAINING BLOCK, not by whatever happens to have overflow — so with no
+   * positioned ancestor inside this scroller, those labels took their
+   * containing block from far up the tree, escaped the horizontal clip, and
+   * dragged the whole PAGE 97px wide at 390px.
+   *
+   * Invisible on its own terms, because the labels are 1px and clipped: it
+   * showed up only as a page that scrolled sideways for no reason. Making the
+   * scroller a containing block puts them back inside it. The same one-word
+   * fix is on every other `rail-scroll` under /me, all of which wrap a
+   * min-width table full of form controls with `sr-only` labels.
+   */
   return (
-    <div className="rail-scroll overflow-x-auto">
+    <div className="rail-scroll relative overflow-x-auto">
       <table className="w-full min-w-[640px] border-separate border-spacing-1">
         <thead>
           <tr>

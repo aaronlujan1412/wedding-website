@@ -48,7 +48,7 @@ export default async function PricesPage() {
         const mine = items.filter((i) => (i.category ?? "other") === category);
         return (
           <Panel key={category} title={category.replace("-", " ")} bodyClassName="p-3">
-            <div className="rail-scroll overflow-x-auto">
+            <div className="rail-scroll relative overflow-x-auto">
               <table className="w-full min-w-[560px] text-[12px]">
                 <thead>
                   <tr className="text-me-dim">
