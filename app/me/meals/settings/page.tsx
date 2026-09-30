@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { Panel } from "@/components/me/Panel";
+import { Panel, Well } from "@/components/me/Panel";
 import { MonthGrid, FreshnessKey } from "@/components/me/MonthGrid";
+import { PlanControls } from "@/components/me/PlanControls";
+import { NewPlanForm } from "@/components/me/NewPlanForm";
 import { RuleForm, RuleList, SettingsForm } from "@/components/me/SettingsForms";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getPlan, getRecipes, getRules, getSettings } from "@/lib/meal-queries";
@@ -27,23 +29,69 @@ export default async function SettingsPage() {
   // new one — after the first week the answer is nearly always one of these.
   const dayTypes = [...new Set((plan?.days ?? []).flatMap((d) => d.tags))].sort();
 
+  // The coverage problems, whose three fixes are all on this page.
+  const warnings = (plan?.lines ?? []).filter((l) => l.coverage_warning);
+
   return (
     <FullWidth>
       {plan ? (
-        <Panel title={`${plan.name.toLowerCase()} — the calendar`} bodyClassName="p-3">
-          <p className="mb-2.5 text-[12px] leading-relaxed text-me-dim">
-            Tap a day to set its dinner or say what kind of day it is. Rebuild
-            the shopping list afterwards — the list is computed from these.
+        <>
+          <Panel title={plan.name.toLowerCase()}>
+            <p className="text-[13px] leading-relaxed text-me-ink">
+              Tap a day to set its dinner or say what kind of day it is. Both
+              buttons rewrite things: placing the dinners replaces every night
+              the scheduler can fill, and building the list rebuilds it from the
+              calendar as it stands.
+            </p>
+            <div className="mt-3.5">
+              <PlanControls planId={plan.id} />
+            </div>
+          </Panel>
+
+          {warnings.length ? (
+            <Panel title="won't keep that long">
+              <p className="mb-3 text-[13px] leading-relaxed text-me-ink">
+                These land on one delivery and are needed after they&apos;ve
+                gone off. Move the dish, buy the item frozen, or put it on the
+                later order — all three are things you do here, which is why
+                this sits beside the calendar rather than on the month view.
+              </p>
+              <ul className="space-y-2">
+                {warnings.map((line) => (
+                  <li key={line.id}>
+                    <Well>
+                      <p className="text-[12px] leading-relaxed text-me-live">
+                        {line.coverage_warning}
+                      </p>
+                      {line.used_for ? (
+                        <p className="mt-1 text-[12px] text-me-dim">{line.used_for}</p>
+                      ) : null}
+                    </Well>
+                  </li>
+                ))}
+              </ul>
+            </Panel>
+          ) : null}
+
+          <Panel title="the calendar" bodyClassName="p-3">
+            <MonthGrid
+              days={plan.days}
+              dinnerOptions={dinnerOptions}
+              mode="plan"
+              dayTypes={dayTypes}
+            />
+            <FreshnessKey />
+          </Panel>
+        </>
+      ) : (
+        <Panel title="start a month">
+          <p className="mb-4 text-[13px] leading-relaxed text-me-ink">
+            A plan is a date range, two delivery days, and a dinner on each
+            weeknight — everything else is worked out from there.
           </p>
-          <MonthGrid
-            days={plan.days}
-            dinnerOptions={dinnerOptions}
-            mode="plan"
-            dayTypes={dayTypes}
-          />
-          <FreshnessKey />
+          <NewPlanForm />
         </Panel>
-      ) : null}
+      )}
 
       <Panel title="the standing setup">
         <p className="mb-3.5 text-[13px] leading-relaxed text-me-ink">

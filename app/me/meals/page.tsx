@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Panel, Well } from "@/components/me/Panel";
+import { Panel } from "@/components/me/Panel";
 import { MonthGrid, FreshnessKey } from "@/components/me/MonthGrid";
 import { ShoppingList } from "@/components/me/ShoppingList";
-import { PlanControls } from "@/components/me/PlanControls";
-import { NewPlanForm } from "@/components/me/NewPlanForm";
 import { FullWidth, WithSidebar } from "@/components/me/WithSidebar";
 import { getItems, getPlan, getRecipes } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
@@ -41,12 +39,18 @@ export default async function MealsPage() {
     return (
       <FullWidth>
         <Panel title="meals">
-          <p className="mb-4 text-[13px] leading-relaxed text-me-ink">
+          <p className="text-[13px] leading-relaxed text-me-ink">
             No month planned yet. A plan is a date range, two delivery days, and
             a dinner on each weeknight — everything else is worked out from
-            there.
+            there.{" "}
+            <Link
+              href="/me/meals/settings"
+              className="text-me-link underline underline-offset-2 hover:text-me-ink"
+            >
+              Start one on Setup
+            </Link>
+            .
           </p>
-          <NewPlanForm />
         </Panel>
       </FullWidth>
     );
@@ -71,13 +75,27 @@ export default async function MealsPage() {
         <p className="text-[13px] leading-relaxed text-me-ink">
           {planned} {planned === 1 ? "dinner" : "dinners"} across{" "}
           {plan.days.length} days, on {deliveries}{" "}
-          {deliveries === 1 ? "delivery" : "deliveries"}. The raised days
-          are when the boxes land; the number on every other day is how long its
-          food has been in the house.
+          {deliveries === 1 ? "delivery" : "deliveries"}. Today is the raised
+          day; gold marks a box landing, and the number on every other day is
+          how long its food has been in the house.
         </p>
-        <div className="mt-3.5">
-          <PlanControls planId={plan.id} />
-        </div>
+        {/* Placing dinners and building the list are planning, and planning
+            lives on Setup. This page is the quick view. */}
+        <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
+          <Link
+            href="/me/meals/settings"
+            className="text-me-link underline underline-offset-2 hover:text-me-ink"
+          >
+            Change the month on Setup
+          </Link>
+          {warnings.length ? (
+            <>
+              {" "}— {warnings.length}{" "}
+              {warnings.length === 1 ? "item won't keep" : "items won't keep"}{" "}
+              long enough for the night that needs {warnings.length === 1 ? "it" : "them"}.
+            </>
+          ) : null}
+        </p>
       </Panel>
 
       <Panel title="the month" bodyClassName="p-3">
@@ -88,30 +106,6 @@ export default async function MealsPage() {
         <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} mode="read" />
         <FreshnessKey />
       </Panel>
-
-      {warnings.length ? (
-        <Panel title="won't keep that long">
-          <p className="mb-3 text-[13px] leading-relaxed text-me-ink">
-            These land on one delivery and are needed after they&apos;ve gone
-            off. Move the dish, buy the item frozen, or put it on the later
-            order.
-          </p>
-          <ul className="space-y-2">
-            {warnings.map((line) => (
-              <li key={line.id}>
-                <Well>
-                  <p className="text-[12px] leading-relaxed text-me-live">
-                    {line.coverage_warning}
-                  </p>
-                  {line.used_for ? (
-                    <p className="mt-1 text-[12px] text-me-dim">{line.used_for}</p>
-                  ) : null}
-                </Well>
-              </li>
-            ))}
-          </ul>
-        </Panel>
-      ) : null}
 
       <Panel title="the shopping">
         <ShoppingList
