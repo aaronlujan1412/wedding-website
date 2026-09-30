@@ -476,6 +476,7 @@ export type Database = {
           generated: boolean
           id: string
           item_id: string
+          notes: string | null
           order_id: string
           plan_id: string
           quantity: number
@@ -489,6 +490,7 @@ export type Database = {
           generated?: boolean
           id?: string
           item_id: string
+          notes?: string | null
           order_id: string
           plan_id: string
           quantity?: number
@@ -502,6 +504,7 @@ export type Database = {
           generated?: boolean
           id?: string
           item_id?: string
+          notes?: string | null
           order_id?: string
           plan_id?: string
           quantity?: number

@@ -1,0 +1,11 @@
+-- What to do with a thing when it arrives.
+--
+-- Added for the October import, where the notes column turned out to carry the
+-- most operationally useful text in the whole workbook: "Portion on arrival:
+-- 1.25 lb (10/2) + 1.5 lb FREEZE labeled '10/21 Big Mac'". That is the unpack
+-- ritual, it is per shopping line, and losing it on import would have thrown
+-- away the part of the plan you actually follow while standing at the counter.
+--
+-- Distinct from used_for, which says WHY the line exists. This says what to do
+-- with it.
+alter table meal_plan_items add column notes text;
