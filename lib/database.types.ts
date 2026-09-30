@@ -366,46 +366,70 @@ export type Database = {
       }
       meal_items: {
         Row: {
+          carbs_per_100g: number | null
           category: string | null
           created_at: string
+          fat_per_100g: number | null
+          fdc_description: string | null
+          fdc_id: number | null
           id: string
+          kcal_is_derived: boolean
+          kcal_per_100g: number | null
           keeps_days: number | null
           name: string
           notes: string | null
+          nutrition_updated_at: string | null
           pack: string | null
           price_cents: number | null
           price_includes_markup: boolean
           priced_on: string | null
+          protein_per_100g: number | null
           store: string | null
           tier: string
           updated_at: string
         }
         Insert: {
+          carbs_per_100g?: number | null
           category?: string | null
           created_at?: string
+          fat_per_100g?: number | null
+          fdc_description?: string | null
+          fdc_id?: number | null
           id?: string
+          kcal_is_derived?: boolean
+          kcal_per_100g?: number | null
           keeps_days?: number | null
           name: string
           notes?: string | null
+          nutrition_updated_at?: string | null
           pack?: string | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
+          protein_per_100g?: number | null
           store?: string | null
           tier?: string
           updated_at?: string
         }
         Update: {
+          carbs_per_100g?: number | null
           category?: string | null
           created_at?: string
+          fat_per_100g?: number | null
+          fdc_description?: string | null
+          fdc_id?: number | null
           id?: string
+          kcal_is_derived?: boolean
+          kcal_per_100g?: number | null
           keeps_days?: number | null
           name?: string
           notes?: string | null
+          nutrition_updated_at?: string | null
           pack?: string | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
+          protein_per_100g?: number | null
           store?: string | null
           tier?: string
           updated_at?: string
