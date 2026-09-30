@@ -64,7 +64,14 @@ export type PlanDay = {
 
 export type PlanLine = {
   id: string;
+  /** Which tab it sits on. */
+  order_id: string;
   order_ordinal: number;
+  /**
+   * False when a person put it there by hand. Those survive regeneration and
+   * are the only ones that can be removed from the list directly.
+   */
+  generated: boolean;
   item_name: string;
   pack: string | null;
   /** Where it's bought. Null means nobody has said. */
@@ -81,6 +88,24 @@ export type PlanLine = {
   quantity_is_a_guess: boolean;
 };
 
+/**
+ * A tab on the shopping list.
+ *
+ * A delivery is a box that arrives on a date and supplies the days after it.
+ * An `extras` tab is one somebody made by hand to collect snacks and
+ * nice-to-haves — no date, because nothing delivers it.
+ */
+export type PlanOrder = {
+  id: string;
+  ordinal: number;
+  kind: "delivery" | "extras";
+  /** Null on an extras tab. */
+  delivers_on: string | null;
+  /** Set on an extras tab; a delivery names itself by ordinal and date. */
+  name: string | null;
+  store: string | null;
+};
+
 export type Plan = {
   id: string;
   name: string;
@@ -88,7 +113,7 @@ export type Plan = {
   ends_on: string;
   budget_cents: number;
   status: "draft" | "final";
-  orders: { id: string; ordinal: number; delivers_on: string; store: string | null }[];
+  orders: PlanOrder[];
   days: PlanDay[];
   lines: PlanLine[];
 };

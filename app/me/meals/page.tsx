@@ -6,7 +6,7 @@ import { ShoppingList } from "@/components/me/ShoppingList";
 import { PlanControls } from "@/components/me/PlanControls";
 import { NewPlanForm } from "@/components/me/NewPlanForm";
 import { FullWidth, WithSidebar } from "@/components/me/WithSidebar";
-import { getPlan, getRecipes } from "@/lib/meal-queries";
+import { getItems, getPlan, getRecipes } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = {
@@ -35,7 +35,7 @@ export default async function MealsPage() {
     );
   }
 
-  const [plan, recipes] = await Promise.all([getPlan(), getRecipes()]);
+  const [plan, recipes, items] = await Promise.all([getPlan(), getRecipes(), getItems()]);
 
   if (!plan) {
     return (
@@ -60,14 +60,18 @@ export default async function MealsPage() {
 
   const warnings = plan.lines.filter((l) => l.coverage_warning);
   const planned = plan.days.filter((d) => d.dinner).length;
+  // Deliveries, not tabs. `orders` now also carries the extras tabs somebody
+  // made for snacks, and counting those here said "on 3 deliveries" about a
+  // month with two boxes coming.
+  const deliveries = plan.orders.filter((o) => o.kind === "delivery").length;
 
   return (
     <FullWidth>
       <Panel title={plan.name.toLowerCase()}>
         <p className="text-[13px] leading-relaxed text-me-ink">
           {planned} {planned === 1 ? "dinner" : "dinners"} across{" "}
-          {plan.days.length} days, on {plan.orders.length}{" "}
-          {plan.orders.length === 1 ? "delivery" : "deliveries"}. The raised days
+          {plan.days.length} days, on {deliveries}{" "}
+          {deliveries === 1 ? "delivery" : "deliveries"}. The raised days
           are when the boxes land; the number on every other day is how long its
           food has been in the house.
         </p>
@@ -107,8 +111,10 @@ export default async function MealsPage() {
 
       <Panel title="the shopping">
         <ShoppingList
+          planId={plan.id}
           lines={plan.lines}
           orders={plan.orders}
+          items={items}
           budgetCents={plan.budget_cents}
         />
       </Panel>

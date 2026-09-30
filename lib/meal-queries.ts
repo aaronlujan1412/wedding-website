@@ -2,7 +2,7 @@ import "server-only";
 
 import { supabase } from "./supabase";
 import { currentUser } from "./site-user";
-import type { Item, Plan, PlanDay, PlanLine, Recipe, Window } from "./meal-types";
+import type { Item, Plan, PlanDay, PlanLine, PlanOrder, Recipe, Window } from "./meal-types";
 
 /**
  * Reads of the meal library and the plans.
@@ -142,9 +142,9 @@ export async function getPlan(id?: string): Promise<Plan | null> {
   const [orders, days, lines] = await Promise.all([
     supabase
       .from("meal_plan_orders")
-      .select("id, ordinal, delivers_on, store")
+      .select("id, ordinal, kind, delivers_on, name, store")
       .eq("plan_id", plan.id)
-      .order("delivers_on"),
+      .order("ordinal"),
     supabase
       .from("meal_plan_days")
       .select(
@@ -155,25 +155,35 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     supabase
       .from("meal_plan_items")
       .select(
-        "id, quantity, unit_price_cents, tier, used_for, notes, coverage_warning, quantity_is_a_guess, bought_at, item:item_id (name, pack, store), order:order_id (ordinal, store)",
+        "id, order_id, generated, quantity, unit_price_cents, tier, used_for, notes, coverage_warning, quantity_is_a_guess, bought_at, item:item_id (name, pack, store), order:order_id (ordinal, store)",
       )
       .eq("plan_id", plan.id),
   ]);
 
-  const orderList = (orders.data ?? []).map((o) => ({
+  const orderList: PlanOrder[] = (orders.data ?? []).map((o) => ({
     id: o.id,
     ordinal: o.ordinal,
+    kind: o.kind === "extras" ? "extras" : "delivery",
     delivers_on: o.delivers_on,
+    name: o.name,
     store: o.store,
   }));
+
+  /*
+   * Only deliveries supply a day. An extras tab has no date — nothing brings
+   * it — so it can neither be the box a Tuesday eats out of nor a delivery
+   * landing on one. Filtered here rather than left to `null <= "2026-09-29"`
+   * happening to be false in JavaScript.
+   */
+  const deliveries = orderList.filter((o) => o.kind === "delivery" && o.delivers_on);
 
   const dayList: PlanDay[] = (days.data ?? []).map((d) => {
     // The last delivery on or before this day. Before the first one, there is
     // no supplier yet — shown as such rather than as day 0 of something.
-    const supplying = [...orderList]
+    const supplying = [...deliveries]
       .reverse()
-      .find((o) => o.delivers_on <= d.on_date);
-    const delivery = orderList.find((o) => o.delivers_on === d.on_date);
+      .find((o) => (o.delivers_on as string) <= d.on_date);
+    const delivery = deliveries.find((o) => o.delivers_on === d.on_date);
 
     const dinner = d.dinner as unknown as { name: string; window_when: string } | null;
     const lunch = d.lunch as unknown as { name: string } | null;
@@ -188,7 +198,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
       kid_here: d.kid_here,
       prep_day: d.prep_day,
       notes: d.notes,
-      days_out: supplying ? daysBetween(supplying.delivers_on, d.on_date) : null,
+      days_out: supplying ? daysBetween(supplying.delivers_on as string, d.on_date) : null,
       delivery_ordinal: delivery?.ordinal ?? null,
     };
   });
@@ -203,7 +213,9 @@ export async function getPlan(id?: string): Promise<Plan | null> {
       const order = l.order as unknown as { ordinal: number; store: string | null };
       return {
         id: l.id,
+        order_id: l.order_id,
         order_ordinal: order?.ordinal ?? 1,
+        generated: l.generated,
         item_name: item?.name ?? "—",
         pack: item?.pack ?? null,
         // The item's own store wins: a line is bought where that thing is sold,

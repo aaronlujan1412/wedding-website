@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { LibraryState } from "@/app/actions/meal-library";
+import type { MealState } from "@/app/actions/meals";
 
 /**
  * The small parts every editing form on these pages is built from.
@@ -103,3 +104,12 @@ export function Says({ state }: { state: LibraryState }) {
 }
 
 export const EMPTY: LibraryState = { error: null, note: null };
+
+/**
+ * The same empty shape, for the plan actions.
+ *
+ * `MealState` and `LibraryState` are structurally identical, so TypeScript
+ * would accept `EMPTY` for both — named separately anyway, because the day one
+ * of them grows a field is the day a silent mismatch starts type-checking.
+ */
+export const EMPTY_MEAL: MealState = { error: null, note: null };

@@ -651,24 +651,30 @@ export type Database = {
       }
       meal_plan_orders: {
         Row: {
-          delivers_on: string
+          delivers_on: string | null
           id: string
+          kind: string
+          name: string | null
           notes: string | null
           ordinal: number
           plan_id: string
           store: string | null
         }
         Insert: {
-          delivers_on: string
+          delivers_on?: string | null
           id?: string
+          kind?: string
+          name?: string | null
           notes?: string | null
           ordinal: number
           plan_id: string
           store?: string | null
         }
         Update: {
-          delivers_on?: string
+          delivers_on?: string | null
           id?: string
+          kind?: string
+          name?: string | null
           notes?: string | null
           ordinal?: number
           plan_id?: string
