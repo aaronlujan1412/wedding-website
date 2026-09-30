@@ -488,3 +488,45 @@ export async function setIngredientAmount(
   refresh();
   return ok(null);
 }
+
+/**
+ * What kind of day this is.
+ *
+ * Toggles one type on or off rather than taking the whole list, because the
+ * control is a chip on a calendar cell and that is the gesture: the list is
+ * read back from the row so two quick taps cannot race into each other losing
+ * the first one's type.
+ */
+export async function toggleDayTag(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const day_id = text(formData.get("day_id"));
+  const raw = String(formData.get("tag") ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const tag = raw.slice(0, 40);
+  if (!day_id || !tag) return fail("Name the kind of day.");
+
+  const { data: day } = await supabase
+    .from("meal_plan_days")
+    .select("tags")
+    .eq("id", day_id)
+    .maybeSingle();
+
+  if (!day) return fail("No such day.");
+
+  const current: string[] = day.tags ?? [];
+  const tags = current.includes(tag)
+    ? current.filter((t) => t !== tag)
+    : [...current, tag];
+
+  const { error } = await supabase
+    .from("meal_plan_days")
+    .update({ tags })
+    .eq("id", day_id);
+
+  if (error) return fail(error.message);
+  refresh();
+  return ok(null);
+}

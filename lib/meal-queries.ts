@@ -176,7 +176,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     supabase
       .from("meal_plan_days")
       .select(
-        "id, on_date, kid_here, prep_day, notes, dinner_recipe_id, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
+        "id, on_date, tags, notes, dinner_recipe_id, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
       )
       .eq("plan_id", plan.id)
       .order("on_date"),
@@ -223,8 +223,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
       dinner_recipe_id: d.dinner_recipe_id,
       dinner_window: (dinner?.window_when as Window) ?? null,
       lunch: lunch?.name ?? null,
-      kid_here: d.kid_here,
-      prep_day: d.prep_day,
+      tags: d.tags ?? [],
       notes: d.notes,
       days_out: supplying ? daysBetween(supplying.delivers_on as string, d.on_date) : null,
       delivery_ordinal: delivery?.ordinal ?? null,

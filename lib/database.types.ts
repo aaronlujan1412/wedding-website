@@ -535,6 +535,7 @@ export type Database = {
           on_date: string
           plan_id: string
           prep_day: boolean
+          tags: string[]
         }
         Insert: {
           dinner_recipe_id?: string | null
@@ -546,6 +547,7 @@ export type Database = {
           on_date: string
           plan_id: string
           prep_day?: boolean
+          tags?: string[]
         }
         Update: {
           dinner_recipe_id?: string | null
@@ -557,6 +559,7 @@ export type Database = {
           on_date?: string
           plan_id?: string
           prep_day?: boolean
+          tags?: string[]
         }
         Relationships: [
           {

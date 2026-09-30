@@ -81,7 +81,11 @@ export default async function MealsPage() {
       </Panel>
 
       <Panel title="the month" bodyClassName="p-3">
-        <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} />
+        {/* Read-only here. Changing a month is a sit-down job and belongs on
+            Setup; this page is opened mid-week to find out what is for dinner,
+            usually on a phone, where a stray tap should never rewrite the
+            plan. The dish title links into cook mode instead. */}
+        <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} mode="read" />
         <FreshnessKey />
       </Panel>
 

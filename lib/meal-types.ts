@@ -97,8 +97,8 @@ export type PlanDay = {
   dinner_recipe_id: string | null;
   dinner_window: Window | null;
   lunch: string | null;
-  kid_here: boolean;
-  prep_day: boolean;
+  /** What kind of day it is: daniel, party, prep. Made up by the household. */
+  tags: string[];
   notes: string | null;
   /** Nights since the delivery that supplies this day. Null before the first. */
   days_out: number | null;
