@@ -41,6 +41,9 @@ export type Item = {
   keeps_days: number | null;
   notes: string | null;
   used_by: number;
+  /** Which food is in it, once somebody has said. Null is the normal start. */
+  food_id: string | null;
+  food_description: string | null;
 };
 
 export type PlanDay = {
@@ -114,3 +117,99 @@ export function freshness(daysOut: number | null): {
 
 export const money = (cents: number) =>
   `$${(cents / 100).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+/* ------------------------------------------------------------------ *
+ * Foods
+ * ------------------------------------------------------------------ */
+
+export type FoodSource = "usda" | "custom";
+
+/** A food as the search returns it, with its most ordinary portion attached. */
+export type FoodHit = {
+  id: string;
+  source: FoodSource;
+  dataset: string | null;
+  description: string;
+  category: string | null;
+  /** Per 100 g, every one of them. Null means the source does not say. */
+  kcal: number | null;
+  protein_g: number | null;
+  fat_g: number | null;
+  saturated_fat_g: number | null;
+  carbs_g: number | null;
+  fiber_g: number | null;
+  sugar_g: number | null;
+  sodium_mg: number | null;
+  /** True when the calories were computed from the macros, not measured. */
+  kcal_is_derived: boolean;
+  portion_label: string | null;
+  portion_grams: number | null;
+  portion_count: number;
+};
+
+export type Portion = { id: string; label: string; grams: number };
+
+export type FoodDetail = FoodHit & {
+  notes: string | null;
+  portions: Portion[];
+  /** Price book rows identified as this food. */
+  packs: { id: string; name: string; store: string | null; pack: string | null }[];
+};
+
+/**
+ * The eight numbers, in the order a label prints them.
+ *
+ * One list so the detail card, the compare row and any future export agree —
+ * and so adding a ninth nutrient is one line rather than four.
+ */
+export const NUTRIENTS = [
+  { key: "kcal", label: "Calories", unit: "" },
+  { key: "protein_g", label: "Protein", unit: "g" },
+  { key: "carbs_g", label: "Carbs", unit: "g" },
+  { key: "fiber_g", label: "Fibre", unit: "g" },
+  { key: "sugar_g", label: "Sugars", unit: "g" },
+  { key: "fat_g", label: "Fat", unit: "g" },
+  { key: "saturated_fat_g", label: "Saturated fat", unit: "g" },
+  { key: "sodium_mg", label: "Sodium", unit: "mg" },
+] as const satisfies readonly { key: keyof FoodHit; label: string; unit: string }[];
+
+/**
+ * A per-100g figure at some real weight.
+ *
+ * Null in, null out — deliberately, and never zero. A food the source has no
+ * fibre figure for is not a food with no fibre, and to someone counting it the
+ * difference is the whole point.
+ */
+export function atGrams(per100g: number | null, grams: number): number | null {
+  if (per100g === null || per100g === undefined) return null;
+  if (!Number.isFinite(grams) || grams < 0) return null;
+  return (Number(per100g) * grams) / 100;
+}
+
+/**
+ * How many decimals a nutrition figure deserves.
+ *
+ * Calories and sodium to the whole unit: a tenth of a calorie is noise dressed
+ * as precision, and nobody is counting single milligrams of sodium.
+ *
+ * Grams keep one decimal all the way to 100, because that is the range every
+ * macro actually lives in and the decimal is real information there — 20.9 g of
+ * protein reported as '21g' is the rounding a person came here to avoid. Past
+ * 100 g the tenth is noise again.
+ */
+export function nutrientText(value: number | null, unit: string): string {
+  if (value === null) return "—";
+  const rounded =
+    unit === "mg" || unit === ""
+      ? Math.round(value)
+      : value < 100
+        ? Math.round(value * 10) / 10
+        : Math.round(value);
+  return `${rounded.toLocaleString("en-US")}${unit}`;
+}
+
+/** '113 g' / '1.5 kg' — weights get the same treatment as money. */
+export function gramsText(grams: number): string {
+  if (grams >= 1000) return `${Math.round(grams / 10) / 100} kg`;
+  return `${Math.round(grams * 10) / 10} g`;
+}

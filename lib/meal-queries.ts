@@ -84,7 +84,12 @@ export async function getItems(): Promise<Item[]> {
   const [items, links] = await Promise.all([
     supabase
       .from("meal_items")
-      .select("id, name, pack, category, tier, price_cents, keeps_days, notes")
+      // The embedded food comes along rather than a second round trip: a pack
+      // whose food is unknown is the thing this page is for fixing, so the
+      // answer has to be visible on every row.
+      .select(
+        "id, name, pack, category, tier, price_cents, keeps_days, notes, food_id, meal_foods(description)",
+      )
       .order("category")
       .order("name"),
     supabase.from("meal_recipe_items").select("item_id"),
@@ -97,9 +102,10 @@ export async function getItems(): Promise<Item[]> {
     counts.set(row.item_id, (counts.get(row.item_id) ?? 0) + 1);
   }
 
-  return items.data.map((i) => ({
+  return items.data.map(({ meal_foods, ...i }) => ({
     ...i,
     used_by: counts.get(i.id) ?? 0,
+    food_description: meal_foods?.description ?? null,
   })) as Item[];
 }
 
