@@ -51,6 +51,8 @@ export type Item = {
   protein_per_100g: number | null;
   /** What the whole pack weighs. Null until somebody weighs it. */
   pack_grams: number | null;
+  /** How many packs share this row's food — the same thing in another size. */
+  sizes: number;
 };
 
 /**
@@ -225,8 +227,15 @@ export type Portion = { id: string; label: string; grams: number };
 export type FoodDetail = FoodHit & {
   notes: string | null;
   portions: Portion[];
-  /** Price book rows identified as this food. */
-  packs: { id: string; name: string; store: string | null; pack: string | null }[];
+  /** Price book rows identified as this food — the sizes it comes in. */
+  packs: {
+    id: string;
+    name: string;
+    store: string | null;
+    pack: string | null;
+    price_cents: number | null;
+    pack_grams: number | null;
+  }[];
 };
 
 /**

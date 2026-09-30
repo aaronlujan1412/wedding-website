@@ -2,6 +2,7 @@ import "server-only";
 
 import { supabase } from "./supabase";
 import { currentUser } from "./site-user";
+import { gramsOf } from "./meal-units";
 import type { Item, Plan, PlanDay, PlanLine, PlanOrder, Recipe, Window } from "./meal-types";
 
 /**
@@ -105,6 +106,17 @@ export async function getItems(): Promise<Item[]> {
     counts.set(row.item_id, (counts.get(row.item_id) ?? 0) + 1);
   }
 
+  /*
+   * How many packs share a food — the same thing in another size. The price
+   * book's unique key is (name, store, pack), so a 3 lb bag and a 1 lb bag have
+   * always been two rows; what was missing is any sign that they are the same
+   * food and therefore comparable.
+   */
+  const perFood = new Map<string, number>();
+  for (const row of items.data) {
+    if (row.food_id) perFood.set(row.food_id, (perFood.get(row.food_id) ?? 0) + 1);
+  }
+
   return items.data.map(({ meal_foods, ...i }) => ({
     ...i,
     used_by: counts.get(i.id) ?? 0,
@@ -121,6 +133,7 @@ export async function getItems(): Promise<Item[]> {
         ? null
         : Number(meal_foods.protein_g),
     pack_grams: i.pack_grams === null ? null : Number(i.pack_grams),
+    sizes: i.food_id ? (perFood.get(i.food_id) ?? 1) : 1,
   })) as Item[];
 }
 
@@ -355,4 +368,134 @@ export async function getItemOptions(): Promise<{ id: string; label: string }[]>
     id: i.id,
     label: i.pack ? `${i.name} — ${i.pack}` : i.name,
   }));
+}
+
+/**
+ * What the month buys, what it cooks, and what is left over.
+ *
+ * The subtraction is the easy half. The hard half is being honest about the
+ * parts it cannot do: an ingredient with no amount recorded contributes
+ * nothing to "used", so a surplus computed over a library that has amounts on
+ * two links out of a hundred would report that you have all of everything
+ * left. Every row therefore carries how many of its uses could not be counted,
+ * and the page leads with that rather than with a number.
+ */
+export type Leftover = {
+  item_id: string;
+  name: string;
+  pack: string | null;
+  pack_grams: number | null;
+  keeps_days: number | null;
+  packs_bought: number;
+  grams_bought: number | null;
+  grams_used: number;
+  /** Uses whose amount is missing or not convertible — see `gramsOf`. */
+  uncounted: number;
+  uses: {
+    recipe_id: string;
+    recipe: string;
+    times: number;
+    quantity: number | null;
+    unit: string | null;
+    grams: number | null;
+  }[];
+};
+
+export async function getLeftovers(planId?: string): Promise<Leftover[]> {
+  if (!(await currentUser())) return [];
+
+  const plan = await getPlan(planId);
+  if (!plan) return [];
+
+  // How many times each dish is actually cooked this month. A dish scheduled
+  // twice uses its ingredients twice, which is the whole reason rotation has a
+  // limit — and the reason this counts days rather than distinct recipes.
+  const times = new Map<string, number>();
+  for (const day of plan.days) {
+    if (day.dinner_recipe_id) {
+      times.set(day.dinner_recipe_id, (times.get(day.dinner_recipe_id) ?? 0) + 1);
+    }
+  }
+  if (!times.size) return [];
+
+  const [links, items] = await Promise.all([
+    supabase
+      .from("meal_recipe_items")
+      .select("recipe_id, item_id, quantity, unit, recipe:recipe_id (name)")
+      .in("recipe_id", [...times.keys()]),
+    supabase.from("meal_items").select("id, name, pack, pack_grams, keeps_days"),
+  ]);
+
+  const item = new Map(
+    (items.data ?? []).map((i) => [
+      i.id,
+      {
+        name: i.name,
+        pack: i.pack,
+        pack_grams: i.pack_grams === null ? null : Number(i.pack_grams),
+        keeps_days: i.keeps_days,
+      },
+    ]),
+  );
+
+  // What the plan actually puts in the basket, in packs.
+  const bought = new Map<string, number>();
+  for (const line of plan.lines) {
+    // `lines` carries the item's NAME, not its id, so the basket is keyed by
+    // name and resolved against the price book below. Changing PlanLine to
+    // carry item_id would ripple through the shopping list for no gain here.
+    bought.set(line.item_name, (bought.get(line.item_name) ?? 0) + line.quantity);
+  }
+
+  const out = new Map<string, Leftover>();
+
+  for (const link of links.data ?? []) {
+    const info = item.get(link.item_id);
+    if (!info) continue;
+
+    const run = times.get(link.recipe_id) ?? 0;
+    const quantity = link.quantity === null ? null : Number(link.quantity);
+    const once = gramsOf(quantity, link.unit, info.pack_grams);
+    const recipe = (link.recipe as unknown as { name: string } | null)?.name ?? "a dish";
+
+    const row =
+      out.get(link.item_id) ??
+      ({
+        item_id: link.item_id,
+        name: info.name,
+        pack: info.pack,
+        pack_grams: info.pack_grams,
+        keeps_days: info.keeps_days,
+        packs_bought: bought.get(info.name) ?? 0,
+        grams_bought: info.pack_grams
+          ? (bought.get(info.name) ?? 0) * info.pack_grams
+          : null,
+        grams_used: 0,
+        uncounted: 0,
+        uses: [],
+      } satisfies Leftover);
+
+    if (once === null) row.uncounted += 1;
+    else row.grams_used += once * run;
+
+    row.uses.push({
+      recipe_id: link.recipe_id,
+      recipe,
+      times: run,
+      quantity,
+      unit: link.unit,
+      grams: once === null ? null : once * run,
+    });
+
+    out.set(link.item_id, row);
+  }
+
+  return [...out.values()].sort(
+    (a, b) =>
+      // Most unanswerable first while the library is still being filled in —
+      // those are the rows that make every figure below them a floor.
+      b.uncounted - a.uncounted ||
+      (b.grams_bought ?? 0) - (b.grams_used) - ((a.grams_bought ?? 0) - a.grams_used) ||
+      a.name.localeCompare(b.name),
+  );
 }

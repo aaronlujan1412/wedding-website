@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { PriceRow } from "@/components/me/PriceRow";
 import { PackFood } from "@/components/me/PackFood";
 import { centsText, packValue, type Item } from "@/lib/meal-types";
@@ -227,6 +228,18 @@ export function PriceBrowser({ items }: { items: Item[] }) {
                     foodId={item.food_id}
                     foodDescription={item.food_description}
                   />
+                  {/* The same food in another size. Two rows for one thing is
+                      the normal way a price book holds "3 lb bag" and "1 lb
+                      bag"; this is the only place that says so, and it points
+                      at where they can be compared. */}
+                  {item.sizes > 1 && item.food_id ? (
+                    <Link
+                      href={`/me/meals/foods/${item.food_id}`}
+                      className="mt-0.5 block font-dot text-[10px] text-me-link underline underline-offset-2 hover:text-me-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+                    >
+                      {item.sizes} sizes — compare
+                    </Link>
+                  ) : null}
                   <Nutrition item={item} />
                 </td>
                 <td className="py-1.5 pr-3 text-me-dim">

@@ -16,7 +16,7 @@ import { currentUser } from "@/lib/site-user";
 export type LibraryState = { error: string | null; note: string | null };
 
 const DENIED: LibraryState = { error: "Not signed in.", note: null };
-const ok = (note: string): LibraryState => ({ error: null, note });
+const ok = (note: string | null): LibraryState => ({ error: null, note });
 const fail = (error: string): LibraryState => ({ error, note: null });
 
 function refresh() {
@@ -435,4 +435,56 @@ export async function setOrderDate(
   if (error) return fail(error.message);
   refresh();
   return ok("Delivery moved — rebuild the list.");
+}
+
+/**
+ * How much of an item a dish uses.
+ *
+ * Its own action rather than a trip through `addIngredient`, which upserts the
+ * whole link: filling in an amount from the leftovers page would otherwise
+ * quietly reset `optional` and overwrite the note explaining why the
+ * ingredient is there.
+ *
+ * This is the field the whole downstream depends on — leftovers, a dish's real
+ * macros, and a budget total that is a forecast rather than a floor — and it
+ * was recorded on two links out of a hundred and one.
+ */
+export async function setIngredientAmount(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const recipe_id = text(formData.get("recipe_id"));
+  const item_id = text(formData.get("item_id"));
+  if (!recipe_id || !item_id) return fail("No ingredient.");
+
+  const raw = String(formData.get("quantity") ?? "").trim();
+
+  // Clearing it is a real answer: "we thought we knew and we do not".
+  if (!raw) {
+    const { error } = await supabase
+      .from("meal_recipe_items")
+      .update({ quantity: null, unit: null })
+      .eq("recipe_id", recipe_id)
+      .eq("item_id", item_id);
+    if (error) return fail(error.message);
+    refresh();
+    return ok("Cleared.");
+  }
+
+  const quantity = Number(raw);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return fail("That amount doesn't read as a number.");
+  }
+
+  const { error } = await supabase
+    .from("meal_recipe_items")
+    .update({ quantity, unit: text(formData.get("unit")) })
+    .eq("recipe_id", recipe_id)
+    .eq("item_id", item_id);
+
+  if (error) return fail(error.message);
+  refresh();
+  return ok(null);
 }

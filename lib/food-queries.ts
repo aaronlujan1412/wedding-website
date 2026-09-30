@@ -94,7 +94,7 @@ export async function getFood(id: string): Promise<FoodDetail | null> {
       .order("grams"),
     supabase
       .from("meal_items")
-      .select("id, name, store, pack")
+      .select("id, name, store, pack, price_cents, pack_grams")
       .eq("food_id", id)
       .order("name"),
   ]);
@@ -119,6 +119,8 @@ export async function getFood(id: string): Promise<FoodDetail | null> {
       name: p.name,
       store: p.store,
       pack: p.pack,
+      price_cents: p.price_cents,
+      pack_grams: p.pack_grams === null ? null : Number(p.pack_grams),
     })),
   };
 }
