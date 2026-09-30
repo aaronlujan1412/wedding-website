@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { Panel } from "@/components/me/Panel";
 import { ItemForm } from "@/components/me/ItemForm";
 import { PriceRow } from "@/components/me/PriceRow";
+import { PackFood } from "@/components/me/PackFood";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getItems } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
@@ -31,6 +32,11 @@ export default async function PricesPage() {
           Keeps is the number the coverage check runs on. An item with no keeps
           recorded is never warned about, so a blank there is a gap rather than
           a permission.
+        </p>
+        <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
+          Under each name is which food is in the pack. That&apos;s what connects
+          a price to nutrition — a pack nobody has identified counts toward the
+          budget and toward nothing else.
         </p>
       </Panel>
 
@@ -69,6 +75,12 @@ export default async function PricesPage() {
                             {i.tier}
                           </span>
                         ) : null}
+                        <PackFood
+                          itemId={i.id}
+                          itemName={i.name}
+                          foodId={i.food_id}
+                          foodDescription={i.food_description}
+                        />
                       </td>
                       <td className="py-1.5 pr-3 text-me-dim">{i.pack ?? "—"}</td>
                       <td className="py-1.5 pr-3 text-right">

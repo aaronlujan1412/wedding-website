@@ -329,6 +329,104 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_food_portions: {
+        Row: {
+          food_id: string
+          grams: number
+          id: string
+          label: string
+          sort_order: number
+        }
+        Insert: {
+          food_id: string
+          grams: number
+          id?: string
+          label: string
+          sort_order?: number
+        }
+        Update: {
+          food_id?: string
+          grams?: number
+          id?: string
+          label?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meal_food_portions_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "meal_foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      meal_foods: {
+        Row: {
+          carbs_g: number | null
+          category: string | null
+          created_at: string
+          dataset: string | null
+          description: string
+          fat_g: number | null
+          fdc_id: number | null
+          fiber_g: number | null
+          id: string
+          kcal: number | null
+          kcal_is_derived: boolean
+          notes: string | null
+          protein_g: number | null
+          saturated_fat_g: number | null
+          search: unknown
+          sodium_mg: number | null
+          source: string
+          sugar_g: number | null
+          updated_at: string
+        }
+        Insert: {
+          carbs_g?: number | null
+          category?: string | null
+          created_at?: string
+          dataset?: string | null
+          description: string
+          fat_g?: number | null
+          fdc_id?: number | null
+          fiber_g?: number | null
+          id?: string
+          kcal?: number | null
+          kcal_is_derived?: boolean
+          notes?: string | null
+          protein_g?: number | null
+          saturated_fat_g?: number | null
+          search?: unknown
+          sodium_mg?: number | null
+          source: string
+          sugar_g?: number | null
+          updated_at?: string
+        }
+        Update: {
+          carbs_g?: number | null
+          category?: string | null
+          created_at?: string
+          dataset?: string | null
+          description?: string
+          fat_g?: number | null
+          fdc_id?: number | null
+          fiber_g?: number | null
+          id?: string
+          kcal?: number | null
+          kcal_is_derived?: boolean
+          notes?: string | null
+          protein_g?: number | null
+          saturated_fat_g?: number | null
+          search?: unknown
+          sodium_mg?: number | null
+          source?: string
+          sugar_g?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meal_item_prices: {
         Row: {
           created_at: string
@@ -366,75 +464,62 @@ export type Database = {
       }
       meal_items: {
         Row: {
-          carbs_per_100g: number | null
           category: string | null
           created_at: string
-          fat_per_100g: number | null
-          fdc_description: string | null
-          fdc_id: number | null
+          food_id: string | null
           id: string
-          kcal_is_derived: boolean
-          kcal_per_100g: number | null
           keeps_days: number | null
           name: string
           notes: string | null
-          nutrition_updated_at: string | null
           pack: string | null
           price_cents: number | null
           price_includes_markup: boolean
           priced_on: string | null
-          protein_per_100g: number | null
           store: string | null
           tier: string
           updated_at: string
         }
         Insert: {
-          carbs_per_100g?: number | null
           category?: string | null
           created_at?: string
-          fat_per_100g?: number | null
-          fdc_description?: string | null
-          fdc_id?: number | null
+          food_id?: string | null
           id?: string
-          kcal_is_derived?: boolean
-          kcal_per_100g?: number | null
           keeps_days?: number | null
           name: string
           notes?: string | null
-          nutrition_updated_at?: string | null
           pack?: string | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
-          protein_per_100g?: number | null
           store?: string | null
           tier?: string
           updated_at?: string
         }
         Update: {
-          carbs_per_100g?: number | null
           category?: string | null
           created_at?: string
-          fat_per_100g?: number | null
-          fdc_description?: string | null
-          fdc_id?: number | null
+          food_id?: string | null
           id?: string
-          kcal_is_derived?: boolean
-          kcal_per_100g?: number | null
           keeps_days?: number | null
           name?: string
           notes?: string | null
-          nutrition_updated_at?: string | null
           pack?: string | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
-          protein_per_100g?: number | null
           store?: string | null
           tier?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "meal_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "meal_foods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       meal_plan_days: {
         Row: {
@@ -1898,6 +1983,10 @@ export type Database = {
       }
       fill_meal_plan_days: { Args: { p_plan: string }; Returns: number }
       generate_meal_plan_list: { Args: { p_plan: string }; Returns: Json }
+      meal_food_search: {
+        Args: { p_category: string; p_description: string }
+        Returns: unknown
+      }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number
@@ -1909,6 +1998,28 @@ export type Database = {
           p_plan: string
         }
         Returns: Json
+      }
+      search_meal_foods: {
+        Args: { p_limit?: number; p_query: string }
+        Returns: {
+          carbs_g: number
+          category: string
+          dataset: string
+          description: string
+          fat_g: number
+          fiber_g: number
+          id: string
+          kcal: number
+          kcal_is_derived: boolean
+          portion_count: number
+          portion_grams: number
+          portion_label: string
+          protein_g: number
+          saturated_fat_g: number
+          sodium_mg: number
+          source: string
+          sugar_g: number
+        }[]
       }
       send_trip_route_proposal: {
         Args: {
