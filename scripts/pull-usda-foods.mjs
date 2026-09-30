@@ -74,7 +74,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * indistinguishable from slow. Over ~450 requests a stall is not an edge case,
  * it is a matter of time.
  */
-const REQUEST_TIMEOUT = 15_000;
+const REQUEST_TIMEOUT = 45_000;
 
 /**
  * One request, retried on a rate limit, a stall or a server error.
@@ -120,18 +120,10 @@ async function ask(path, init) {
       if (attempt === 4) break;
 
       /*
-       * The FIRST retry is immediate, and that is the whole point.
-       *
-       * These stalls are not the API being busy, they are a dead socket. fetch
-       * keeps connections alive; against a remote database the gap between two
-       * FDC calls is long enough that the far end drops the connection, and the
-       * next request goes out on a corpse and hangs until the timeout. A fresh
-       * connection works instantly -- which is exactly what a production run
-       * showed: the 5s retry failed too and the 10s one succeeded, because what
-       * fixed it was the third connection, never the waiting.
-       *
-       * So: retry at once, and only start backing off if that also fails, which
-       * is when it might really be the far end.
+       * The first retry is immediate; the backoff only starts if that fails
+       * too. A genuinely busy API wants waiting, but most failures here are a
+       * single oversized response (see foodsByIds), and for those the answer is
+       * a smaller request rather than a longer wait.
        */
       const wait = attempt === 0 ? 0 : 2 ** (attempt - 1) * 5;
       const why = exc.name === "TimeoutError" ? `no answer in ${REQUEST_TIMEOUT / 1000}s` : exc.message;
@@ -164,13 +156,37 @@ async function idsIn(dataset) {
   return ids;
 }
 
-/** Full records, the 20 at a time the endpoint allows. */
+/**
+ * Full records, up to the 20 at a time the endpoint allows -- splitting the
+ * batch whenever it proves too slow to fetch whole.
+ *
+ * WHY SPLITTING AND NOT A BIGGER TIMEOUT. FDC records vary wildly in size. A
+ * typical batch of 20 is 0.56 MB and answers in 1.9s; the twenty largest in the
+ * database come to 5.57 MB and take 26.7s. There is no timeout that is both
+ * tight enough to catch a real stall and loose enough for those, and guessing
+ * one is what left the same twenty foods unimported on every run -- they were
+ * marginal at 30s and hopeless at 15.
+ *
+ * Halving adapts to the payload instead. A fat batch costs one wasted attempt
+ * and then goes through in pieces; a normal one never notices this exists.
+ */
 async function foodsByIds(ids) {
-  return ask("/foods", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ fdcIds: ids, format: "full" }),
-  });
+  try {
+    return await ask("/foods", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ fdcIds: ids, format: "full" }),
+    });
+  } catch (exc) {
+    // One id that will not come down is a real failure, not a fat batch.
+    if (ids.length === 1) throw exc;
+
+    const half = Math.ceil(ids.length / 2);
+    console.log(`\n    a batch of ${ids.length} would not come down; splitting`);
+    const head = await foodsByIds(ids.slice(0, half));
+    const tail = await foodsByIds(ids.slice(half));
+    return [...head, ...tail];
+  }
 }
 
 /* ------------------------------------------------------------------ *
