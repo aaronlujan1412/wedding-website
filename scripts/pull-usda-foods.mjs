@@ -74,7 +74,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
  * indistinguishable from slow. Over ~450 requests a stall is not an edge case,
  * it is a matter of time.
  */
-const REQUEST_TIMEOUT = 30_000;
+const REQUEST_TIMEOUT = 15_000;
 
 /**
  * One request, retried on a rate limit, a stall or a server error.
@@ -119,10 +119,24 @@ async function ask(path, init) {
       last = exc;
       if (attempt === 4) break;
 
-      const wait = 2 ** attempt * 5;
+      /*
+       * The FIRST retry is immediate, and that is the whole point.
+       *
+       * These stalls are not the API being busy, they are a dead socket. fetch
+       * keeps connections alive; against a remote database the gap between two
+       * FDC calls is long enough that the far end drops the connection, and the
+       * next request goes out on a corpse and hangs until the timeout. A fresh
+       * connection works instantly -- which is exactly what a production run
+       * showed: the 5s retry failed too and the 10s one succeeded, because what
+       * fixed it was the third connection, never the waiting.
+       *
+       * So: retry at once, and only start backing off if that also fails, which
+       * is when it might really be the far end.
+       */
+      const wait = attempt === 0 ? 0 : 2 ** (attempt - 1) * 5;
       const why = exc.name === "TimeoutError" ? `no answer in ${REQUEST_TIMEOUT / 1000}s` : exc.message;
-      console.log(`\n    ${why}; retrying in ${wait}s`);
-      await sleep(wait * 1000);
+      console.log(`\n    ${why}; ${wait ? `retrying in ${wait}s` : "reconnecting"}`);
+      if (wait) await sleep(wait * 1000);
     }
   }
 
