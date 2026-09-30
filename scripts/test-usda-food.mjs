@@ -99,12 +99,29 @@ const derived = readNutrients({
 check("no Energy row: kcal derived 4/9/4", near(derived.kcal, 20 * 4 + 10 * 9 + 5 * 4));
 check("derived kcal says so", derived.kcal_is_derived === true);
 
-// Pure fat still gets an answer: this is olive oil, which the last script
-// reported as 0 kcal.
-const oil = readNutrients({
-  foodNutrients: [{ nutrient: { number: "204", unitName: "G" }, amount: 100 }],
+// A PARTIAL macro set derives nothing. Foundation records dry beans with
+// protein and fat and no carbohydrate -- and carbohydrate is most of a bean --
+// so summing what was there gave 110 kcal against a real ~340. Thirty-three
+// foods were wrong that way, and every one looked measured.
+const partial = readNutrients({
+  foodNutrients: [
+    { nutrient: { number: "203", unitName: "G" }, amount: 24.4 },
+    { nutrient: { number: "204", unitName: "G" }, amount: 1.45 },
+  ],
 });
-check("fat alone still yields calories (olive oil, 900)", near(oil.kcal, 900));
+check("protein and fat without carbs derives nothing", partial.kcal === null);
+check("and is not marked derived", partial.kcal_is_derived === false);
+check("the macros that were there are still kept", near(partial.protein_g, 24.4));
+
+// An explicit zero is a measurement, not a gap: pure fat still derives.
+const oil = readNutrients({
+  foodNutrients: [
+    { nutrient: { number: "204", unitName: "G" }, amount: 100 },
+    { nutrient: { number: "203", unitName: "G" }, amount: 0 },
+    { nutrient: { number: "205", unitName: "G" }, amount: 0 },
+  ],
+});
+check("a complete set with zeroes still derives (olive oil, 900)", near(oil.kcal, 900));
 
 // Nothing to read at all must be null, NOT a confident zero.
 const empty = readNutrients({ foodNutrients: [] });
@@ -116,6 +133,50 @@ const sodiumOnly = readNutrients({
 });
 check("sodium without macros does not invent calories", sodiumOnly.kcal === null);
 check("sodium is still read", near(sodiumOnly.sodium_mg, 480));
+
+/* ---- negatives: the method showing its working ----------------------- */
+
+// Foundation reports carbohydrate "by difference" slightly below zero on seven
+// meats and fish. Real values, and the database rejects negatives outright --
+// unclamped, one of these took its whole batch of twenty down with it.
+const byDifference = readNutrients({
+  foodNutrients: [
+    { nutrient: { number: "205", unitName: "G" }, amount: -0.42825 },
+    { nutrient: { number: "203", unitName: "G" }, amount: 20.85 },
+    { nutrient: { number: "204", unitName: "G" }, amount: 0 },
+  ],
+});
+check("a small negative carb reads as zero", byDifference.carbs_g === 0);
+check("the other macros are untouched", near(byDifference.protein_g, 20.85));
+check(
+  "the clamp happens before Atwater, so kcal is not dragged below the protein",
+  near(byDifference.kcal, 20.85 * 4),
+);
+
+// Not an artifact of subtraction -- that is a parse problem, and a number
+// nobody should count.
+const wild = readNutrients({
+  foodNutrients: [
+    { nutrient: { number: "205", unitName: "G" }, amount: -40 },
+    { nutrient: { number: "203", unitName: "G" }, amount: 10 },
+    { nutrient: { number: "204", unitName: "G" }, amount: 2 },
+  ],
+});
+check("a large negative becomes null, not zero", wild.carbs_g === null);
+check(
+  "nulling a macro leaves the set incomplete, so nothing is derived",
+  wild.kcal === null,
+);
+
+check(
+  "a food whose only macro was nulled has no calories, not zero",
+  (() => {
+    const only = readNutrients({
+      foodNutrients: [{ nutrient: { number: "205", unitName: "G" }, amount: -99 }],
+    });
+    return only.carbs_g === null && only.kcal === null;
+  })(),
+);
 
 /* ---- portions: two datasets, two wordings ---------------------------- */
 

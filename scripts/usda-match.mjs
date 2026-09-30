@@ -68,9 +68,13 @@ const stem = (w) =>
  */
 const FORM = new Set(
   [
-    "leaves", "leaf", "skin", "white", "yolk", "juice", "flour", "powder",
+    "leaves", "leaf", "skin", "rind", "white", "yolk", "juice", "flour", "powder",
     "meatless", "concentrate", "dehydrated", "baby", "overripe", "unripe",
     "sprouted", "canned", "paste", "syrup", "extract", "buttermilk", "sauce",
+    // A dried apple is 243 kcal against a fresh one's 52 -- a different food
+    // by any measure that matters here. Deliberately NOT "peel": this stemmer
+    // maps "peeled" onto it too, and a peeled mandarin is just a mandarin.
+    "dried",
   ]
     // Through the same stemmer the descriptions go through, or they never
     // match: "meatless" reduces to "meatles", and a hand-written "meatless" in
@@ -103,6 +107,33 @@ const words = (s) =>
     .map(stem);
 
 /**
+ * "Without skin" does not mean skin.
+ *
+ * FDC negates constantly -- "Sweet potatoes, orange flesh, WITHOUT SKIN, raw",
+ * "Lemons, raw, WITHOUT PEEL" -- and taking the negated word at face value
+ * turns the best entry in the database into the worst. It cost sweet potatoes
+ * the correct match outright: "skin" is in FORM, the 0.3 penalty landed on the
+ * one raw entry, and a bag of frozen french fries won instead at 209 kcal
+ * against 86.
+ *
+ * Drops the negator and the single word it governs, which is how FDC writes
+ * them -- always one noun, never a phrase.
+ */
+const NEGATORS = new Set(["without", "excluding"]);
+
+function dropNegated(said) {
+  const out = [];
+  for (let i = 0; i < said.length; i += 1) {
+    if (NEGATORS.has(said[i])) {
+      i += 1; // and the word it negates
+      continue;
+    }
+    out.push(said[i]);
+  }
+  return out;
+}
+
+/**
  * How well a FDC description answers a shopping-list name.
  *
  * Scored on the SHOPPING name's words, not the description's: FDC descriptions
@@ -118,7 +149,11 @@ const words = (s) =>
  */
 function score(itemName, description) {
   const want = words(queryFor(itemName));
-  const have = new Set(words(description));
+  // One cleaned list, used for both the membership test and the ordering
+  // below -- the description used to be tokenised twice, which was two places
+  // for a rule like negation to be applied to only one of them.
+  const said = dropNegated(words(description));
+  const have = new Set(said);
   if (!want.length) return 0;
 
   const core = want.filter((w) => !PACKAGING.has(w) && !SOFT.has(w));
@@ -136,7 +171,6 @@ function score(itemName, description) {
    * correct match, the other ricotta being offered as milk. The second term
    * separates them: feta is in the item's name and ricotta is not.
    */
-  const said = words(description);
   const identity = said.slice(0, 2);
   const penalty = identity.filter((w) => !want.includes(w)).length * 0.15;
 
@@ -149,4 +183,54 @@ function score(itemName, description) {
 
 
 
-export { queryFor, score, stem, words, PACKAGING, SOFT };
+
+/**
+ * Words in a description that the shopping name never asked for.
+ *
+ * The tiebreak. Scores tie constantly -- "Sweet potato, raw, unprepared" and
+ * "Sweet Potatoes, french fried, crosscut, frozen, unprepared" both answer
+ * "Sweet potatoes" perfectly on every word that was typed -- and without a
+ * second key the winner is whichever row Postgres happened to return first.
+ * Fewer unasked-for qualifiers is the better answer nearly every time.
+ */
+function extraWords(itemName, description) {
+  const want = words(queryFor(itemName));
+  return words(description).filter((w) => !want.includes(w)).length;
+}
+
+/**
+ * A PACK YOU BUY IS RAW.
+ *
+ * Domain knowledge the general scorer has no business carrying, which is why
+ * this is a separate function rather than more weight inside `score`. A price
+ * book row is a thing in a shop: dry quinoa, not cooked quinoa; a rasher of
+ * bacon, not a bacon-and-beef snack stick. FDC carries both, they score
+ * identically against a one-word shopping name, and the difference is 368 kcal
+ * against 120.
+ *
+ * That gap is the reason this exists. A wrong link here does not look wrong --
+ * it looks like nutrition.
+ */
+const PREPARED = new Set(
+  ["cooked", "fried", "baked", "roasted", "boiled", "stewed", "grilled",
+   "prepared", "dip", "sticks", "snack", "breaded"].map(stem),
+);
+
+const RAW = new Set(["raw", "uncooked", "unprepared"].map(stem));
+
+function packScore(itemName, description) {
+  const base = score(itemName, description);
+  if (!base) return 0;
+
+  const want = words(queryFor(itemName));
+  const said = words(description);
+
+  // Only when the shopping name did not ask for it. Somebody who writes
+  // "rotisserie chicken" means the cooked one.
+  const prepared = said.filter((w) => PREPARED.has(w) && !want.includes(w)).length * 0.1;
+  const raw = said.some((w) => RAW.has(w)) ? 0.05 : 0;
+
+  return Math.max(0, Math.min(1, base - prepared + raw));
+}
+
+export { queryFor, score, packScore, extraWords, dropNegated, stem, words, PACKAGING, SOFT };

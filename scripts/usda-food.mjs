@@ -111,20 +111,28 @@ function readNutrients(food) {
 
   /*
    * No Energy row at all, which is ordinary for Foundation Foods. Atwater
-   * (4/9/4) reconstructs it to within a couple of percent.
+   * (4/9/4) reconstructs it to within a couple of percent -- but ONLY from a
+   * complete set. All three, or no answer.
    *
-   * Only from macros that are ACTUALLY THERE. Summing three absent numbers
-   * gives a confident 0 kcal, which is how olive oil -- pure fat, 884 kcal --
-   * came back as nothing at all last time. No macros means no answer, said as
-   * null rather than as zero.
+   * WHY ALL THREE. A missing macro is not a zero, and treating it as one does
+   * not produce an approximation, it produces a floor wearing an
+   * approximation's clothes. Foundation records "Beans, Dry, Black (0%
+   * moisture)" with protein and fat and no carbohydrate, and carbohydrate is
+   * most of a bean: summing what was there gave 110 kcal against a real ~340.
+   * Watermelon flesh, recorded with protein alone, came out at 3.5 kcal.
+   * Thirty-three foods were wrong this way, and every one of them looked
+   * measured.
+   *
+   * Null is the honest answer, and the pages already draw it as "no calorie
+   * figure" rather than as zero -- which is the older half of this same bug,
+   * when olive oil summed three absent macros and reported nothing at all.
    */
   const macros = ["protein_g", "fat_g", "carbs_g"];
-  if (!macros.some((m) => out[m] !== undefined && out[m] !== null)) {
+  if (!macros.every((m) => out[m] !== undefined && out[m] !== null)) {
     return { ...out, kcal: null, kcal_is_derived: false };
   }
 
-  const kcal =
-    (out.protein_g ?? 0) * 4 + (out.fat_g ?? 0) * 9 + (out.carbs_g ?? 0) * 4;
+  const kcal = out.protein_g * 4 + out.fat_g * 9 + out.carbs_g * 4;
   return { ...out, kcal: Math.round(kcal * 100) / 100, kcal_is_derived: true };
 }
 

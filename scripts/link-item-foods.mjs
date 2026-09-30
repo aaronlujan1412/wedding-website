@@ -30,7 +30,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { assertSafeTarget, target } from "./db-target.mjs";
-import { score } from "./usda-match.mjs";
+import { extraWords, packScore } from "./usda-match.mjs";
 
 const args = process.argv.slice(2);
 const flags = new Set(args.filter((a) => a.startsWith("--")));
@@ -102,17 +102,55 @@ for (const item of items) {
     continue;
   }
 
-  // The tested scorer for precision -- it is the thing that knows a part of a
-  // food is not the food: chicken SKIN is not chicken, quinoa flour is not
-  // quinoa, meatless bacon is not bacon.
-  let best = null;
-  for (const food of candidates ?? []) {
-    const s = score(item.name, food.description);
-    // A tie goes to Foundation: measured rather than carried over from the
-    // older SR Legacy tables. Same rule the old script used.
-    const preferred = food.dataset === "Foundation" ? 0.02 : 0;
-    if (!best || s + preferred > best.score) best = { food, score: s + preferred };
-  }
+  /*
+   * The tested scorer for precision. It knows a part of a food is not the food
+   * (chicken SKIN, quinoa FLOUR, MEATLESS bacon) and, as packScore, that a pack
+   * you buy is raw -- dry quinoa at 368 kcal rather than cooked at 120.
+   *
+   * Then a real tiebreak, because scores tie constantly: every word of "Sweet
+   * potatoes" is matched perfectly by both the raw entry and the frozen
+   * french-fried one. Without a second key the winner was whichever row
+   * Postgres returned first.
+   */
+  const TIE = 0.02;
+  const bucket = (value) => Math.round(value / TIE);
+
+  const ranked = (candidates ?? [])
+    .map((food) => ({
+      food,
+      /*
+       * A tie goes to Foundation: measured, rather than carried over from the
+       * older SR Legacy tables -- but NOT when the Foundation row has no
+       * calorie figure at all. "Prefer the measured one" says nothing about a
+       * row with nothing measured, and the nudge was actively picking the
+       * worse answer: watermelon went to Foundation's "flesh only" entry,
+       * which reports protein and no energy, over SR Legacy's plain
+       * "Watermelon, raw" at 30 kcal.
+       */
+      score:
+        packScore(item.name, food.description) +
+        (food.dataset === "Foundation" && food.kcal !== null ? 0.02 : 0),
+      extra: extraWords(item.name, food.description),
+      // A food with no calories cannot answer the question this is asked for.
+      hasKcal: food.kcal !== null ? 0 : 1,
+    }))
+    .sort(
+      (a, b) =>
+        /*
+         * Quantised so the comparator stays TRANSITIVE. Comparing raw scores
+         * with a tolerance -- "within 0.02 counts as equal" -- is exactly the
+         * inconsistent comparator this repo has been bitten by before: V8 and
+         * SpiderMonkey order such ties differently. A linker that proposes a
+         * different food depending on which engine ran it is worse than one
+         * that is merely wrong, because it is wrong irreproducibly.
+         */
+        bucket(b.score) - bucket(a.score) ||
+        a.hasKcal - b.hasKcal ||
+        a.extra - b.extra ||
+        a.food.description.localeCompare(b.food.description),
+    );
+
+  const best = ranked[0] ?? null;
 
   if (!best || best.score < 0.5) {
     none.push(item);

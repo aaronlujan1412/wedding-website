@@ -7,7 +7,7 @@
  *
  *   node scripts/test-usda-match.mjs
  */
-import { queryFor, score } from "./usda-match.mjs";
+import { dropNegated, extraWords, packScore, queryFor, score, words } from "./usda-match.mjs";
 
 const CONFIDENT = 0.8;
 let failed = 0;
@@ -82,6 +82,68 @@ for (const [item, desc] of [
   const s = score(item, desc);
   check(`${item} -> "${desc}" is confident (${s.toFixed(2)})`, s >= CONFIDENT);
 }
+
+
+
+/* ---- the price book: a pack you buy is raw -------------------------- */
+
+// These tie EXACTLY under `score` -- every word typed is matched by both -- so
+// before packScore the winner was whichever row Postgres returned first. The
+// wrong answer in each pair is the one a person would never buy in a shop, and
+// the calorie gap is 2x to 3x.
+for (const [item, right, wrong] of [
+  ["Quinoa", "Quinoa, uncooked", "Quinoa, cooked"],
+  ["Bacon", "Bacon, pork, cured, raw", "Bacon and beef sticks"],
+  ["Sweet potatoes", "Sweet potato, raw, unprepared", "Sweet Potatoes, french fried, crosscut, frozen, unprepared"],
+  ["Chicken breast", "Chicken, breast, raw", "Chicken, breast, fried, breaded"],
+]) {
+  const a = packScore(item, right);
+  const b = packScore(item, wrong);
+  check(`${item}: "${right.slice(0, 26)}" beats "${wrong.slice(0, 26)}" (${a.toFixed(2)} v ${b.toFixed(2)})`, a > b);
+}
+
+// Asking for it means you get it: rotisserie chicken IS the cooked one.
+check(
+  "a preparation the shopping name asked for is not penalised",
+  packScore("Rotisserie chicken", "Chicken, rotisserie, cooked") >=
+    packScore("Rotisserie chicken", "Chicken, broiler, raw"),
+);
+
+// The tiebreak, on its own terms.
+check(
+  "fewer unasked-for words wins a tie",
+  extraWords("Sweet potatoes", "Sweet potato, raw, unprepared") <
+    extraWords("Sweet potatoes", "Sweet Potatoes, french fried, crosscut, frozen, unprepared"),
+);
+
+// packScore must not quietly promote something score already rejected.
+check(
+  "a food that is not the food stays rejected",
+  packScore("Bacon", "Bacon, meatless") < CONFIDENT,
+);
+
+/* ---- negation: "without skin" is not skin --------------------------- */
+
+// This one cost sweet potatoes the correct match outright. "skin" is in FORM,
+// the 0.3 penalty landed on the only raw entry in the database, and a bag of
+// frozen french fries won at 209 kcal against 86.
+check(
+  "sweet potatoes: the raw entry beats the french fries",
+  packScore("Sweet potatoes", "Sweet potatoes, orange flesh, without skin, raw") >
+    packScore("Sweet potatoes", "Sweet Potatoes, french fried, crosscut, frozen, unprepared"),
+);
+check(
+  "a negated FORM word is not penalised",
+  score("Sweet potatoes", "Sweet potatoes, orange flesh, without skin, raw") >= CONFIDENT,
+);
+check(
+  "the negator itself is dropped too",
+  !dropNegated(words("Lemons, raw, without peel")).includes("without"),
+);
+check(
+  "an un-negated part of a food is still penalised",
+  score("Rotisserie chicken", "Chicken, broiler, rotisserie, BBQ, skin") < CONFIDENT,
+);
 
 console.log(failed ? `\n${failed} failed.` : "\nAll good.");
 process.exit(failed ? 1 : 0);
