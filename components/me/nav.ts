@@ -9,12 +9,14 @@
 export type MeNavItem = {
   label: string;
   href: string;
+  /** Entries only an owner sees. The rest are public or shared. */
+  ownerOnly?: boolean;
 };
 
 export const ME_NAV: MeNavItem[] = [
   { label: "Index", href: "/me" },
   { label: "About", href: "/me/about" },
-  { label: "Second Brain", href: "/me/brain" },
+  { label: "Second Brain", href: "/me/brain", ownerOnly: true },
   { label: "Meals", href: "/me/meals" },
 ];
 
@@ -51,4 +53,16 @@ export function toolFor(pathname: string): string | null {
       (root) => pathname === root || pathname.startsWith(`${root}/`),
     ) ?? null
   );
+}
+
+/**
+ * The tabs a given viewer should be offered.
+ *
+ * A `meals` account is not shown the brain at all rather than shown it and
+ * bounced: a tab that only ever leads to a write-up of something you cannot
+ * open is worse than no tab, and listing what somebody is missing is its own
+ * small disclosure.
+ */
+export function navFor(role: "owner" | "meals" | null): MeNavItem[] {
+  return ME_NAV.filter((item) => !item.ownerOnly || role === "owner");
 }

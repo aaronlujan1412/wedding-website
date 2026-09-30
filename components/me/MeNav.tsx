@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ME_NAV } from "@/components/me/nav";
+import { navFor } from "@/components/me/nav";
 import { signOut } from "@/app/actions/auth";
 
 /**
@@ -16,7 +16,13 @@ import { signOut } from "@/app/actions/auth";
  * a page built entirely out of bevels the raised/sunk pair already means
  * available/engaged, and a second way of saying it would be one too many.
  */
-export function MeNav({ username }: { username: string | null }) {
+export function MeNav({
+  username,
+  role,
+}: {
+  username: string | null;
+  role: "owner" | "meals" | null;
+}) {
   const pathname = usePathname();
 
   const TAB =
@@ -27,7 +33,7 @@ export function MeNav({ username }: { username: string | null }) {
       aria-label="Site"
       className="flex flex-wrap items-center gap-1.5 sm:flex-nowrap"
     >
-      {ME_NAV.map((item) => {
+      {navFor(role).map((item) => {
         const active =
           item.href === "/me"
             ? pathname === "/me"

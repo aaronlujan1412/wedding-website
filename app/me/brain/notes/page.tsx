@@ -6,7 +6,7 @@ import { NoteList } from "@/components/me/NoteList";
 import { SearchBox } from "@/components/me/SearchBox";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { getTags, searchNotes } from "@/lib/brain-queries";
-import { currentUser } from "@/lib/site-user";
+import { currentOwner } from "@/lib/site-user";
 
 export const metadata: Metadata = {
   title: "Notes",
@@ -48,7 +48,7 @@ export default async function NotesPage({
 }: {
   searchParams: Promise<Params>;
 }) {
-  if (!(await currentUser())) redirect("/me/brain");
+  if (!(await currentOwner())) redirect("/me/brain");
 
   const params = await searchParams;
   const staged = params.staged === "1";

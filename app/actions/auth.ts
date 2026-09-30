@@ -18,8 +18,16 @@ import { supabase } from "@/lib/supabase";
 
 export type SignInState = { error: string | null };
 
-/** Where a sign-in with no usable `next` lands. */
-const HOME = "/me/brain";
+/**
+ * Where a sign-in with no usable `next` lands, by what the account can reach.
+ *
+ * A meals account sent to /me/brain gets the public write-up of a tool it
+ * cannot open, which reads as a broken sign-in rather than a boundary.
+ */
+const HOME: Record<string, string> = {
+  owner: "/me/brain",
+  meals: "/me/meals",
+};
 
 /**
  * One message for every failure.
@@ -54,7 +62,7 @@ export async function signIn(
 
   const { data: user } = await supabase
     .from("users")
-    .select("id, password_hash, token_version")
+    .select("id, password_hash, role, token_version")
     .eq("username", username)
     .maybeSingle();
 
@@ -96,7 +104,7 @@ export async function signIn(
     maxAge: SITE_SESSION_MAX_AGE,
   });
 
-  redirect(safeRedirectPath(formData.get("next"), HOME));
+  redirect(safeRedirectPath(formData.get("next"), HOME[user.role] ?? "/me"));
 }
 
 export async function signOut() {

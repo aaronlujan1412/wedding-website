@@ -1,7 +1,7 @@
 import "server-only";
 
 import { supabase } from "./supabase";
-import { currentUser } from "./site-user";
+import { currentOwner } from "./site-user";
 import type {
   Decision,
   InboxEntry,
@@ -74,7 +74,7 @@ export type BrainStats = {
 };
 
 export async function getBrainStats(): Promise<BrainStats | null> {
-  if (!(await currentUser())) return null;
+  if (!(await currentOwner())) return null;
 
   /*
    * Through RPCs rather than counted in JS. PostgREST caps a select at 1,000
@@ -102,7 +102,7 @@ export async function getBrainStats(): Promise<BrainStats | null> {
 }
 
 export async function getRecentNotes(limit = 8): Promise<NoteSummary[]> {
-  if (!(await currentUser())) return [];
+  if (!(await currentOwner())) return [];
 
   const { data, error } = await supabase
     .from("brain_notes")
@@ -154,7 +154,7 @@ export async function searchNotes({
   limit = 25,
   offset = 0,
 }: SearchOptions): Promise<SearchResult> {
-  if (!(await currentUser())) return { notes: [], total: 0 };
+  if (!(await currentOwner())) return { notes: [], total: 0 };
 
   const term = query?.trim();
 
@@ -211,7 +211,7 @@ export async function searchNotes({
 }
 
 export async function getNote(id: string): Promise<Note | null> {
-  if (!(await currentUser())) return null;
+  if (!(await currentOwner())) return null;
 
   const { data, error } = await supabase
     .from("brain_notes")
@@ -251,7 +251,7 @@ export async function getNote(id: string): Promise<Note | null> {
 export async function resolveLinks(
   titles: string[],
 ): Promise<Map<string, string>> {
-  if (!titles.length || !(await currentUser())) return new Map();
+  if (!titles.length || !(await currentOwner())) return new Map();
 
   const { data, error } = await supabase
     .from("brain_notes")
@@ -269,7 +269,7 @@ export async function resolveLinks(
 
 /** Every tag in use, commonest first — the browse page's filter list. */
 export async function getTags(limit = 40): Promise<{ tag: string; count: number }[]> {
-  if (!(await currentUser())) return [];
+  if (!(await currentOwner())) return [];
 
   // Also an RPC, and for the same reason as the bucket counts: unnesting 3,430
   // tag arrays through PostgREST would only ever see the first page of them.
@@ -289,7 +289,7 @@ export async function getTags(limit = 40): Promise<{ tag: string; count: number 
  * so the cost of that is nothing.
  */
 export async function getInbox(): Promise<InboxEntry[]> {
-  if (!(await currentUser())) return [];
+  if (!(await currentOwner())) return [];
 
   const [notes, decisions] = await Promise.all([
     supabase
@@ -327,7 +327,7 @@ export async function getInbox(): Promise<InboxEntry[]> {
 
 /** What has been decided lately, for the log under the queue. */
 export async function getDecisionLog(limit = 25): Promise<Decision[]> {
-  if (!(await currentUser())) return [];
+  if (!(await currentOwner())) return [];
 
   const { data, error } = await supabase
     .from("brain_decisions")
