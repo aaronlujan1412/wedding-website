@@ -44,7 +44,7 @@ export const TOOL_TABS: Record<string, MeNavItem[]> = {
     { label: "Prices", href: "/me/meals/prices" },
     { label: "Foods", href: "/me/meals/foods" },
     { label: "Leftovers", href: "/me/meals/leftovers" },
-    { label: "Setup", href: "/me/meals/settings" },
+    { label: "Plan", href: "/me/meals/settings" },
   ],
 };
 

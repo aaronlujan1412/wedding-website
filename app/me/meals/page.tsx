@@ -47,7 +47,7 @@ export default async function MealsPage() {
               href="/me/meals/settings"
               className="text-me-link underline underline-offset-2 hover:text-me-ink"
             >
-              Start one on Setup
+              Start one on Plan
             </Link>
             .
           </p>
@@ -80,13 +80,13 @@ export default async function MealsPage() {
           how long its food has been in the house.
         </p>
         {/* Placing dinners and building the list are planning, and planning
-            lives on Setup. This page is the quick view. */}
+            lives on Plan. This page is the quick view. */}
         <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
           <Link
             href="/me/meals/settings"
             className="text-me-link underline underline-offset-2 hover:text-me-ink"
           >
-            Change the month on Setup
+            Change the month on Plan
           </Link>
           {warnings.length ? (
             <>
@@ -100,7 +100,7 @@ export default async function MealsPage() {
 
       <Panel title="the month" bodyClassName="p-3">
         {/* Read-only here. Changing a month is a sit-down job and belongs on
-            Setup; this page is opened mid-week to find out what is for dinner,
+            Plan; this page is opened mid-week to find out what is for dinner,
             usually on a phone, where a stray tap should never rewrite the
             plan. The dish title links into cook mode instead. */}
         <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} mode="read" />

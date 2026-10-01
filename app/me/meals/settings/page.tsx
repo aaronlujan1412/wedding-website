@@ -9,7 +9,7 @@ import { FullWidth } from "@/components/me/WithSidebar";
 import { getPlan, getRecipes, getRules, getSettings } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
 
-export const metadata: Metadata = { title: "Setup", robots: { index: false, follow: false } };
+export const metadata: Metadata = { title: "Plan", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {

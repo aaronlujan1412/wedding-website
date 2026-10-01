@@ -19,7 +19,7 @@ import { DayEditor } from "@/components/me/DayEditor";
  * through to pink at the tail — because that distance, not the date, decides
  * whether a dinner works.
  *
- * TWO MODES, one grid. `plan` is the editable calendar on Setup, where a cell
+ * TWO MODES, one grid. `plan` is the editable calendar on Plan, where a cell
  * opens a dialog to set the dinner and say what kind of day it is. `read` is
  * This Month, where the dish is a link into cook mode and nothing can be
  * changed by a stray tap on a phone in a kitchen.
