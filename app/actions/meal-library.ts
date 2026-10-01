@@ -16,7 +16,7 @@ import { currentUser } from "@/lib/site-user";
 export type LibraryState = { error: string | null; note: string | null };
 
 const DENIED: LibraryState = { error: "Not signed in.", note: null };
-const ok = (note: string): LibraryState => ({ error: null, note });
+const ok = (note: string | null): LibraryState => ({ error: null, note });
 const fail = (error: string): LibraryState => ({ error, note: null });
 
 function refresh() {
@@ -32,6 +32,14 @@ function cents(raw: FormDataEntryValue | null): number | null {
   return Math.round(value * 100);
 }
 
+/** A weight in grams: any positive number, or null for "nobody has weighed it". */
+function grams(raw: FormDataEntryValue | null): number | null {
+  const value = String(raw ?? "").replace(/[,\s]/g, "");
+  if (!value) return null;
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.round(n * 100) / 100 : null;
+}
+
 function int(raw: FormDataEntryValue | null): number | null {
   const text = String(raw ?? "").trim();
   if (!text) return null;
@@ -40,6 +48,27 @@ function int(raw: FormDataEntryValue | null): number | null {
 }
 
 const text = (raw: FormDataEntryValue | null) => String(raw ?? "").trim() || null;
+
+/**
+ * "High Protein, quick , quick" -> ["high protein", "quick"].
+ *
+ * Lowercased and de-duplicated because tags are compared as written: "High
+ * Protein" and "high protein" would otherwise be two chips that look like one
+ * bug, and the chip rail would grow a near-duplicate every time somebody typed
+ * with the shift key down.
+ *
+ * Order is kept as typed rather than sorted — the chips are sorted at the point
+ * they are drawn, and a dish's own list reading back in the order somebody
+ * wrote it is less startling when they return to the form.
+ */
+function tags(raw: FormDataEntryValue | null): string[] {
+  const seen = new Set<string>();
+  for (const part of String(raw ?? "").split(",")) {
+    const tag = part.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40);
+    if (tag) seen.add(tag);
+  }
+  return [...seen];
+}
 
 /* ---------------------------------------------------------------- items -- */
 
@@ -65,6 +94,10 @@ export async function saveItem(
     category: text(formData.get("category")) ?? "other",
     tier: String(formData.get("tier") ?? "core"),
     keeps_days: int(formData.get("keeps_days")),
+    // Not int(): a pack can weigh 453.6 g, and rounding a weight to reuse an
+    // existing helper would quietly bias every cost-per-gram figure derived
+    // from it.
+    pack_grams: grams(formData.get("pack_grams")),
     price_cents: price,
     priced_on: price === null ? null : new Date().toISOString().slice(0, 10),
     notes: text(formData.get("notes")),
@@ -188,6 +221,7 @@ export async function saveRecipe(
     method: text(formData.get("method")),
     notes: text(formData.get("notes")),
     batch_friendly: formData.get("batch_friendly") === "on",
+    tags: tags(formData.get("tags")),
     updated_at: new Date().toISOString(),
   };
 
@@ -401,4 +435,98 @@ export async function setOrderDate(
   if (error) return fail(error.message);
   refresh();
   return ok("Delivery moved — rebuild the list.");
+}
+
+/**
+ * How much of an item a dish uses.
+ *
+ * Its own action rather than a trip through `addIngredient`, which upserts the
+ * whole link: filling in an amount from the leftovers page would otherwise
+ * quietly reset `optional` and overwrite the note explaining why the
+ * ingredient is there.
+ *
+ * This is the field the whole downstream depends on — leftovers, a dish's real
+ * macros, and a budget total that is a forecast rather than a floor — and it
+ * was recorded on two links out of a hundred and one.
+ */
+export async function setIngredientAmount(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const recipe_id = text(formData.get("recipe_id"));
+  const item_id = text(formData.get("item_id"));
+  if (!recipe_id || !item_id) return fail("No ingredient.");
+
+  const raw = String(formData.get("quantity") ?? "").trim();
+
+  // Clearing it is a real answer: "we thought we knew and we do not".
+  if (!raw) {
+    const { error } = await supabase
+      .from("meal_recipe_items")
+      .update({ quantity: null, unit: null })
+      .eq("recipe_id", recipe_id)
+      .eq("item_id", item_id);
+    if (error) return fail(error.message);
+    refresh();
+    return ok("Cleared.");
+  }
+
+  const quantity = Number(raw);
+  if (!Number.isFinite(quantity) || quantity <= 0) {
+    return fail("That amount doesn't read as a number.");
+  }
+
+  const { error } = await supabase
+    .from("meal_recipe_items")
+    .update({ quantity, unit: text(formData.get("unit")) })
+    .eq("recipe_id", recipe_id)
+    .eq("item_id", item_id);
+
+  if (error) return fail(error.message);
+  refresh();
+  return ok(null);
+}
+
+/**
+ * What kind of day this is.
+ *
+ * Toggles one type on or off rather than taking the whole list, because the
+ * control is a chip on a calendar cell and that is the gesture: the list is
+ * read back from the row so two quick taps cannot race into each other losing
+ * the first one's type.
+ */
+export async function toggleDayTag(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const day_id = text(formData.get("day_id"));
+  const raw = String(formData.get("tag") ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+  const tag = raw.slice(0, 40);
+  if (!day_id || !tag) return fail("Name the kind of day.");
+
+  const { data: day } = await supabase
+    .from("meal_plan_days")
+    .select("tags")
+    .eq("id", day_id)
+    .maybeSingle();
+
+  if (!day) return fail("No such day.");
+
+  const current: string[] = day.tags ?? [];
+  const tags = current.includes(tag)
+    ? current.filter((t) => t !== tag)
+    : [...current, tag];
+
+  const { error } = await supabase
+    .from("meal_plan_days")
+    .update({ tags })
+    .eq("id", day_id);
+
+  if (error) return fail(error.message);
+  refresh();
+  return ok(null);
 }

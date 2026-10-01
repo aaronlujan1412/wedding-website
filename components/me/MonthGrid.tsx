@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { freshness, type PlanDay } from "@/lib/meal-types";
-import { DinnerPicker } from "@/components/me/DinnerPicker";
+import { DayEditor } from "@/components/me/DayEditor";
 
 /**
  * The month, as a table.
@@ -7,24 +8,33 @@ import { DinnerPicker } from "@/components/me/DinnerPicker";
  * A forum was tables and a calendar is a table, so this is the skin's own
  * grammar rather than a concession to it.
  *
- * THE ONE IDEA ON THIS PAGE: a delivery day is `bevel-out` and every other day
- * is `bevel-in`. The two days the box arrives rise out of a grid of sunken
- * cells, and the eye reads the two supply waves before it reads a word. The
- * raised/sunk pair already means available/engaged everywhere else here; this
- * is the same pair meaning arrived/spending-down, so it needs no key and no new
- * colour.
+ * WHAT RISES OUT OF THE PAGE IS TODAY. It used to be the two delivery days,
+ * on the reasoning that the supply waves are what the plan turns on. True when
+ * you are building a month; wrong every other day of it, because the question
+ * you actually arrive with is "what are we eating tonight", and the answer was
+ * flat against thirty other flat cells. Today is raised now; a delivery keeps
+ * its gold and its label, which is plenty to find twice in a grid.
  *
- * The date then carries how far the day sits from its box — green on arrival
- * through to pink at the tail — because that distance, not the date, is the
- * thing that decides whether a dinner works. Everything else about a day is
- * text.
+ * The date still carries how far the day sits from its box — green on arrival
+ * through to pink at the tail — because that distance, not the date, decides
+ * whether a dinner works.
+ *
+ * TWO MODES, one grid. `plan` is the editable calendar on Plan, where a cell
+ * opens a dialog to set the dinner and say what kind of day it is. `read` is
+ * This Month, where the dish is a link into cook mode and nothing can be
+ * changed by a stray tap on a phone in a kitchen.
  */
 export function MonthGrid({
   days,
   dinnerOptions,
+  mode = "read",
+  dayTypes = [],
 }: {
   days: PlanDay[];
   dinnerOptions: { id: string; name: string }[];
+  mode?: "plan" | "read";
+  /** Types already in use this month, offered before typing a new one. */
+  dayTypes?: string[];
 }) {
   if (!days.length) {
     return (
@@ -44,8 +54,18 @@ export function MonthGrid({
   const weeks: (PlanDay | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
 
+  /*
+   * Today as the browser's own calendar date, not UTC. `toISOString()` would
+   * put a west-of-Greenwich evening on tomorrow's cell, which is exactly when
+   * somebody is looking at this page asking what is for dinner.
+   */
+  const now = new Date();
+  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
+    now.getDate(),
+  ).padStart(2, "0")}`;
+
   return (
-    <div className="rail-scroll overflow-x-auto">
+    <div className="rail-scroll relative overflow-x-auto">
       <table className="w-full min-w-[640px] border-separate border-spacing-1">
         <thead>
           <tr>
@@ -65,7 +85,14 @@ export function MonthGrid({
             <tr key={w}>
               {week.map((day, i) =>
                 day ? (
-                  <DayCell key={day.id} day={day} options={dinnerOptions} />
+                  <DayCell
+                    key={day.id}
+                    day={day}
+                    options={dinnerOptions}
+                    mode={mode}
+                    dayTypes={dayTypes}
+                    isToday={day.on_date === today}
+                  />
                 ) : (
                   <td key={`gap-${i}`} />
                 ),
@@ -81,9 +108,15 @@ export function MonthGrid({
 function DayCell({
   day,
   options,
+  mode,
+  dayTypes,
+  isToday,
 }: {
   day: PlanDay;
   options: { id: string; name: string }[];
+  mode: "plan" | "read";
+  dayTypes: string[];
+  isToday: boolean;
 }) {
   const arriving = day.delivery_ordinal !== null;
   const fresh = freshness(day.days_out);
@@ -91,15 +124,28 @@ function DayCell({
 
   return (
     <td
-      className={`w-[14.28%] align-top ${
-        arriving ? "bevel-out bg-me-bar" : "bevel-in bg-me-void"
-      } p-2`}
+      aria-current={isToday ? "date" : undefined}
+      className={`w-[14.28%] align-top p-2 ${
+        isToday
+          ? "bevel-out bg-me-bar"
+          : arriving
+            ? "bevel-in bg-me-panel"
+            : "bevel-in bg-me-void"
+      }`}
     >
       <p className="flex items-baseline justify-between gap-2">
-        <span className={`font-dot text-[15px] leading-none ${fresh.ink}`}>
+        <span
+          className={`font-dot text-[15px] leading-none ${
+            isToday ? "text-[var(--me-phosphor)]" : fresh.ink
+          }`}
+        >
           {dayOfMonth}
         </span>
-        {arriving ? (
+        {isToday ? (
+          <span className="font-dot text-[10px] leading-none text-[var(--me-phosphor)]">
+            today
+          </span>
+        ) : arriving ? (
           <span className="font-dot text-[10px] leading-none text-me-gold">
             order {day.delivery_ordinal}
           </span>
@@ -112,44 +158,85 @@ function DayCell({
         ) : null}
       </p>
 
-      <div className="mt-1.5">
-        <DinnerPicker
-          dayId={day.id}
-          current={day.dinner_recipe_id}
-          options={options}
-        />
-      </div>
-
-      {day.kid_here || day.prep_day ? (
-        <p className="mt-1 font-dot text-[10px] text-me-dim">
-          {[day.kid_here && "Daniel here", day.prep_day && "prep"]
-            .filter(Boolean)
-            .join(" · ")}
+      {/* A delivery that is also today loses its label to "today", so the gold
+          says it instead — the one thing a cell cannot afford is to stop
+          saying a box arrives. */}
+      {isToday && arriving ? (
+        <p className="font-dot text-[10px] leading-none text-me-gold">
+          order {day.delivery_ordinal} lands
         </p>
       ) : null}
+
+      <div className="mt-1.5">
+        {mode === "plan" ? (
+          <DayEditor day={day} options={options} dayTypes={dayTypes} />
+        ) : (
+          <ReadDay day={day} />
+        )}
+      </div>
     </td>
+  );
+}
+
+/**
+ * The dish, on a page you are reading rather than editing.
+ *
+ * The title is a link into cook mode, because "what are we eating" and "how do
+ * I make it" are the same question ten minutes apart, and the answer to the
+ * second used to be three pages away.
+ */
+function ReadDay({ day }: { day: PlanDay }) {
+  return (
+    <>
+      {day.dinner && day.dinner_recipe_id ? (
+        <Link
+          href={`/me/meals/recipes/${day.dinner_recipe_id}`}
+          className="block text-[12px] leading-snug text-me-link underline underline-offset-2 hover:text-me-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        >
+          {day.dinner}
+        </Link>
+      ) : (
+        <p className="text-[12px] leading-snug text-me-dim">—</p>
+      )}
+
+      {day.tags.length ? (
+        <p className="mt-1 font-dot text-[10px] leading-snug text-me-dim">
+          {day.tags.join("  ")}
+        </p>
+      ) : null}
+    </>
   );
 }
 
 /**
  * What the colours on the dates mean.
  *
- * Shown once under the grid rather than as a tooltip on thirty cells. The
- * raised delivery days need no entry — a box that arrived is the only thing
- * standing up out of the page.
+ * Shown once under the grid rather than as a tooltip on thirty cells.
  */
 export function FreshnessKey() {
   const bands = [0, 1, 5, 10, 14];
   return (
     <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t-2 border-me-edge-lo pt-2.5 text-[11px] text-me-dim">
-      {bands.map((d) => {
-        const f = freshness(d);
+      <span className="flex items-center gap-1.5">
+        <span
+          aria-hidden
+          className="inline-block size-2.5 bg-[var(--me-phosphor)]"
+        />
+        today
+      </span>
+      <span className="flex items-center gap-1.5">
+        <span aria-hidden className="inline-block size-2.5 bg-me-panel" />
+        <span className="text-me-gold">order 1</span> a box lands
+      </span>
+      {/* The zero band is dropped: "arrival — box lands" said exactly what the
+          gold marker beside it already says, in the same key, two words
+          apart. */}
+      {bands.slice(1).map((n) => {
+        const f = freshness(n);
         return (
-          <span key={d} className="flex items-center gap-1.5">
-            <span aria-hidden className={`font-dot text-[13px] ${f.ink}`}>
-              {d === 0 ? "■" : `d+${d}`}
-            </span>
-            {f.label.replace(/^day \d+ — /, "")}
+          <span key={n} className={f.ink}>
+            d+{n}{" "}
+            <span className="text-me-dim">{f.label.replace(/^day \d+ — /, "")}</span>
           </span>
         );
       })}

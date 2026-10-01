@@ -29,6 +29,8 @@ export type Recipe = {
   notes: string | null;
   batch_friendly: boolean;
   ingredient_count: number;
+  /** Categories the household made up. A chip exists because a dish has it. */
+  tags: string[];
 };
 
 export type Item = {
@@ -44,7 +46,49 @@ export type Item = {
   /** Which food is in it, once somebody has said. Null is the normal start. */
   food_id: string | null;
   food_description: string | null;
+  /** Per 100 g, from the linked food. Null when nothing is linked. */
+  kcal_per_100g: number | null;
+  protein_per_100g: number | null;
+  /** What the whole pack weighs. Null until somebody weighs it. */
+  pack_grams: number | null;
+  /** How many packs share this row's food — the same thing in another size. */
+  sizes: number;
 };
+
+/**
+ * What a pack costs per 100 g, and per gram of protein.
+ *
+ * Both need three facts at once — a price, a weight, and a linked food — and
+ * any of the three may be missing, which is the normal state of a price book.
+ * Null rather than zero every time, because "we have not weighed it" and "it
+ * is free" are not the same claim, and only one of them is ever true.
+ */
+export function packValue(item: Item): {
+  centsPer100g: number | null;
+  centsPerProteinGram: number | null;
+} {
+  const { price_cents, pack_grams, protein_per_100g } = item;
+  if (!price_cents || !pack_grams || pack_grams <= 0) {
+    return { centsPer100g: null, centsPerProteinGram: null };
+  }
+
+  const centsPer100g = (price_cents / pack_grams) * 100;
+  const proteinGrams =
+    protein_per_100g === null ? null : (protein_per_100g * pack_grams) / 100;
+
+  return {
+    centsPer100g,
+    centsPerProteinGram:
+      proteinGrams && proteinGrams > 0 ? price_cents / proteinGrams : null,
+  };
+}
+
+/** '8.7¢' / '$1.79' — cents get the cent sign until they stop being pennies. */
+export function centsText(cents: number | null): string {
+  if (cents === null) return "—";
+  if (cents < 100) return `${Math.round(cents * 10) / 10}¢`;
+  return money(Math.round(cents));
+}
 
 export type PlanDay = {
   id: string;
@@ -53,8 +97,8 @@ export type PlanDay = {
   dinner_recipe_id: string | null;
   dinner_window: Window | null;
   lunch: string | null;
-  kid_here: boolean;
-  prep_day: boolean;
+  /** What kind of day it is: daniel, party, prep. Made up by the household. */
+  tags: string[];
   notes: string | null;
   /** Nights since the delivery that supplies this day. Null before the first. */
   days_out: number | null;
@@ -64,7 +108,14 @@ export type PlanDay = {
 
 export type PlanLine = {
   id: string;
+  /** Which tab it sits on. */
+  order_id: string;
   order_ordinal: number;
+  /**
+   * False when a person put it there by hand. Those survive regeneration and
+   * are the only ones that can be removed from the list directly.
+   */
+  generated: boolean;
   item_name: string;
   pack: string | null;
   /** Where it's bought. Null means nobody has said. */
@@ -81,6 +132,24 @@ export type PlanLine = {
   quantity_is_a_guess: boolean;
 };
 
+/**
+ * A tab on the shopping list.
+ *
+ * A delivery is a box that arrives on a date and supplies the days after it.
+ * An `extras` tab is one somebody made by hand to collect snacks and
+ * nice-to-haves — no date, because nothing delivers it.
+ */
+export type PlanOrder = {
+  id: string;
+  ordinal: number;
+  kind: "delivery" | "extras";
+  /** Null on an extras tab. */
+  delivers_on: string | null;
+  /** Set on an extras tab; a delivery names itself by ordinal and date. */
+  name: string | null;
+  store: string | null;
+};
+
 export type Plan = {
   id: string;
   name: string;
@@ -88,7 +157,7 @@ export type Plan = {
   ends_on: string;
   budget_cents: number;
   status: "draft" | "final";
-  orders: { id: string; ordinal: number; delivers_on: string; store: string | null }[];
+  orders: PlanOrder[];
   days: PlanDay[];
   lines: PlanLine[];
 };
@@ -158,8 +227,15 @@ export type Portion = { id: string; label: string; grams: number };
 export type FoodDetail = FoodHit & {
   notes: string | null;
   portions: Portion[];
-  /** Price book rows identified as this food. */
-  packs: { id: string; name: string; store: string | null; pack: string | null }[];
+  /** Price book rows identified as this food — the sizes it comes in. */
+  packs: {
+    id: string;
+    name: string;
+    store: string | null;
+    pack: string | null;
+    price_cents: number | null;
+    pack_grams: number | null;
+  }[];
 };
 
 /**

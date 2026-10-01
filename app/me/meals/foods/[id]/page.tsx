@@ -5,6 +5,8 @@ import { Panel } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { FoodPortion } from "@/components/me/FoodPortion";
 import { PortionEditor } from "@/components/me/PortionEditor";
+import { CustomFoodEditor } from "@/components/me/CustomFoodEditor";
+import { PackSizes } from "@/components/me/PackSizes";
 import { getFood } from "@/lib/food-queries";
 import { currentUser } from "@/lib/site-user";
 
@@ -49,6 +51,12 @@ export default async function FoodPage({
         </div>
       </Panel>
 
+      {food.source === "custom" ? (
+        <Panel title="the numbers">
+          <CustomFoodEditor food={food} />
+        </Panel>
+      ) : null}
+
       {/* Foundation and SR Legacy carry no portions for some foods, and every
           custom food starts with none. Saying so — and offering the fix in the
           same breath — beats a silent "grams" dropdown with one option. */}
@@ -61,24 +69,8 @@ export default async function FoodPage({
       </Panel>
 
       {food.packs.length ? (
-        <Panel title="what you buy it as">
-          <ul className="space-y-1.5 text-[13px]">
-            {food.packs.map((pack) => (
-              <li key={pack.id} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-me-ink">{pack.name}</span>
-                {pack.pack ? (
-                  <span className="text-[12px] text-me-dim">{pack.pack}</span>
-                ) : null}
-                {pack.store ? (
-                  <span className="font-dot text-[11px] text-me-dim">{pack.store}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
-            These price-book rows are identified as this food, so anything
-            costed from them can be counted nutritionally too.
-          </p>
+        <Panel title={food.packs.length > 1 ? "the sizes it comes in" : "what you buy it as"}>
+          <PackSizes packs={food.packs} />
         </Panel>
       ) : null}
     </FullWidth>

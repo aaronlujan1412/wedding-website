@@ -472,6 +472,7 @@ export type Database = {
           name: string
           notes: string | null
           pack: string | null
+          pack_grams: number | null
           price_cents: number | null
           price_includes_markup: boolean
           priced_on: string | null
@@ -488,6 +489,7 @@ export type Database = {
           name: string
           notes?: string | null
           pack?: string | null
+          pack_grams?: number | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
@@ -504,6 +506,7 @@ export type Database = {
           name?: string
           notes?: string | null
           pack?: string | null
+          pack_grams?: number | null
           price_cents?: number | null
           price_includes_markup?: boolean
           priced_on?: string | null
@@ -532,6 +535,7 @@ export type Database = {
           on_date: string
           plan_id: string
           prep_day: boolean
+          tags: string[]
         }
         Insert: {
           dinner_recipe_id?: string | null
@@ -543,6 +547,7 @@ export type Database = {
           on_date: string
           plan_id: string
           prep_day?: boolean
+          tags?: string[]
         }
         Update: {
           dinner_recipe_id?: string | null
@@ -554,6 +559,7 @@ export type Database = {
           on_date?: string
           plan_id?: string
           prep_day?: boolean
+          tags?: string[]
         }
         Relationships: [
           {
@@ -651,24 +657,30 @@ export type Database = {
       }
       meal_plan_orders: {
         Row: {
-          delivers_on: string
+          delivers_on: string | null
           id: string
+          kind: string
+          name: string | null
           notes: string | null
           ordinal: number
           plan_id: string
           store: string | null
         }
         Insert: {
-          delivers_on: string
+          delivers_on?: string | null
           id?: string
+          kind?: string
+          name?: string | null
           notes?: string | null
           ordinal: number
           plan_id: string
           store?: string | null
         }
         Update: {
-          delivers_on?: string
+          delivers_on?: string | null
           id?: string
+          kind?: string
+          name?: string | null
           notes?: string | null
           ordinal?: number
           plan_id?: string
@@ -776,6 +788,7 @@ export type Database = {
           protein_g: number | null
           retired: boolean
           serves: number | null
+          tags: string[]
           updated_at: string
           window_when: string
         }
@@ -792,6 +805,7 @@ export type Database = {
           protein_g?: number | null
           retired?: boolean
           serves?: number | null
+          tags?: string[]
           updated_at?: string
           window_when?: string
         }
@@ -808,6 +822,7 @@ export type Database = {
           protein_g?: number | null
           retired?: boolean
           serves?: number | null
+          tags?: string[]
           updated_at?: string
           window_when?: string
         }
@@ -1990,6 +2005,7 @@ export type Database = {
         Args: { p_category: string; p_description: string }
         Returns: unknown
       }
+      meal_tags_sane: { Args: { p_tags: string[] }; Returns: boolean }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number

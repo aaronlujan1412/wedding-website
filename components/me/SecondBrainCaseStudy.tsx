@@ -73,7 +73,7 @@ export function SecondBrainCaseStudy() {
       <Panel title="one search">
         {/* Its own scroller: the diagram is wider than a phone, and the page
             body must never scroll sideways. */}
-        <div className="bevel-in rail-scroll overflow-x-auto bg-[var(--me-screen)] p-3">
+        <div className="bevel-in rail-scroll relative overflow-x-auto bg-[var(--me-screen)] p-3">
           <pre className="w-max font-mono text-[11px] leading-relaxed text-[var(--me-phosphor)] sm:text-xs">
             {PIPELINE}
           </pre>

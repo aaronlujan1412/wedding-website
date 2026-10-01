@@ -2,6 +2,7 @@
 
 import { useFormStatus } from "react-dom";
 import type { LibraryState } from "@/app/actions/meal-library";
+import type { MealState } from "@/app/actions/meals";
 
 /**
  * The small parts every editing form on these pages is built from.
@@ -103,3 +104,49 @@ export function Says({ state }: { state: LibraryState }) {
 }
 
 export const EMPTY: LibraryState = { error: null, note: null };
+
+/**
+ * The same empty shape, for the plan actions.
+ *
+ * `MealState` and `LibraryState` are structurally identical, so TypeScript
+ * would accept `EMPTY` for both — named separately anyway, because the day one
+ * of them grows a field is the day a silent mismatch starts type-checking.
+ */
+export const EMPTY_MEAL: MealState = { error: null, note: null };
+
+/**
+ * A field with room for more than a line.
+ *
+ * Exists because `method` was a single-line input, and a single-line input is
+ * an instruction about what to write in it: twenty-five dishes ended up holding
+ * things like "Oven 425F" — real notes, but nothing anyone can cook from.
+ */
+export function Area({
+  label,
+  name,
+  defaultValue,
+  placeholder,
+  rows = 6,
+  hint,
+}: {
+  label: string;
+  name: string;
+  defaultValue?: string | null;
+  placeholder?: string;
+  rows?: number;
+  hint?: string;
+}) {
+  return (
+    <label className="flex w-full flex-col gap-1">
+      <span className="font-dot text-[11px] text-me-dim">{label}</span>
+      <textarea
+        name={name}
+        rows={rows}
+        defaultValue={defaultValue ?? ""}
+        placeholder={placeholder}
+        className={`${FIELD} resize-y leading-relaxed`}
+      />
+      {hint ? <span className="text-[11px] leading-snug text-me-dim">{hint}</span> : null}
+    </label>
+  );
+}

@@ -113,6 +113,17 @@ export default async function FoodsPage({
       )}
 
       <Panel title="add a food by hand">
+        <p className="mb-3 text-[12px] leading-relaxed text-me-dim">
+          For something you eat but don&apos;t shop for — a restaurant dish, a
+          takeaway. If it&apos;s a pack you buy, start from{" "}
+          <Link
+            href="/me/meals/prices"
+            className="text-me-link underline underline-offset-2 hover:text-me-ink"
+          >
+            the price book
+          </Link>{" "}
+          instead and it carries the name across for you.
+        </p>
         <CustomFoodForm />
       </Panel>
 
@@ -121,14 +132,14 @@ export default async function FoodsPage({
           <p className="text-[13px] leading-relaxed text-me-ink">
             {unidentified} {unidentified === 1 ? "pack has" : "packs have"} no
             food attached yet, so {unidentified === 1 ? "it counts" : "they count"}{" "}
-            toward the budget without counting toward anything nutritional.{" "}
+            toward the budget and toward nothing nutritional.{" "}
             <Link
               href="/me/meals/prices"
               className="text-me-link underline underline-offset-2 hover:text-me-ink"
             >
               Identify them on the price book
             </Link>
-            .
+            , where the &ldquo;no food yet&rdquo; chip hands you the list.
           </p>
         </Panel>
       ) : null}

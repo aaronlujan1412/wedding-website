@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useActionState, useState, useTransition } from "react";
 import Link from "next/link";
-import { findFoods, setPackFood } from "@/app/actions/foods";
-import { FIELD } from "@/components/me/form-bits";
+import { createFoodFromPack, findFoods, setPackFood } from "@/app/actions/foods";
+import { EMPTY, FIELD, Submit } from "@/components/me/form-bits";
 import type { FoodHit } from "@/lib/meal-types";
 
 /**
@@ -143,16 +143,7 @@ export function PackFood({
           ))}
         </ul>
       ) : (
-        <p className="text-[11px] leading-snug text-me-dim">
-          Nothing matched.{" "}
-          <Link
-            href="/me/meals/foods"
-            className="text-me-link underline underline-offset-2 hover:text-me-ink"
-          >
-            Add it as a custom food
-          </Link>
-          {" — branded things aren't in USDA's generic datasets."}
-        </p>
+        <MakeFood itemId={itemId} itemName={itemName} />
       )}
 
       {foodId ? (
@@ -165,6 +156,36 @@ export function PackFood({
           nobody knows — clear it
         </button>
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * The escape hatch, and the reason the price book and the food database stopped
+ * feeling like two filing cabinets.
+ *
+ * USDA's generic datasets carry no branded food, so searching them for "Babybel
+ * Light" will never work however the query is spelled. Rather than sending
+ * somebody to the other tab to retype a name they have already typed here, this
+ * makes the food from the pack, links the two, and lands on the one form where
+ * the label's numbers go.
+ */
+function MakeFood({ itemId, itemName }: { itemId: string; itemName: string }) {
+  const [state, make] = useActionState(createFoodFromPack, EMPTY);
+
+  return (
+    <div className="text-[11px] leading-snug text-me-dim">
+      <p>Nothing in USDA matches — branded food isn&apos;t in its generic datasets.</p>
+      <form action={make} className="mt-1">
+        <input type="hidden" name="item_id" value={itemId} />
+        <Submit
+          busy="making…"
+          className="rounded-xs font-dot text-me-link underline underline-offset-2 hover:text-me-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        >
+          Make &ldquo;{itemName}&rdquo; a food of its own
+        </Submit>
+      </form>
+      {state.error ? <p className="mt-1 text-me-live">{state.error}</p> : null}
     </div>
   );
 }

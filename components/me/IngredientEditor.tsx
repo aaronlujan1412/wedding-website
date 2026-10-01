@@ -43,7 +43,7 @@ export function IngredientEditor({
           get to that night with no food for it.
         </p>
       ) : (
-        <div className="rail-scroll overflow-x-auto">
+        <div className="rail-scroll relative overflow-x-auto">
           <table className="w-full min-w-[520px] text-[12px]">
             <thead>
               <tr className="text-me-dim">

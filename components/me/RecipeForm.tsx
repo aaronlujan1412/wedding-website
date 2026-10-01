@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { saveRecipe } from "@/app/actions/meal-library";
-import { Choice, EMPTY, Field, Says, Submit } from "@/components/me/form-bits";
+import { Area, Choice, EMPTY, Field, Says, Submit } from "@/components/me/form-bits";
 import type { RecipeDetail } from "@/lib/meal-queries";
 
 const KINDS = [
@@ -47,10 +47,31 @@ export function RecipeForm({ recipe }: { recipe?: RecipeDetail }) {
         <Field label="serves" name="serves" defaultValue={recipe?.serves} width="w-24" />
         <Field label="kcal" name="kcal" defaultValue={recipe?.kcal} width="w-24" />
         <Field label="protein (g)" name="protein_g" defaultValue={recipe?.protein_g} width="w-28" />
-        <Field label="method" name="method" defaultValue={recipe?.method} placeholder="Oven 425F" width="w-full sm:w-52" />
+
       </div>
 
       <Field label="note" name="notes" defaultValue={recipe?.notes} width="w-full" />
+
+      {/* Comma-separated rather than a tag widget: the whole list is four words
+          long, and a widget would be more to learn than to type. The server
+          lowercases and de-duplicates, so shift-key slips do not grow the chip
+          rail. */}
+      <Field
+        label="categories"
+        name="tags"
+        defaultValue={recipe?.tags?.join(", ")}
+        placeholder="high protein, quick, light"
+        width="w-full sm:w-96"
+      />
+
+      <Area
+        label="method"
+        name="method"
+        defaultValue={recipe?.method}
+        rows={7}
+        placeholder={"Oven to 425F.\nToss the chickpeas with the harissa.\nRoast 25 minutes, turning once."}
+        hint="One line per step — the cook view numbers them. A single line stays a note."
+      />
 
       <div className="flex flex-wrap items-center gap-4">
         <label className="flex items-center gap-2 text-[12px] text-me-ink">

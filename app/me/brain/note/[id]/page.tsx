@@ -97,7 +97,7 @@ export default async function NotePage({
               ),
               pre: ({ className, ...rest }) => (
                 <pre
-                  className={`${className ?? ""} bevel-in rail-scroll overflow-x-auto bg-[var(--me-screen)] p-3 font-mono text-[12px] text-[var(--me-phosphor)]`}
+                  className={`${className ?? ""} bevel-in rail-scroll relative overflow-x-auto bg-[var(--me-screen)] p-3 font-mono text-[12px] text-[var(--me-phosphor)]`}
                   {...rest}
                 />
               ),

@@ -32,6 +32,10 @@ export function ItemForm({ categories }: { categories: string[] }) {
         <Field label="pack" name="pack" placeholder="10 lb bag" width="w-32" />
         <Field label="price" name="price" placeholder="12.99" width="w-24" />
         <Field label="keeps (days)" name="keeps_days" placeholder="14" width="w-28" />
+        {/* Optional, and most rows will never have one. With the linked food it
+            gives cost per 100 g and per gram of protein; without it those
+            figures are simply not shown. */}
+        <Field label="pack weighs (g)" name="pack_grams" placeholder="2948" width="w-32" />
         <Choice label="category" name="category" options={categoryOptions} width="w-40" />
         <Choice label="counts as" name="tier" options={TIERS} defaultValue="core" width="w-56" />
         <Field label="store" name="store" placeholder="Costco" width="w-32" />
