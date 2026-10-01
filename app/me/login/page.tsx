@@ -26,7 +26,12 @@ export default async function BrainLoginPage({
   searchParams: Promise<{ next?: string }>;
 }) {
   const { next } = await searchParams;
-  const target = safeRedirectPath(next, "/me/brain");
+  /*
+   * /me, not /me/brain. The brain is owner-only, so a `meals` account landing
+   * on the old default was bounced straight back out of the page it had just
+   * signed in to reach. /me is the hub and every role can open it.
+   */
+  const target = safeRedirectPath(next, "/me");
 
   // Already signed in: no reason to show a form. Straight through.
   if (await currentUser()) redirect(target);

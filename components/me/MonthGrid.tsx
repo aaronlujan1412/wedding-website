@@ -1,3 +1,6 @@
+"use client";
+
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { freshness, type PlanDay } from "@/lib/meal-types";
 import { DayEditor } from "@/components/me/DayEditor";
@@ -36,6 +39,8 @@ export function MonthGrid({
   /** Types already in use this month, offered before typing a new one. */
   dayTypes?: string[];
 }) {
+  const today = useToday();
+
   if (!days.length) {
     return (
       <p className="text-[13px] text-me-dim">
@@ -53,16 +58,6 @@ export function MonthGrid({
 
   const weeks: (PlanDay | null)[][] = [];
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7));
-
-  /*
-   * Today as the browser's own calendar date, not UTC. `toISOString()` would
-   * put a west-of-Greenwich evening on tomorrow's cell, which is exactly when
-   * somebody is looking at this page asking what is for dinner.
-   */
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(
-    now.getDate(),
-  ).padStart(2, "0")}`;
 
   return (
     <div className="rail-scroll relative overflow-x-auto">
@@ -91,7 +86,7 @@ export function MonthGrid({
                     options={dinnerOptions}
                     mode={mode}
                     dayTypes={dayTypes}
-                    isToday={day.on_date === today}
+                    isToday={today !== null && day.on_date === today}
                   />
                 ) : (
                   <td key={`gap-${i}`} />
@@ -102,6 +97,48 @@ export function MonthGrid({
         </tbody>
       </table>
     </div>
+  );
+}
+
+/**
+ * Today, read where the clock actually is.
+ *
+ * THIS COMPONENT USED TO BE A SERVER COMPONENT, and `new Date()` in one runs on
+ * the server, whose clock is UTC. At 7:42 pm in Salt Lake City it is already
+ * tomorrow in UTC, so the raised cell sat on the wrong day for the last six
+ * hours of every day — which is exactly the stretch when somebody opens this
+ * asking what is for dinner. The old code computed local date PARTS, which was
+ * right, and ran them in the wrong place, which made it useless; I checked the
+ * expression in a browser console and never checked where it executed.
+ *
+ * `useSyncExternalStore` rather than state in an effect: it has a server
+ * snapshot built in, so the server and the first client render agree on null
+ * and no cell is marked until the browser has answered. No hydration mismatch
+ * and no setState in an effect, which this repo treats as an error.
+ *
+ * The subscription re-reads every minute so a page left open overnight moves
+ * the marker at midnight. The snapshot is a string, so an unchanged date is
+ * `Object.is`-equal and re-renders nothing.
+ */
+function localDate(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
+function subscribeToMidnight(onChange: () => void) {
+  const timer = setInterval(onChange, 60_000);
+  return () => clearInterval(timer);
+}
+
+function useToday(): string | null {
+  return useSyncExternalStore(
+    subscribeToMidnight,
+    localDate,
+    // The server has no idea what day it is where the reader is, and saying so
+    // beats guessing UTC.
+    () => null,
   );
 }
 

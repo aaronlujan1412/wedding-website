@@ -78,8 +78,12 @@ export function MeNav({
             </form>
           </>
         ) : (
+          /* Carries where you are, so signing in puts you back rather than
+             somewhere this component picked. Without it the login falls back
+             to a default, which for a `meals` account was the one tool it
+             cannot open. */
           <Link
-            href="/me/login"
+            href={`/me/login?next=${encodeURIComponent(pathname)}`}
             className={`${TAB} bevel-out bg-me-bar text-me-ink hover:bg-me-edge-hi`}
           >
             sign in
