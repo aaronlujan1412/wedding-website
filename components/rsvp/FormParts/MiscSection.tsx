@@ -4,6 +4,7 @@ import { isSongRequestOpen } from "@/lib/constants";
 
 type Props = {
   guestId: number;
+  groupId: number | null;
   songRequest: string | null;
   notes: string;
   onGuestUpdate: (guestId: number, updates: Partial<Guest>) => void;
@@ -11,13 +12,14 @@ type Props = {
 
 export default function MiscSection({
   guestId,
+  groupId,
   songRequest,
   notes,
   onGuestUpdate,
 }: Props) {
   return (
     <div className="flex flex-col gap-4">
-      {isSongRequestOpen ? (
+      {isSongRequestOpen(groupId) ? (
         <div className="flex flex-col gap-2">
           <label className="font-bold">
             Does this guest have any song requests? One per guest.
