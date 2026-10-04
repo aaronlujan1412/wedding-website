@@ -69,6 +69,7 @@ export default function IndividualGuestForm({
               songRequest={groupMember.song_request}
               notes={groupMember.notes ?? ""}
               guestId={groupMember.id}
+              groupId={groupMember.group_id}
               onGuestUpdate={onGuestUpdate}
             />
           </div>
