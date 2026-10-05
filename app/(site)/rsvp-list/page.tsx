@@ -11,6 +11,7 @@ import { LedgerHeading } from "@/components/rsvp-list/LedgerParts";
 import {
   summarize,
   type DietaryTally,
+  type GroupBundle,
   type RsvpGuest,
 } from "@/components/rsvp-list/summarize";
 
@@ -37,6 +38,31 @@ function TallyRow({ items }: { items: DietaryTally[] }) {
   );
 }
 
+function GroupList({
+  id,
+  title,
+  blurb,
+  groups,
+}: {
+  id: string;
+  title: string;
+  blurb: string;
+  groups: GroupBundle[];
+}) {
+  if (groups.length === 0) return null;
+  return (
+    <section aria-labelledby={id}>
+      <LedgerHeading id={id} title={title} count={groups.length} />
+      <p className="mb-5 font-garamond text-lg text-foreground/90">{blurb}</p>
+      <Accordion type="multiple" className="w-full border-t border-border">
+        {groups.map((group) => (
+          <GroupPanel key={group.key} group={group} />
+        ))}
+      </Accordion>
+    </section>
+  );
+}
+
 export default async function RsvpListPage() {
   const [{ data: guests, error: guestsError }, { data: groups }] =
     await Promise.all([getAllGuestRsvps(), getGuestGroupsForLedger()]);
@@ -60,6 +86,9 @@ export default async function RsvpListPage() {
 
   const ledger = summarize((guests ?? []) as RsvpGuest[], groups ?? []);
   const awaitingGroups = ledger.groups.filter((group) => group.awaiting > 0);
+  // One yes puts the whole group in Coming.
+  const comingGroups = ledger.groups.filter((group) => group.coming > 0);
+  const notComingGroups = ledger.groups.filter((group) => group.coming === 0);
   const daysOut = daysUntilWedding();
 
   return (
@@ -181,21 +210,18 @@ export default async function RsvpListPage() {
             </section>
           )}
 
-          <section aria-labelledby="every-group">
-            <LedgerHeading
-              id="every-group"
-              title="Every group"
-              count={ledger.groups.length}
-            />
-            <p className="mb-5 font-garamond text-lg text-foreground/90">
-              Groups still owing a reply come first.
-            </p>
-            <Accordion type="multiple" className="w-full border-t border-border">
-              {ledger.groups.map((group) => (
-                <GroupPanel key={group.key} group={group} />
-              ))}
-            </Accordion>
-          </section>
+          <GroupList
+            id="coming"
+            title="Coming"
+            blurb="Anyone in a group saying yes puts the group here."
+            groups={comingGroups}
+          />
+          <GroupList
+            id="not-coming"
+            title="Not coming"
+            blurb="Nobody in these groups said yes."
+            groups={notComingGroups}
+          />
         </div>
       )}
     </main>
