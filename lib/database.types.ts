@@ -34,6 +34,228 @@ export type Database = {
   }
   public: {
     Tables: {
+      board_cards: {
+        Row: {
+          body: string | null
+          column_id: string
+          created_at: string
+          id: string
+          labels: string[]
+          locked_at: string | null
+          position: number
+          project_id: string
+          review_at: string | null
+          review_kind: string | null
+          review_note: string | null
+          summary: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          column_id: string
+          created_at?: string
+          id?: string
+          labels?: string[]
+          locked_at?: string | null
+          position?: number
+          project_id: string
+          review_at?: string | null
+          review_kind?: string | null
+          review_note?: string | null
+          summary?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          column_id?: string
+          created_at?: string
+          id?: string
+          labels?: string[]
+          locked_at?: string | null
+          position?: number
+          project_id?: string
+          review_at?: string | null
+          review_kind?: string | null
+          review_note?: string | null
+          summary?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_cards_column_id_fkey"
+            columns: ["column_id"]
+            isOneToOne: false
+            referencedRelation: "board_columns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_cards_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "board_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_columns: {
+        Row: {
+          agent_can_enter: boolean
+          created_at: string
+          id: string
+          key: string
+          name: string
+          position: number
+          project_id: string
+        }
+        Insert: {
+          agent_can_enter?: boolean
+          created_at?: string
+          id?: string
+          key: string
+          name: string
+          position: number
+          project_id: string
+        }
+        Update: {
+          agent_can_enter?: boolean
+          created_at?: string
+          id?: string
+          key?: string
+          name?: string
+          position?: number
+          project_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_columns_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "board_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      board_cursor: {
+        Row: {
+          id: boolean
+          last_read_at: string
+        }
+        Insert: {
+          id?: boolean
+          last_read_at?: string
+        }
+        Update: {
+          id?: boolean
+          last_read_at?: string
+        }
+        Relationships: []
+      }
+      board_projects: {
+        Row: {
+          brain_tags: string[]
+          created_at: string
+          description: string | null
+          id: string
+          locked_at: string | null
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          brain_tags?: string[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          locked_at?: string | null
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          brain_tags?: string[]
+          created_at?: string
+          description?: string | null
+          id?: string
+          locked_at?: string | null
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      board_thread: {
+        Row: {
+          answer_option_id: string | null
+          answered_at: string | null
+          author: string
+          body: string
+          card_id: string | null
+          created_at: string
+          id: string
+          kind: string
+          options: Json | null
+          parent_id: string | null
+          project_id: string
+          status: string
+        }
+        Insert: {
+          answer_option_id?: string | null
+          answered_at?: string | null
+          author: string
+          body: string
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          options?: Json | null
+          parent_id?: string | null
+          project_id: string
+          status?: string
+        }
+        Update: {
+          answer_option_id?: string | null
+          answered_at?: string | null
+          author?: string
+          body?: string
+          card_id?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          options?: Json | null
+          parent_id?: string | null
+          project_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "board_thread_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "board_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_thread_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "board_thread"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "board_thread_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "board_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brain_decisions: {
         Row: {
           applied_at: string | null
@@ -1971,6 +2193,10 @@ export type Database = {
         Returns: number
       }
       adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
+      board_create_project: {
+        Args: { p_description?: string; p_name: string; p_slug: string }
+        Returns: string
+      }
       brain_bucket_counts: {
         Args: never
         Returns: {
