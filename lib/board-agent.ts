@@ -94,7 +94,11 @@ export function whyRefused(
     const target = columns.find((c) => c.id === targetColumnId);
     if (!target) return "No such column on this project.";
     if (!target.agent_can_enter) {
-      return `"${target.name}" is not a column I can move cards into. Set a review flag of kind "complete" instead, and Aaron moves it.`;
+      /* Deliberately does not prescribe a review kind. Any column can be
+         barred, not only the one that means finished, so "raise a flag saying
+         what you want" is the advice that stays true — naming "complete" here
+         was wrong the moment a second column was barred. */
+      return `"${target.name}" is a column only Aaron moves cards into. Raise a review flag saying what should happen to this card instead, and leave it where it is.`;
     }
   }
 

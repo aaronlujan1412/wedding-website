@@ -327,3 +327,178 @@ export async function addNote(
   refresh(cardId);
   return { data: true, error: null };
 }
+
+/* ---------------------------------------------------------------------------
+ * Project and column settings.
+ *
+ * Columns are the reason this exists rather than being seed-only: a column's
+ * `agent_can_enter` is what stops Claude marking work finished, and a safety
+ * flag that can only be set by whoever wrote the seed script is not a setting,
+ * it is an accident of history.
+ * ------------------------------------------------------------------------- */
+
+export async function updateProject(
+  id: string,
+  patch: { name?: string; description?: string; brain_tags?: string[] },
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  if (patch.name !== undefined && !patch.name.trim()) {
+    return { data: null, error: "A project needs a name." };
+  }
+
+  const { error } = await supabase
+    .from("board_projects")
+    .update({
+      ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+      ...(patch.description !== undefined
+        ? { description: patch.description.trim() || null }
+        : {}),
+      ...(patch.brain_tags !== undefined ? { brain_tags: patch.brain_tags } : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}
+
+export async function createColumn(
+  projectId: string,
+  name: string,
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const clean = name.trim();
+  if (!clean) return { data: null, error: "A column needs a name." };
+
+  const { data: last } = await supabase
+    .from("board_columns")
+    .select("position")
+    .eq("project_id", projectId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  // The key is only a stable handle for code that cares (the seed, a future
+  // import). The name is what anyone reads, and renaming must not break it.
+  const key = `${clean.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "column"}-${Date.now().toString(36)}`;
+
+  const { error } = await supabase.from("board_columns").insert({
+    project_id: projectId,
+    key,
+    name: clean,
+    position: (last?.position ?? -1) + 1,
+  });
+
+  if (error) return { data: null, error: error.message };
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}
+
+export async function updateColumn(
+  id: string,
+  patch: { name?: string; agent_can_enter?: boolean },
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  if (patch.name !== undefined && !patch.name.trim()) {
+    return { data: null, error: "A column needs a name." };
+  }
+
+  const { error } = await supabase
+    .from("board_columns")
+    .update({
+      ...(patch.name !== undefined ? { name: patch.name.trim() } : {}),
+      ...(patch.agent_can_enter !== undefined
+        ? { agent_can_enter: patch.agent_can_enter }
+        : {}),
+    })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}
+
+/** Swap a column with its neighbour. Positions are integers and contiguous. */
+export async function moveColumn(
+  id: string,
+  direction: "left" | "right",
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data: column } = await supabase
+    .from("board_columns")
+    .select("id, project_id, position")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (!column) return { data: null, error: "That column is gone." };
+
+  const { data: neighbour } = await supabase
+    .from("board_columns")
+    .select("id, position")
+    .eq("project_id", column.project_id)
+    [direction === "left" ? "lt" : "gt"]("position", column.position)
+    .order("position", { ascending: direction !== "left" })
+    .limit(1)
+    .maybeSingle();
+
+  // Already at the end. Not an error — the button simply had nothing to do.
+  if (!neighbour) return { data: true, error: null };
+
+  // Two writes with no transaction. A failure between them leaves two columns
+  // sharing a position, which sorts arbitrarily but loses nothing; there is no
+  // unique constraint on position for exactly that reason.
+  const { error: first } = await supabase
+    .from("board_columns")
+    .update({ position: column.position })
+    .eq("id", neighbour.id);
+  if (first) return { data: null, error: first.message };
+
+  const { error: second } = await supabase
+    .from("board_columns")
+    .update({ position: neighbour.position })
+    .eq("id", column.id);
+  if (second) return { data: null, error: second.message };
+
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}
+
+/**
+ * Retire a column.
+ *
+ * `board_cards.column_id` is `on delete restrict`, so Postgres refuses while
+ * anything is still in it. That is the right behaviour — a column quietly
+ * taking its cards with it is how work disappears — but the constraint name is
+ * not an explanation, so it is translated here.
+ */
+export async function deleteColumn(id: string): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { count } = await supabase
+    .from("board_cards")
+    .select("id", { count: "exact", head: true })
+    .eq("column_id", id);
+
+  if (count && count > 0) {
+    return {
+      data: null,
+      error: `Move the ${count} card${count === 1 ? "" : "s"} out of this column first — deleting it would take them with it.`,
+    };
+  }
+
+  const { error } = await supabase.from("board_columns").delete().eq("id", id);
+  if (error) return { data: null, error: error.message };
+
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}

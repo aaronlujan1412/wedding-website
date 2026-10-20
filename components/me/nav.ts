@@ -33,7 +33,19 @@ export const ME_NAV: MeNavItem[] = [
  * itself, and a row of tabs leading to redirects is a menu of doors that are
  * all locked.
  */
+/**
+ * Tools whose inner pages belong to the owner even though the tool's front
+ * page is public. The front page is a write-up of what the thing is; the pages
+ * under it are the thing, and a tab row leading to redirects is the menu of
+ * locked doors this file already refuses to draw elsewhere.
+ */
+export const OWNER_ONLY_TOOLS = ["/me/brain", "/me/board"];
+
 export const TOOL_TABS: Record<string, MeNavItem[]> = {
+  "/me/board": [
+    { label: "Board", href: "/me/board" },
+    { label: "Settings", href: "/me/board/settings" },
+  ],
   "/me/brain": [
     { label: "Hub", href: "/me/brain" },
     { label: "Notes", href: "/me/brain/notes" },

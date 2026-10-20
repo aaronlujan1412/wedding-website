@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TOOL_TABS, toolFor } from "@/components/me/nav";
+import { OWNER_ONLY_TOOLS, TOOL_TABS, toolFor } from "@/components/me/nav";
 
 /**
  * Where you can go inside the tool you are already in.
@@ -21,8 +21,8 @@ export function ToolTabs({ role }: { role: "owner" | "meals" | null }) {
   const root = toolFor(pathname);
 
   if (!role || !root) return null;
-  // The brain is the owner's; its sections are too.
-  if (root === "/me/brain" && role !== "owner") return null;
+  // Some tools have a public front page and owner-only pages under it.
+  if (OWNER_ONLY_TOOLS.includes(root) && role !== "owner") return null;
   const tabs = TOOL_TABS[root];
 
   return (
