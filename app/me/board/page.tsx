@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { Panel, Well } from "@/components/me/Panel";
 import { WithSidebar, FullWidth } from "@/components/me/WithSidebar";
 import { Board } from "@/components/me/board/Board";
-import { getBoard } from "@/lib/board-queries";
+import { ProjectBar } from "@/components/me/board/ProjectBar";
+import { getBoard, getCurrentProject, listProjects } from "@/lib/board-queries";
 import { currentOwner } from "@/lib/site-user";
 
 /**
@@ -24,7 +25,11 @@ export const dynamic = "force-dynamic";
 
 export default async function BoardPage() {
   const owner = await currentOwner();
-  const board = owner ? await getBoard() : null;
+  const project = owner ? await getCurrentProject() : null;
+  const [board, projects] = await Promise.all([
+    project ? getBoard(project) : null,
+    owner ? listProjects() : [],
+  ]);
 
   if (!board) {
     return (
@@ -60,6 +65,8 @@ export default async function BoardPage() {
 
   return (
     <FullWidth>
+      <ProjectBar current={board.project} projects={projects} />
+
       <Panel title={board.project.name} bodyClassName="p-2">
         {board.project.description ? (
           <p className="px-1 pb-2 text-[13px] text-me-dim">

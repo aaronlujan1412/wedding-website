@@ -5,7 +5,7 @@ import { Panel, Well } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { Thread } from "@/components/me/board/Thread";
 import { ReviewBanner, CardControls } from "@/components/me/board/CardActions";
-import { getCard, getThread, getProject } from "@/lib/board-queries";
+import { getCard, getThread, getProjectById } from "@/lib/board-queries";
 import { currentOwner } from "@/lib/site-user";
 import { supabase } from "@/lib/supabase";
 
@@ -48,7 +48,10 @@ export default async function CardPage({
 
   const [thread, project, { data: columns }] = await Promise.all([
     getThread(id),
-    getProject(),
+    // The card's own project. Reading "the current project" here would check
+    // the lock on whichever board was last opened, which is the wrong answer
+    // the moment there are two.
+    getProjectById(card.project_id),
     supabase
       .from("board_columns")
       .select("*")

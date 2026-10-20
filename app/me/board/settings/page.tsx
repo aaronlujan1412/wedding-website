@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { Panel } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { Settings } from "@/components/me/board/Settings";
-import { getProject } from "@/lib/board-queries";
+import { getCurrentProject } from "@/lib/board-queries";
 import { currentOwner } from "@/lib/site-user";
 import { supabase } from "@/lib/supabase";
 
@@ -23,7 +23,7 @@ export const dynamic = "force-dynamic";
 export default async function BoardSettingsPage() {
   if (!(await currentOwner())) redirect("/me/board");
 
-  const project = await getProject();
+  const project = await getCurrentProject();
   if (!project) notFound();
 
   const [{ data: columns }, { data: cards }] = await Promise.all([

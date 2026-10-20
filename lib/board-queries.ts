@@ -1,7 +1,9 @@
 import "server-only";
 
+import { cookies } from "next/headers";
 import { supabase } from "./supabase";
 import { currentOwner } from "./site-user";
+import { BOARD_COOKIE } from "./board-cookie";
 import type {
   BoardCard,
   BoardColumn,
@@ -23,18 +25,62 @@ import type {
  * is not the owner, never a throw: the page draws its public face instead.
  */
 
-/** The project a bare `/me/board` opens on. */
-export const DEFAULT_PROJECT_SLUG = "homelab";
-
-export async function getProject(
-  slug: string = DEFAULT_PROJECT_SLUG,
-): Promise<BoardProject | null> {
+export async function getProject(slug: string): Promise<BoardProject | null> {
   if (!(await currentOwner())) return null;
 
   const { data } = await supabase
     .from("board_projects")
     .select("*")
     .eq("slug", slug)
+    .maybeSingle();
+
+  return data ?? null;
+}
+
+/** The project a card belongs to, rather than whichever one is current. */
+export async function getProjectById(id: string): Promise<BoardProject | null> {
+  if (!(await currentOwner())) return null;
+
+  const { data } = await supabase
+    .from("board_projects")
+    .select("*")
+    .eq("id", id)
+    .maybeSingle();
+
+  return data ?? null;
+}
+
+/**
+ * Which project the board opens on.
+ *
+ * An explicit choice wins, then the one touched most recently. Same shape as
+ * `getCurrentTrip()`, and for the same reason: with one project a chooser is
+ * friction, and with several the last one you worked on is a better guess than
+ * whichever happens to sort first.
+ *
+ * An archived project is never resolved to automatically — reaching one takes
+ * asking for it by slug.
+ */
+export async function getCurrentProject(): Promise<BoardProject | null> {
+  if (!(await currentOwner())) return null;
+
+  const chosen = (await cookies()).get(BOARD_COOKIE)?.value;
+  if (chosen) {
+    const { data } = await supabase
+      .from("board_projects")
+      .select("*")
+      .eq("slug", chosen)
+      .eq("status", "active")
+      .maybeSingle();
+    if (data) return data;
+  }
+
+  const { data } = await supabase
+    .from("board_projects")
+    .select("*")
+    .eq("status", "active")
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   return data ?? null;
@@ -60,10 +106,8 @@ export async function listProjects(): Promise<BoardProject[]> {
  * at most, and the bucketing is cheaper than the round trips.
  */
 export async function getBoard(
-  slug: string = DEFAULT_PROJECT_SLUG,
+  project: BoardProject,
 ): Promise<BoardView | null> {
-  const project = await getProject(slug);
-  if (!project) return null;
 
   const [columnsResult, cardsResult] = await Promise.all([
     supabase

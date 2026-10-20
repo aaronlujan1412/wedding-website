@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+import { BOARD_COOKIE } from "@/lib/board-cookie";
 import { supabase } from "@/lib/supabase";
 import { currentOwner } from "@/lib/site-user";
 import { positionBetween } from "@/lib/board-types";
@@ -501,4 +503,91 @@ export async function deleteColumn(id: string): Promise<Result<true>> {
   refresh();
   revalidatePath("/me/board/settings");
   return { data: true, error: null };
+}
+
+/* ---------------------------------------------------------------------------
+ * Projects.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Which project the board opens on, remembered in a cookie.
+ *
+ * The same shape as the planner's trip cookie: a choice, not a route. Boards
+ * are switched between rarely and worked in for a long time, so carrying the
+ * project in every URL would be noise on every link for the sake of a
+ * shareable address nobody needs on a single-reader site.
+ */
+export async function chooseProject(slug: string): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data } = await supabase
+    .from("board_projects")
+    .select("slug")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!data) return { data: null, error: "No such project." };
+
+  (await cookies()).set(BOARD_COOKIE, data.slug, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 365,
+  });
+
+  refresh();
+  revalidatePath("/me/board/settings");
+  return { data: true, error: null };
+}
+
+/**
+ * A new project, with the starting set of columns.
+ *
+ * Goes through `board_create_project` rather than two inserts: a project with
+ * no columns cannot hold a card, and supabase-js has no transactions. Same
+ * reasoning as `adopt_trip_leg`.
+ */
+export async function createProject(
+  name: string,
+  description?: string,
+): Promise<Result<string>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const clean = name.trim();
+  if (!clean) return { data: null, error: "A project needs a name." };
+
+  const base =
+    clean
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") || "project";
+
+  // `settings` would shadow nothing today — the project lives in a cookie, not
+  // the path — but it reads as a reserved word and costs nothing to avoid.
+  const slug = base === "settings" ? "settings-board" : base;
+
+  const { data: existing } = await supabase
+    .from("board_projects")
+    .select("slug")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (existing) {
+    return { data: null, error: `There is already a project called "${clean}".` };
+  }
+
+  const { data, error } = await supabase.rpc("board_create_project", {
+    p_slug: slug,
+    p_name: clean,
+    p_description: description?.trim() || undefined,
+  });
+
+  if (error) return { data: null, error: error.message };
+
+  // Switch to it. Making a project and then having to go and find it is the
+  // kind of small rudeness that makes a tool feel unfinished.
+  await chooseProject(slug);
+
+  return { data: data as string, error: null };
 }
