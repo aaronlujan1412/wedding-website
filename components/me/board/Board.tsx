@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -339,8 +340,11 @@ function Column({
 }
 
 function SortableCard({ card }: { card: BoardCard }) {
+  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, disabled: Boolean(card.locked_at) });
+
+  const open = () => router.push(`/me/board/${card.id}`);
 
   return (
     <div
@@ -348,9 +352,20 @@ function SortableCard({ card }: { card: BoardCard }) {
       style={{ transform: CSS.Translate.toString(transform), transition }}
       {...attributes}
       {...listeners}
+      /* A card is both a handle and a link. The pointer sensor's 6px
+         activation constraint is what separates them: a press that does not
+         travel is a click, and anything further is a drag. dnd-kit's keyboard
+         sensor lifts with space, so Enter is free to open. */
+      onClick={open}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          open();
+        }
+      }}
       /* The original stays in place while the overlay travels; hiding it
          entirely makes the column collapse and reflow under the pointer. */
-      className={isDragging ? "opacity-35" : ""}
+      className={`cursor-pointer ${isDragging ? "opacity-35" : ""}`}
     >
       <CardFace card={card} />
     </div>

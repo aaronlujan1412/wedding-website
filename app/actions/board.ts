@@ -27,8 +27,9 @@ async function owner() {
   return currentOwner();
 }
 
-function refresh() {
+function refresh(cardId?: string) {
   revalidatePath("/me/board");
+  if (cardId) revalidatePath(`/me/board/${cardId}`);
 }
 
 export async function createCard(
@@ -213,5 +214,116 @@ export async function resolveReview(
 
   if (error) return { data: null, error: error.message };
   refresh();
+  return { data: true, error: null };
+}
+
+/**
+ * Answer one of Claude's questions.
+ *
+ * The answer is a thread row of its own pointing back at the question, rather
+ * than a field on it. Two reasons: the thread stays readable top to bottom as
+ * a conversation, and `/api/board/work` finds answers by querying for them
+ * instead of re-reading every question to see which grew a field.
+ *
+ * Picking an option is the common case and writes that option's label as the
+ * body, so the thread reads as a sentence either way — "Symlink it" rather
+ * than a bare id nobody can interpret six weeks later.
+ */
+export async function answerQuestion(
+  questionId: string,
+  body: string,
+  optionId?: string,
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data: question } = await supabase
+    .from("board_thread")
+    .select("project_id, card_id, options, status")
+    .eq("id", questionId)
+    .maybeSingle();
+
+  if (!question) return { data: null, error: "That question is gone." };
+  if (question.status !== "open") {
+    return { data: null, error: "That one has already been answered." };
+  }
+
+  const options = (question.options ?? []) as { id: string; label: string }[];
+  const picked = optionId ? options.find((o) => o.id === optionId) : undefined;
+
+  if (optionId && !picked) {
+    return { data: null, error: "That option is not on this question." };
+  }
+
+  const typed = body.trim();
+  if (!typed && !picked) {
+    return { data: null, error: "Pick an option, or write an answer." };
+  }
+
+  // Both: the option is the decision, the typed text is the caveat on it.
+  const text = picked && typed ? `${picked.label} — ${typed}` : (typed || picked!.label);
+
+  const { error: insertError } = await supabase.from("board_thread").insert({
+    project_id: question.project_id,
+    card_id: question.card_id,
+    author: "aaron",
+    kind: "answer",
+    body: text,
+    answer_option_id: picked?.id ?? null,
+    parent_id: questionId,
+    status: "answered",
+  });
+
+  if (insertError) return { data: null, error: insertError.message };
+
+  const { error: closeError } = await supabase
+    .from("board_thread")
+    .update({ status: "answered", answered_at: new Date().toISOString() })
+    .eq("id", questionId);
+
+  if (closeError) return { data: null, error: closeError.message };
+
+  refresh(question.card_id ?? undefined);
+  return { data: true, error: null };
+}
+
+/** Wave a question away without answering it. */
+export async function dropQuestion(questionId: string): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data, error } = await supabase
+    .from("board_thread")
+    .update({ status: "dropped", answered_at: new Date().toISOString() })
+    .eq("id", questionId)
+    .eq("status", "open")
+    .select("card_id")
+    .maybeSingle();
+
+  if (error) return { data: null, error: error.message };
+  refresh(data?.card_id ?? undefined);
+  return { data: true, error: null };
+}
+
+/** A note from Aaron on a card — the other half of the thread. */
+export async function addNote(
+  cardId: string,
+  projectId: string,
+  body: string,
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const text = body.trim();
+  if (!text) return { data: null, error: "Nothing to add." };
+
+  const { error } = await supabase.from("board_thread").insert({
+    project_id: projectId,
+    card_id: cardId,
+    author: "aaron",
+    kind: "note",
+    body: text,
+    status: "answered",
+  });
+
+  if (error) return { data: null, error: error.message };
+  refresh(cardId);
   return { data: true, error: null };
 }
