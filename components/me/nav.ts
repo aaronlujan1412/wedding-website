@@ -45,6 +45,7 @@ export const TOOL_TABS: Record<string, MeNavItem[]> = {
   "/me/board": [
     { label: "Board", href: "/me/board" },
     { label: "Settings", href: "/me/board/settings" },
+    { label: "Finished", href: "/me/board/finished" },
   ],
   "/me/brain": [
     { label: "Hub", href: "/me/brain" },

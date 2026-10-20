@@ -12,6 +12,7 @@ import {
 import type { BoardColumn, BoardProject } from "@/lib/board-types";
 import { LockGlyph, BarredGlyph } from "./glyphs";
 import { INPUT, INPUT_INLINE, Field } from "./field";
+import { ArchiveControl } from "./ArchiveControl";
 
 /**
  * Project settings: the lock, the columns, and what the vault is asked for.
@@ -37,6 +38,10 @@ export function Settings({
       <ProjectLock project={project} />
       <Details project={project} />
       <Columns project={project} columns={columns} cardCounts={cardCounts} />
+      <ArchiveControl
+        project={project}
+        cardCount={Object.values(cardCounts).reduce((n, v) => n + v, 0)}
+      />
     </div>
   );
 }

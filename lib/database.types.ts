@@ -34,6 +34,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      board_archives: {
+        Row: {
+          brain_path: string | null
+          card_count: number
+          created_at: string
+          finished_at: string
+          id: string
+          name: string
+          slug: string
+          summary: string
+        }
+        Insert: {
+          brain_path?: string | null
+          card_count?: number
+          created_at?: string
+          finished_at?: string
+          id?: string
+          name: string
+          slug: string
+          summary: string
+        }
+        Update: {
+          brain_path?: string | null
+          card_count?: number
+          created_at?: string
+          finished_at?: string
+          id?: string
+          name?: string
+          slug?: string
+          summary?: string
+        }
+        Relationships: []
+      }
       board_cards: {
         Row: {
           body: string | null
@@ -2193,6 +2226,10 @@ export type Database = {
         Returns: number
       }
       adopt_trip_stay: { Args: { p_stay: string }; Returns: string }
+      board_archive_project: {
+        Args: { p_project: string; p_summary: string }
+        Returns: string
+      }
       board_create_project: {
         Args: { p_description?: string; p_name: string; p_slug: string }
         Returns: string

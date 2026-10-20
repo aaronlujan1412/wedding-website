@@ -6,6 +6,7 @@ import { BOARD_COOKIE } from "@/lib/board-cookie";
 import { supabase } from "@/lib/supabase";
 import { currentOwner } from "@/lib/site-user";
 import { positionBetween } from "@/lib/board-types";
+import { composeArchive } from "@/lib/board-archive";
 import type { BoardCard } from "@/lib/board-types";
 
 /**
@@ -626,4 +627,87 @@ export async function moveCardToColumn(
   if (error) return { data: null, error: error.message };
   refresh(id);
   return { data: true, error: null };
+}
+
+/* ---------------------------------------------------------------------------
+ * Archiving.
+ * ------------------------------------------------------------------------- */
+
+/**
+ * Compress a project into one document and tear the rest down.
+ *
+ * Irreversible by design, which is why it returns the summary rather than just
+ * succeeding: the page shows it before asking, so nobody archives a project to
+ * find out what the archive would have said.
+ */
+export async function archiveProject(id: string): Promise<Result<string>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const [{ data: project }, { data: columns }, { data: cards }] =
+    await Promise.all([
+      supabase.from("board_projects").select("*").eq("id", id).maybeSingle(),
+      supabase.from("board_columns").select("*").eq("project_id", id).order("position"),
+      supabase.from("board_cards").select("*").eq("project_id", id).order("position"),
+    ]);
+
+  if (!project) return { data: null, error: "That project is gone." };
+
+  const summary = composeArchive(project, columns ?? [], cards ?? []);
+
+  const { data: archiveId, error } = await supabase.rpc("board_archive_project", {
+    p_project: id,
+    p_summary: summary,
+  });
+
+  if (error) return { data: null, error: error.message };
+
+  // The cookie would otherwise point at a project that no longer exists, and
+  // getCurrentProject would quietly fall through to whichever is newest —
+  // correct, but it reads as the board having lost your place.
+  (await cookies()).delete(BOARD_COOKIE);
+
+  refresh();
+  revalidatePath("/me/board/settings");
+  revalidatePath("/me/board/finished");
+  return { data: archiveId as string, error: null };
+}
+
+/** What archiving would write, without archiving. */
+export async function previewArchive(id: string): Promise<Result<string>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const [{ data: project }, { data: columns }, { data: cards }] =
+    await Promise.all([
+      supabase.from("board_projects").select("*").eq("id", id).maybeSingle(),
+      supabase.from("board_columns").select("*").eq("project_id", id).order("position"),
+      supabase.from("board_cards").select("*").eq("project_id", id).order("position"),
+    ]);
+
+  if (!project) return { data: null, error: "That project is gone." };
+  return { data: composeArchive(project, columns ?? [], cards ?? []), error: null };
+}
+
+/**
+ * Start again from an archive.
+ *
+ * A new project seeded with the summary as its description, so it opens
+ * carrying the reasoning and none of the dead cards. The archive stays — this
+ * is picking the thread back up, not undoing the archive.
+ */
+export async function reviveArchive(archiveId: string): Promise<Result<string>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data: archive } = await supabase
+    .from("board_archives")
+    .select("*")
+    .eq("id", archiveId)
+    .maybeSingle();
+
+  if (!archive) return { data: null, error: "That archive is gone." };
+
+  const result = await createProject(archive.name, archive.summary);
+  if (result.error) return { data: null, error: result.error };
+
+  revalidatePath("/me/board/finished");
+  return { data: result.data, error: null };
 }

@@ -215,6 +215,7 @@ agent API, the lock. Migrate the 31 artifact cards and delete that board.
 **Phase 2** — the thread, `options[]` questions, the review flag and its filter.
 
 **Phase 3** — project tags joined to `brain_notes`. Multiple projects.
+Archiving. All done, bar filing an archive into the vault.
 
 `project_id` is in the schema from day one; phase 1 ships with one project.
 
@@ -269,8 +270,16 @@ The original rows go once the archive is written and the vault has the document.
 the archive and the vault note. A revived project starts with the reasoning and
 none of the dead cards.
 
-Phase 3. It needs the SecondBrain write path, and that is the same path
-`/api/brain/sync` already owns — the summary is just another note the box pulls.
+**Built, except the vault half.** The summary, `board_archives`, the Finished
+projects page and Pick it back up all work. `brain_path` is nullable and always
+null for now.
+
+Filing into the vault turned out not to be free. The site cannot write there:
+the RAG service is bound to the tailnet, `brain_notes` is a mirror that the
+next reconcile would wipe, and `brain_decisions` only promotes a note that
+already exists in `_inbox` — it has no verb for creating one. Doing it properly
+means teaching the homelab box a new decision kind, which is work in the other
+repo. `brain_path` is where the answer goes when that happens.
 
 ## Open questions
 
