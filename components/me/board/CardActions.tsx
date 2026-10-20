@@ -2,7 +2,12 @@
 
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { resolveReview, setCardLock, deleteCard } from "@/app/actions/board";
+import {
+  resolveReview,
+  setCardLock,
+  deleteCard,
+  moveCardToColumn,
+} from "@/app/actions/board";
 import { REVIEW_LABEL } from "@/lib/board-types";
 import type { BoardCard, BoardColumn, ReviewKind } from "@/lib/board-types";
 import { LockGlyph } from "./glyphs";
@@ -127,6 +132,50 @@ export function CardControls({ card }: { card: BoardCard }) {
           Delete this card
         </button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * Move the card, by naming where it goes.
+ *
+ * The board's own answer is a drag, which a phone cannot do — a touch drag
+ * competes with the page scroll, and this site's planner reached the same
+ * conclusion years ago: on a phone the card's buttons are the move controls.
+ * It is on every screen rather than hidden above lg, because naming the column
+ * is often faster than dragging to it anyway.
+ */
+export function MoveControl({
+  card,
+  columns,
+}: {
+  card: BoardCard;
+  columns: BoardColumn[];
+}) {
+  const [pending, startTransition] = useTransition();
+  const elsewhere = columns.filter((c) => c.id !== card.column_id);
+
+  if (elsewhere.length === 0) return null;
+
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="font-dot text-[11px] leading-none text-me-dim">Move to</span>
+      {elsewhere.map((column) => (
+        <button
+          key={column.id}
+          type="button"
+          disabled={pending || Boolean(card.locked_at)}
+          onClick={() =>
+            startTransition(async () => void (await moveCardToColumn(card.id, column.id)))
+          }
+          className="bevel-out bg-me-panel px-2 py-1.5 text-[12px] text-me-ink pointer-coarse:px-3 pointer-coarse:py-2.5 disabled:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        >
+          {column.name}
+        </button>
+      ))}
+      {card.locked_at ? (
+        <span className="text-[12px] text-me-dim">Unlock it first.</span>
+      ) : null}
     </div>
   );
 }

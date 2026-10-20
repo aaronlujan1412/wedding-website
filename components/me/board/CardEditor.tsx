@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateCard } from "@/app/actions/board";
 import type { BoardCard } from "@/lib/board-types";
+import { INPUT, Field } from "./field";
 
 /**
  * Editing a card, in place.
@@ -111,27 +112,4 @@ export function CardEditor({ card }: { card: BoardCard }) {
   );
 }
 
-const INPUT =
-  "w-full bevel-in bg-me-void px-2 py-1.5 text-[13px] leading-relaxed text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold";
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block font-dot text-[11px] leading-none text-me-gold">
-        {label}
-      </span>
-      <span className="mb-1 block text-[11px] leading-snug text-me-dim">
-        {hint}
-      </span>
-      {children}
-    </label>
-  );
-}

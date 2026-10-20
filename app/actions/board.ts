@@ -591,3 +591,39 @@ export async function createProject(
 
   return { data: data as string, error: null };
 }
+
+/**
+ * Move a card to the end of another column.
+ *
+ * The drag path sends the positions either side because the browser already
+ * knows them. This one does not have that: it is the phone's way of moving a
+ * card, and a tap on a column name says nothing about where in it. Appending
+ * is the honest answer — the card has not been placed relative to anything.
+ */
+export async function moveCardToColumn(
+  id: string,
+  columnId: string,
+): Promise<Result<true>> {
+  if (!(await owner())) return { data: null, error: DENIED };
+
+  const { data: last } = await supabase
+    .from("board_cards")
+    .select("position")
+    .eq("column_id", columnId)
+    .order("position", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const { error } = await supabase
+    .from("board_cards")
+    .update({
+      column_id: columnId,
+      position: positionBetween(last?.position ?? undefined, undefined),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+
+  if (error) return { data: null, error: error.message };
+  refresh(id);
+  return { data: true, error: null };
+}

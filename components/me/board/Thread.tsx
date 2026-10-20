@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { answerQuestion, dropQuestion, addNote } from "@/app/actions/board";
 import type { BoardThreadItem, ThreadOption } from "@/lib/board-types";
+import { INPUT } from "./field";
 
 /**
  * A card's thread, read as a forum thread: posts down the page, oldest first,
@@ -139,7 +140,7 @@ function AnswerForm({
               type="button"
               onClick={() => setPicked(picked === option.id ? null : option.id)}
               aria-pressed={picked === option.id}
-              className={`max-w-[15rem] px-2 py-1.5 text-left text-[12px] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold ${
+              className={`max-w-[15rem] px-2 py-1.5 text-left text-[12px] pointer-coarse:px-3 pointer-coarse:py-2.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold ${
                 picked === option.id
                   ? "bevel-in bg-me-void text-me-gold"
                   : "bevel-out bg-me-panel text-me-ink"
@@ -167,7 +168,7 @@ function AnswerForm({
             ? "Anything to add? (optional once you've picked)"
             : "Your answer"
         }
-        className="w-full bevel-in bg-me-void px-2 py-1.5 text-[13px] leading-relaxed text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        className={INPUT}
       />
 
       <div className="flex items-center gap-2">
@@ -222,7 +223,7 @@ function NoteBox({ cardId, projectId }: { cardId: string; projectId: string }) {
         rows={3}
         autoFocus
         placeholder="Something Claude should know before it picks this up."
-        className="w-full bevel-in bg-me-void px-2 py-1.5 text-[13px] leading-relaxed text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        className={INPUT}
       />
       <div className="flex gap-2">
         <button

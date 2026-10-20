@@ -23,6 +23,7 @@ import { moveCard, createCard } from "@/app/actions/board";
 import { positionBetween, REVIEW_LABEL } from "@/lib/board-types";
 import type { BoardCard, BoardLane, BoardProject, ReviewKind } from "@/lib/board-types";
 import { LockGlyph, FlagGlyph, DotGlyph, BarredGlyph } from "./glyphs";
+import { INPUT } from "./field";
 
 /**
  * The board, drawn as a forum index.
@@ -168,6 +169,22 @@ export function Board({
         projectLocked={Boolean(project.locked_at)}
       />
 
+      {/* One column at a time below lg, with a strip to pick which. Four
+          232px columns on a 390px screen is one and a half columns and a
+          sideways scroll, and comparing columns is the reason to open a
+          board at all — so the phone compares counts in the strip instead.
+
+          Both layouts are in the DOM and CSS hides one, rather than a
+          media-query hook: a hook would render the wrong one on the server
+          and flash on hydration. Nothing here is draggable — this tree is
+          outside DndContext, and a drag competes with the page scroll on a
+          touch screen. Cards move from the card page. */}
+      <PhoneBoard
+        lanes={lanes}
+        visible={visible}
+        projectId={project.id}
+      />
+
       <DndContext
         id="board"
         sensors={sensors}
@@ -176,10 +193,7 @@ export function Board({
         onDragEnd={onDragEnd}
         onDragCancel={() => setDragging(null)}
       >
-        {/* Columns run off the side on a narrow screen rather than stacking:
-            a Kanban that stacks is a list, and the comparison between columns
-            is the whole point of looking at one. */}
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 max-lg:hidden">
           {lanes.map((lane) => (
             <Column
               key={lane.column.id}
@@ -195,6 +209,96 @@ export function Board({
           {dragging ? <CardFace card={dragging} pressed /> : null}
         </DragOverlay>
       </DndContext>
+    </div>
+  );
+}
+
+function PhoneBoard({
+  lanes,
+  visible,
+  projectId,
+}: {
+  lanes: BoardLane[];
+  visible: (cards: BoardCard[]) => BoardCard[];
+  projectId: string;
+}) {
+  const [openId, setOpenId] = useState<string | null>(null);
+  const router = useRouter();
+  const [adding, setAdding] = useState(false);
+  const [, startTransition] = useTransition();
+
+  // Falls back to the first column rather than storing an index, so a column
+  // deleted from settings cannot leave this pointing at nothing.
+  const lane = lanes.find((l) => l.column.id === openId) ?? lanes[0];
+  if (!lane) return null;
+
+  const cards = visible(lane.cards);
+
+  return (
+    <div className="space-y-2 lg:hidden">
+      <div className="flex flex-wrap gap-1.5">
+        {lanes.map((l) => {
+          const current = l.column.id === lane.column.id;
+          return (
+            <button
+              key={l.column.id}
+              type="button"
+              onClick={() => setOpenId(l.column.id)}
+              aria-current={current ? "true" : undefined}
+              className={`flex items-center gap-1.5 px-2 py-1.5 font-dot text-[12px] leading-none pointer-coarse:px-3 pointer-coarse:py-2.5 ${
+                current
+                  ? "bevel-in bg-me-void text-me-gold"
+                  : "bevel-out bg-me-panel text-me-dim"
+              } focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold`}
+            >
+              {l.column.name}
+              <span className={current ? "text-me-ink" : ""}>{l.cards.length}</span>
+              {!l.column.agent_can_enter ? <BarredGlyph /> : null}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="space-y-1.5">
+        {cards.map((card) => (
+          <button
+            key={card.id}
+            type="button"
+            onClick={() => router.push(`/me/board/${card.id}`)}
+            className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+          >
+            <CardFace card={card} />
+          </button>
+        ))}
+
+        {cards.length === 0 ? (
+          <p className="px-1 py-4 text-center text-[13px] text-me-dim">
+            Nothing in {lane.column.name}.
+          </p>
+        ) : null}
+
+        {adding ? (
+          <form
+            action={(formData) => {
+              const title = String(formData.get("title") ?? "");
+              setAdding(false);
+              startTransition(async () => {
+                await createCard(projectId, lane.column.id, title);
+              });
+            }}
+          >
+            <input name="title" autoFocus placeholder="What needs doing?" className={INPUT} />
+          </form>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            className="w-full bevel-out bg-me-panel px-2 py-2 text-left text-[13px] text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+          >
+            + Add a card to {lane.column.name}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -319,7 +423,7 @@ function Column({
               name="title"
               autoFocus
               placeholder="What needs doing?"
-              className="w-full bevel-in bg-me-void px-2 py-1.5 text-[13px] text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+              className={INPUT}
               onBlur={(e) => {
                 if (!e.currentTarget.value.trim()) setAdding(false);
               }}

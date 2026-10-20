@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/board";
 import type { BoardColumn, BoardProject } from "@/lib/board-types";
 import { LockGlyph, BarredGlyph } from "./glyphs";
+import { INPUT, INPUT_INLINE, Field } from "./field";
 
 /**
  * Project settings: the lock, the columns, and what the vault is asked for.
@@ -185,7 +186,7 @@ function Columns({
                     run(() => updateColumn(column.id, { name }));
                   }
                 }}
-                className="w-40 bevel-in bg-me-panel px-1.5 py-1 text-[13px] text-me-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+                className={`w-40 ${INPUT_INLINE}`}
               />
               <span className="text-[12px] text-me-dim">
                 {cardCounts[column.id] ?? 0} cards
@@ -256,7 +257,7 @@ function Columns({
             name="name"
             autoFocus
             placeholder="Column name"
-            className="w-40 bevel-in bg-me-void px-2 py-1 text-[13px] text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+            className={`w-40 ${INPUT}`}
           />
           <button
             type="submit"
@@ -285,25 +286,4 @@ function Columns({
   );
 }
 
-const INPUT =
-  "w-full bevel-in bg-me-void px-2 py-1.5 text-[13px] leading-relaxed text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold";
 
-function Field({
-  label,
-  hint,
-  children,
-}: {
-  label: string;
-  hint: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <label className="block">
-      <span className="mb-1 block font-dot text-[11px] leading-none text-me-gold">
-        {label}
-      </span>
-      <span className="mb-1 block text-[11px] leading-snug text-me-dim">{hint}</span>
-      {children}
-    </label>
-  );
-}

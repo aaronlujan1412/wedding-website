@@ -5,6 +5,7 @@ import Link from "next/link";
 import { chooseProject, createProject } from "@/app/actions/board";
 import type { BoardProject } from "@/lib/board-types";
 import { LockGlyph } from "./glyphs";
+import { INPUT } from "./field";
 
 /**
  * Which board you are looking at, and how to start another.
@@ -103,7 +104,7 @@ export function ProjectBar({
             name="name"
             autoFocus
             placeholder="What is this project?"
-            className="w-56 bevel-in bg-me-void px-2 py-1 text-[13px] text-me-ink placeholder:text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+            className={`w-56 ${INPUT}`}
           />
           <button
             type="submit"

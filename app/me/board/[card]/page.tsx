@@ -4,7 +4,11 @@ import { notFound, redirect } from "next/navigation";
 import { Panel, Well } from "@/components/me/Panel";
 import { FullWidth } from "@/components/me/WithSidebar";
 import { Thread } from "@/components/me/board/Thread";
-import { ReviewBanner, CardControls } from "@/components/me/board/CardActions";
+import {
+  ReviewBanner,
+  CardControls,
+  MoveControl,
+} from "@/components/me/board/CardActions";
 import { getCard, getThread, getProjectById } from "@/lib/board-queries";
 import { currentOwner } from "@/lib/site-user";
 import { supabase } from "@/lib/supabase";
@@ -108,7 +112,11 @@ export default async function CardPage({
           ))}
         </p>
 
-        <CardControls card={card} />
+        <MoveControl card={card} columns={columns ?? []} />
+
+        <div className="mt-3">
+          <CardControls card={card} />
+        </div>
       </Panel>
 
       {card.review_kind ? (
