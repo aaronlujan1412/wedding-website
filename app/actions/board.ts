@@ -39,20 +39,26 @@ export async function createCard(
   projectId: string,
   columnId: string,
   title: string,
+  atTop = false,
 ): Promise<Result<BoardCard>> {
   if (!(await owner())) return { data: null, error: DENIED };
 
   const clean = title.trim();
   if (!clean) return { data: null, error: "A card needs a title." };
 
-  // Bottom of the column. Read only the last row rather than the whole lane.
-  const { data: last } = await supabase
+  // Whichever end the card is going on. Reads one row rather than the lane:
+  // ascending for the top, descending for the bottom.
+  const { data: edge } = await supabase
     .from("board_cards")
     .select("position")
     .eq("column_id", columnId)
-    .order("position", { ascending: false })
+    .order("position", { ascending: atTop })
     .limit(1)
     .maybeSingle();
+
+  const position = atTop
+    ? positionBetween(undefined, edge?.position ?? undefined)
+    : positionBetween(edge?.position ?? undefined, undefined);
 
   const { data, error } = await supabase
     .from("board_cards")
@@ -60,7 +66,7 @@ export async function createCard(
       project_id: projectId,
       column_id: columnId,
       title: clean,
-      position: positionBetween(last?.position ?? undefined, undefined),
+      position,
     })
     .select()
     .single();

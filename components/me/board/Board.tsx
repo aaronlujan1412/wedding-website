@@ -259,6 +259,36 @@ function PhoneBoard({
         })}
       </div>
 
+      {adding ? (
+        <form
+          action={(formData) => {
+            const title = String(formData.get("title") ?? "");
+            setAdding(false);
+            startTransition(async () => {
+              await createCard(projectId, lane.column.id, title, true);
+            });
+          }}
+        >
+          <input
+            name="title"
+            autoFocus
+            placeholder="What needs doing?"
+            className={INPUT}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setAdding(false);
+            }}
+          />
+        </form>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setAdding(true)}
+          className="w-full bevel-out bg-me-panel px-2 py-2.5 text-left text-[13px] text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+        >
+          + Add a card to {lane.column.name}
+        </button>
+      )}
+
       <div className="space-y-1.5">
         {cards.map((card) => (
           <button
@@ -271,33 +301,11 @@ function PhoneBoard({
           </button>
         ))}
 
-        {cards.length === 0 ? (
+        {cards.length === 0 && !adding ? (
           <p className="px-1 py-4 text-center text-[13px] text-me-dim">
             Nothing in {lane.column.name}.
           </p>
         ) : null}
-
-        {adding ? (
-          <form
-            action={(formData) => {
-              const title = String(formData.get("title") ?? "");
-              setAdding(false);
-              startTransition(async () => {
-                await createCard(projectId, lane.column.id, title);
-              });
-            }}
-          >
-            <input name="title" autoFocus placeholder="What needs doing?" className={INPUT} />
-          </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="w-full bevel-out bg-me-panel px-2 py-2 text-left text-[13px] text-me-dim focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
-          >
-            + Add a card to {lane.column.name}
-          </button>
-        )}
       </div>
     </div>
   );
@@ -381,41 +389,45 @@ function Column({
       <h3 className="flex items-center gap-1.5 border-b-2 border-me-edge-lo bg-me-bar px-2.5 py-1.5 font-dot text-[13px] leading-none text-me-gold">
         {lane.column.name}
         <span className="text-me-dim">{lane.cards.length}</span>
-        {!lane.column.agent_can_enter ? (
-          <span className="ml-auto" title="Claude cannot move cards into this column">
-            <BarredGlyph />
-          </span>
-        ) : null}
+        <span className="ml-auto flex items-center gap-1.5">
+          {!lane.column.agent_can_enter ? (
+            <span title="Claude cannot move cards into this column">
+              <BarredGlyph />
+            </span>
+          ) : null}
+          {/* In the title bar rather than under the cards. At the foot of a
+              fifteen-card column it was below the fold of a scrolling box, so
+              adding a card meant scrolling to the bottom of a list you were
+              not reading. The column header is always on screen. */}
+          <button
+            type="button"
+            onClick={() => setAdding(true)}
+            aria-label={`Add a card to ${lane.column.name}`}
+            title={`Add a card to ${lane.column.name}`}
+            /* -my-1.5 py-1.5 grows the hit area to the full height of the title
+                bar without making the bar taller: a one-character target is
+                about 12px otherwise. */
+            className="-my-1.5 px-2 py-1.5 leading-none text-me-gold hover:text-me-ink pointer-coarse:px-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
+          >
+            +
+          </button>
+        </span>
       </h3>
 
       <div
         ref={setNodeRef}
         className={`flex-1 overflow-y-auto space-y-1.5 p-1.5 ${isOver ? "bevel-in bg-me-void" : ""}`}
       >
-        <SortableContext
-          items={cards.map((c) => c.id)}
-          strategy={verticalListSortingStrategy}
-        >
-          {cards.map((card) => (
-            <SortableCard key={card.id} card={card} />
-          ))}
-        </SortableContext>
-
-        {cards.length === 0 ? (
-          <p className="px-1 py-3 text-center text-[12px] text-me-dim">
-            {hiddenByFilter > 0
-              ? `${hiddenByFilter} hidden by the filter`
-              : "Nothing here yet."}
-          </p>
-        ) : null}
-
+        {/* The new card appears where the control that made it is. Creating
+            at the bottom of fifteen cards, from a button at the top, puts it
+            somewhere you have to go and look for. */}
         {adding ? (
           <form
             action={(formData) => {
               const title = String(formData.get("title") ?? "");
               setAdding(false);
               startTransition(async () => {
-                await createCard(projectId, lane.column.id, title);
+                await createCard(projectId, lane.column.id, title, true);
               });
             }}
           >
@@ -427,17 +439,29 @@ function Column({
               onBlur={(e) => {
                 if (!e.currentTarget.value.trim()) setAdding(false);
               }}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") setAdding(false);
+              }}
             />
           </form>
-        ) : (
-          <button
-            type="button"
-            onClick={() => setAdding(true)}
-            className="w-full bevel-out bg-me-panel px-2 py-1 text-left text-[12px] text-me-dim hover:text-me-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
-          >
-            + Add a card
-          </button>
-        )}
+        ) : null}
+
+        <SortableContext
+          items={cards.map((c) => c.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {cards.map((card) => (
+            <SortableCard key={card.id} card={card} />
+          ))}
+        </SortableContext>
+
+        {cards.length === 0 && !adding ? (
+          <p className="px-1 py-3 text-center text-[12px] text-me-dim">
+            {hiddenByFilter > 0
+              ? `${hiddenByFilter} hidden by the filter`
+              : "Nothing here yet."}
+          </p>
+        ) : null}
       </div>
     </section>
   );
