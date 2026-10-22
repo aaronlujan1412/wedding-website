@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useLiveRefresh } from "@/components/honeymoon/useLiveRefresh";
 import {
   DndContext,
   DragOverlay,
@@ -72,6 +73,14 @@ export function Board({
     setSeen(initialLanes);
     setLanes(initialLanes);
   }
+
+  /* Pick up the other side's edits without a reload. The agent writes to this
+     board from the CLI, so a stale tab is the normal case rather than the rare
+     one, and the sync above already makes a fresh `initialLanes` take effect.
+
+     Paused mid-drag: a refresh landing then would replace the optimistic
+     `lanes` out from under the pointer. */
+  useLiveRefresh(Boolean(dragging));
 
   const sensors = useSensors(
     // A card is also a button that opens it, so a drag has to be deliberate.
@@ -223,7 +232,6 @@ function PhoneBoard({
   projectId: string;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
-  const router = useRouter();
   const [adding, setAdding] = useState(false);
   const [, startTransition] = useTransition();
 
@@ -291,14 +299,19 @@ function PhoneBoard({
 
       <div className="space-y-1.5">
         {cards.map((card) => (
-          <button
+          /* A real anchor here, unlike the draggable cards: nothing in this
+             list competes for the press, so the link can be a link — hover
+             URL, middle-click and "copy link address" all come free. */
+          <Link
             key={card.id}
-            type="button"
-            onClick={() => router.push(`/me/board/${card.id}`)}
+            href={`/me/board/${card.id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            draggable={false}
             className="block w-full text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
           >
             <CardFace card={card} />
-          </button>
+          </Link>
         ))}
 
         {cards.length === 0 && !adding ? (
@@ -468,11 +481,15 @@ function Column({
 }
 
 function SortableCard({ card }: { card: BoardCard }) {
-  const router = useRouter();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: card.id, disabled: Boolean(card.locked_at) });
 
-  const open = () => router.push(`/me/board/${card.id}`);
+  /* A new tab, not a navigation. The board is the thing you keep open — your
+     column position, your filter, which cards you were comparing — and a card
+     is a reading surface you come back from. Opening in place threw all of
+     that away on every click, and the back button did not restore the scroll. */
+  const open = () =>
+    window.open(`/me/board/${card.id}`, "_blank", "noopener,noreferrer");
 
   return (
     <div
@@ -483,7 +500,13 @@ function SortableCard({ card }: { card: BoardCard }) {
       /* A card is both a handle and a link. The pointer sensor's 6px
          activation constraint is what separates them: a press that does not
          travel is a click, and anything further is a drag. dnd-kit's keyboard
-         sensor lifts with space, so Enter is free to open. */
+         sensor lifts with space, so Enter is free to open.
+
+         window.open rather than an <a target="_blank">: an anchor is natively
+         draggable and would fight the pointer sensor for the same gesture, and
+         nesting one here would add a second tab stop per card. The tradeoff is
+         no hover URL and no "copy link address" — if those are wanted, the
+         anchor needs draggable={false} and the keyboard handling reworked. */
       onClick={open}
       onKeyDown={(e) => {
         if (e.key === "Enter") {

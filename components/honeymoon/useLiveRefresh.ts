@@ -7,7 +7,10 @@ import { useRouter } from "next/navigation";
 const POLL_MS = 12_000;
 
 /**
- * Poor man's realtime, for any honeymoon tab two people edit at once.
+ * Poor man's realtime, for any surface two writers share — the honeymoon
+ * planner's tabs, and the /me board, where the other writer is the agent
+ * working from the CLI. It lives here for historical reasons rather than
+ * architectural ones; it has no honeymoon-specific logic.
  *
  * Supabase Realtime would need browser-side anon access, which breaks the
  * deliberate "RLS on, no policies" posture. Re-rendering from the server every
