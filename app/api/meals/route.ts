@@ -34,7 +34,21 @@ export async function GET(request: Request) {
   const part = new URL(request.url).searchParams.get("part");
   const wants = (name: string) => !part || part === name;
 
-  const [settings, rules, recipes, items, links] = await Promise.all([
+  /*
+   * `plan` is OPT-IN, never part of the default payload. The meal-plan skill's
+   * contract is the library — dishes, items, prices — and the plan is the thing
+   * it WRITES, so folding days into the default response would hand it back its
+   * own output every month for no reason.
+   *
+   * It exists for the wall display in the kitchen, which asks exactly one
+   * question: what are we eating tonight. That board cannot hold the database
+   * key for the same reason the skill cannot — a token scoped to meals is a far
+   * smaller thing to leave on a Chromebook than one that also reads the guest
+   * list — so it comes through here.
+   */
+  const wantsPlan = part === "plan";
+
+  const [settings, rules, recipes, items, links, planDays] = await Promise.all([
     wants("settings") ? supabase.from("meal_settings").select("*").maybeSingle() : null,
     wants("rules")
       ? supabase.from("meal_rules").select("label, detail, forbidden_term, applies_to").eq("active", true).order("sort_order")
@@ -57,9 +71,18 @@ export async function GET(request: Request) {
     wants("recipes") || wants("items")
       ? supabase.from("meal_recipe_items").select("recipe_id, item_id, quantity, unit, optional")
       : null,
+    wantsPlan
+      ? supabase
+          .from("meal_plan_days")
+          .select("on_date, kid_here, prep_day, notes, dinner:dinner_recipe_id(name), lunch:lunch_recipe_id(name)")
+          // Today onward only. The board shows a fortnight and has no use for
+          // what we ate three weeks ago.
+          .gte("on_date", new Date().toISOString().slice(0, 10))
+          .order("on_date")
+      : null,
   ]);
 
-  const failed = [settings, rules, recipes, items, links].find((r) => r?.error);
+  const failed = [settings, rules, recipes, items, links, planDays].find((r) => r?.error);
   if (failed?.error) {
     return Response.json({ ok: false, error: failed.error.message }, { status: 500 });
   }
@@ -85,9 +108,31 @@ export async function GET(request: Request) {
 
   const itemName = new Map((items?.data ?? []).map((i) => [i.id, i.name]));
 
+  /*
+   * Flattened to date -> dish. PostgREST returns the embedded recipe as an
+   * object (or an array, depending on how it infers the relationship), and the
+   * board should not have to care which.
+   */
+  const name = (r: unknown): string | null => {
+    const v = Array.isArray(r) ? r[0] : r;
+    return v && typeof v === "object" && "name" in v ? ((v as { name: string }).name ?? null) : null;
+  };
+
   return Response.json({
     ok: true,
     as_of: new Date().toISOString(),
+    ...(planDays?.data
+      ? {
+          plan: planDays.data.map((d) => ({
+            date: d.on_date,
+            dinner: name(d.dinner),
+            lunch: name(d.lunch),
+            kid_here: d.kid_here,
+            prep_day: d.prep_day,
+            notes: d.notes,
+          })),
+        }
+      : {}),
     ...(settings?.data ? { settings: settings.data } : {}),
     ...(rules?.data ? { rules: rules.data } : {}),
     ...(items?.data ? { items: items.data } : {}),
