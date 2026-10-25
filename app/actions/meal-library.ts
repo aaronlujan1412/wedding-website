@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/site-user";
+import { dayType } from "@/lib/meal-types";
 
 /**
  * Editing the library: items, prices, recipes, the links between them, and the
@@ -395,7 +396,13 @@ export async function toggleRule(
 
 /* ----------------------------------------------------------------- plan -- */
 
-/** Swap what is for dinner on one night. */
+/**
+ * Swap what is for dinner on one night.
+ *
+ * Picking a dish says the day needs one, in the same update —
+ * `meal_plan_days_dish_needs_dinner` refuses a dish on a day that doesn't.
+ * Clearing it leaves the day needing a dinner: "not this one" is not "none".
+ */
 export async function setDinner(
   _previous: LibraryState,
   formData: FormData,
@@ -408,7 +415,7 @@ export async function setDinner(
   const recipe = text(formData.get("dinner_recipe_id"));
   const { error } = await supabase
     .from("meal_plan_days")
-    .update({ dinner_recipe_id: recipe })
+    .update(recipe ? { dinner_recipe_id: recipe, needs_dinner: true } : { dinner_recipe_id: null })
     .eq("id", day_id);
 
   if (error) return fail(error.message);
@@ -490,43 +497,66 @@ export async function setIngredientAmount(
 }
 
 /**
- * What kind of day this is.
+ * Whether a day needs a dinner at all.
  *
- * Toggles one type on or off rather than taking the whole list, because the
- * control is a chip on a calendar cell and that is the gesture: the list is
- * read back from the row so two quick taps cannot race into each other losing
- * the first one's type.
+ * Saying it doesn't clears the dish and the kinds of day in the same update: a
+ * dish there would be refused by `meal_plan_days_dish_needs_dinner`, and a kind
+ * of day is something you say about a day you eat on. Takes the state wanted
+ * rather than toggling, so a retried tap lands where the first one meant to.
  */
-export async function toggleDayTag(
+export async function setNeedsDinner(
   _previous: LibraryState,
   formData: FormData,
 ): Promise<LibraryState> {
   if (!(await currentUser())) return DENIED;
 
   const day_id = text(formData.get("day_id"));
-  const raw = String(formData.get("tag") ?? "").trim().toLowerCase().replace(/\s+/g, " ");
-  const tag = raw.slice(0, 40);
-  if (!day_id || !tag) return fail("Name the kind of day.");
+  if (!day_id) return fail("No day.");
 
-  const { data: day } = await supabase
+  const needed = formData.get("needed") === "true";
+  const { data, error } = await supabase
     .from("meal_plan_days")
-    .select("tags")
+    .update(
+      needed
+        ? { needs_dinner: true }
+        : { needs_dinner: false, dinner_recipe_id: null, tags: [] },
+    )
     .eq("id", day_id)
-    .maybeSingle();
-
-  if (!day) return fail("No such day.");
-
-  const current: string[] = day.tags ?? [];
-  const tags = current.includes(tag)
-    ? current.filter((t) => t !== tag)
-    : [...current, tag];
-
-  const { error } = await supabase
-    .from("meal_plan_days")
-    .update({ tags })
-    .eq("id", day_id);
+    .select("id");
 
   if (error) return fail(error.message);
+  if (!data?.length) return fail("No such day.");
+  refresh();
+  return ok(null);
+}
+
+/**
+ * Put a kind of day on, or take it off.
+ *
+ * The state wanted rather than a toggle, done in one statement by
+ * `set_meal_day_tag`. The calendar is painted a tap at a time, faster than
+ * round trips, and the read-change-write this replaced let two taps in flight
+ * on one day each write over the other. Putting one on also marks the day as
+ * needing a dinner.
+ */
+export async function setDayTag(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const day_id = text(formData.get("day_id"));
+  const tag = dayType(String(formData.get("tag") ?? ""));
+  if (!day_id || !tag) return fail("Name the kind of day.");
+
+  const { data: found, error } = await supabase.rpc("set_meal_day_tag", {
+    p_day: day_id,
+    p_tag: tag,
+    p_on: formData.get("on") === "true",
+  });
+
+  if (error) return fail(error.message);
+  if (!found) return fail("No such day.");
   refresh();
   return ok(null);
 }

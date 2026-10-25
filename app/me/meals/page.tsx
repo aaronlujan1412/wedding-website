@@ -4,7 +4,7 @@ import { Panel } from "@/components/me/Panel";
 import { MonthGrid, FreshnessKey } from "@/components/me/MonthGrid";
 import { ShoppingList } from "@/components/me/ShoppingList";
 import { FullWidth, WithSidebar } from "@/components/me/WithSidebar";
-import { getItems, getPlan, getRecipes } from "@/lib/meal-queries";
+import { getItems, getPlan } from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = {
@@ -33,16 +33,15 @@ export default async function MealsPage() {
     );
   }
 
-  const [plan, recipes, items] = await Promise.all([getPlan(), getRecipes(), getItems()]);
+  const [plan, items] = await Promise.all([getPlan(), getItems()]);
 
   if (!plan) {
     return (
       <FullWidth>
         <Panel title="meals">
           <p className="text-[13px] leading-relaxed text-me-ink">
-            No month planned yet. A plan is a date range, two delivery days, and
-            a dinner on each weeknight — everything else is worked out from
-            there.{" "}
+            No month planned yet. A plan is a date range and the days you need
+            a dinner — everything else is worked out from there.{" "}
             <Link
               href="/me/meals/settings"
               className="text-me-link underline underline-offset-2 hover:text-me-ink"
@@ -55,12 +54,6 @@ export default async function MealsPage() {
       </FullWidth>
     );
   }
-
-  // Dinners only: a lunch or a snack in the dinner picker is a wrong answer
-  // offered as if it were a right one.
-  const dinnerOptions = recipes
-    .filter((r) => r.kind === "dinner")
-    .map((r) => ({ id: r.id, name: r.name }));
 
   const warnings = plan.lines.filter((l) => l.coverage_warning);
   const planned = plan.days.filter((d) => d.dinner).length;
@@ -82,8 +75,10 @@ export default async function MealsPage() {
         {/* Placing dinners and building the list are planning, and planning
             lives on Plan. This page is the quick view. */}
         <p className="mt-2 text-[12px] leading-relaxed text-me-dim">
+          {/* This month, by id: Plan opens on the newest month otherwise,
+              which from late October is November. */}
           <Link
-            href="/me/meals/settings"
+            href={`/me/meals/settings?plan=${plan.id}`}
             className="text-me-link underline underline-offset-2 hover:text-me-ink"
           >
             Change the month on Plan
@@ -103,7 +98,7 @@ export default async function MealsPage() {
             Plan; this page is opened mid-week to find out what is for dinner,
             usually on a phone, where a stray tap should never rewrite the
             plan. The dish title links into cook mode instead. */}
-        <MonthGrid days={plan.days} dinnerOptions={dinnerOptions} mode="read" />
+        <MonthGrid days={plan.days} />
         <FreshnessKey />
       </Panel>
 

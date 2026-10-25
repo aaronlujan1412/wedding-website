@@ -97,6 +97,11 @@ export type PlanDay = {
   dinner_recipe_id: string | null;
   dinner_window: Window | null;
   lunch: string | null;
+  /**
+   * Somebody said this day needs a dinner. Only these get scheduled, and it is
+   * what tells "not picked yet" (true, no dish) from "not needed" (false).
+   */
+  needs_dinner: boolean;
   /** What kind of day it is: daniel, party, prep. Made up by the household. */
   tags: string[];
   notes: string | null;
@@ -105,6 +110,26 @@ export type PlanDay = {
   /** Set when a delivery lands on this date. */
   delivery_ordinal: number | null;
 };
+
+/**
+ * "  Party  Night " -> "party night": what every kind of day is stored as.
+ *
+ * Shared because the calendar draws a tap before the server has answered, and
+ * a brush named one way on screen and stored another would paint a chip that
+ * vanishes on the next refresh. 40 is `meal_tags_sane`'s limit.
+ */
+export function dayType(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, " ").slice(0, 40).trimEnd();
+}
+
+/** "Wednesday, November 5" — a plan date, read as a calendar date, not an instant. */
+export function longDate(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  });
+}
 
 export type PlanLine = {
   id: string;

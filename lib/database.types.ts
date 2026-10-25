@@ -786,6 +786,7 @@ export type Database = {
           id: string
           kid_here: boolean
           lunch_recipe_id: string | null
+          needs_dinner: boolean
           notes: string | null
           on_date: string
           plan_id: string
@@ -798,6 +799,7 @@ export type Database = {
           id?: string
           kid_here?: boolean
           lunch_recipe_id?: string | null
+          needs_dinner?: boolean
           notes?: string | null
           on_date: string
           plan_id: string
@@ -810,6 +812,7 @@ export type Database = {
           id?: string
           kid_here?: boolean
           lunch_recipe_id?: string | null
+          needs_dinner?: boolean
           notes?: string | null
           on_date?: string
           plan_id?: string
@@ -2318,6 +2321,10 @@ export type Database = {
           p_stay: string
         }
         Returns: string
+      }
+      set_meal_day_tag: {
+        Args: { p_day: string; p_on: boolean; p_tag: string }
+        Returns: boolean
       }
       sweep_orphaned_trip_items: { Args: { p_trip: string }; Returns: number }
     }

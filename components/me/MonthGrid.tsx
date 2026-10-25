@@ -1,9 +1,8 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import Link from "next/link";
 import { freshness, type PlanDay } from "@/lib/meal-types";
-import { DayEditor } from "@/components/me/DayEditor";
 
 /**
  * The month, as a table.
@@ -22,22 +21,22 @@ import { DayEditor } from "@/components/me/DayEditor";
  * through to pink at the tail — because that distance, not the date, decides
  * whether a dinner works.
  *
- * TWO MODES, one grid. `plan` is the editable calendar on Plan, where a cell
- * opens a dialog to set the dinner and say what kind of day it is. `read` is
+ * THE GRID DRAWS THE MONTH; WHAT'S IN A DAY IS THE CALLER'S. Left alone it is
  * This Month, where the dish is a link into cook mode and nothing can be
- * changed by a stray tap on a phone in a kitchen.
+ * changed by a stray tap on a phone in a kitchen. Plan hands in `renderDay`
+ * (`PlanCalendar`), which is where painting and the dinner picker live. It
+ * used to be a `mode` flag plus the picker's props threaded through here, so
+ * the read-only page carried the dish list for an editor it never drew.
+ *
+ * Each cell is `relative isolate`, so a day can lay a full-cell button or a
+ * tint over itself without escaping into the scrolling table around it.
  */
 export function MonthGrid({
   days,
-  dinnerOptions,
-  mode = "read",
-  dayTypes = [],
+  renderDay = (day) => <ReadDay day={day} />,
 }: {
   days: PlanDay[];
-  dinnerOptions: { id: string; name: string }[];
-  mode?: "plan" | "read";
-  /** Types already in use this month, offered before typing a new one. */
-  dayTypes?: string[];
+  renderDay?: (day: PlanDay) => ReactNode;
 }) {
   const today = useToday();
 
@@ -83,11 +82,10 @@ export function MonthGrid({
                   <DayCell
                     key={day.id}
                     day={day}
-                    options={dinnerOptions}
-                    mode={mode}
-                    dayTypes={dayTypes}
                     isToday={today !== null && day.on_date === today}
-                  />
+                  >
+                    {renderDay(day)}
+                  </DayCell>
                 ) : (
                   <td key={`gap-${i}`} />
                 ),
@@ -144,16 +142,12 @@ function useToday(): string | null {
 
 function DayCell({
   day,
-  options,
-  mode,
-  dayTypes,
   isToday,
+  children,
 }: {
   day: PlanDay;
-  options: { id: string; name: string }[];
-  mode: "plan" | "read";
-  dayTypes: string[];
   isToday: boolean;
+  children: ReactNode;
 }) {
   const arriving = day.delivery_ordinal !== null;
   const fresh = freshness(day.days_out);
@@ -162,7 +156,7 @@ function DayCell({
   return (
     <td
       aria-current={isToday ? "date" : undefined}
-      className={`w-[14.28%] align-top p-2 ${
+      className={`relative isolate w-[14.28%] align-top p-2 ${
         isToday
           ? "bevel-out bg-me-bar"
           : arriving
@@ -204,13 +198,7 @@ function DayCell({
         </p>
       ) : null}
 
-      <div className="mt-1.5">
-        {mode === "plan" ? (
-          <DayEditor day={day} options={options} dayTypes={dayTypes} />
-        ) : (
-          <ReadDay day={day} />
-        )}
-      </div>
+      <div className="mt-1.5">{children}</div>
     </td>
   );
 }
@@ -220,7 +208,8 @@ function DayCell({
  *
  * The title is a link into cook mode, because "what are we eating" and "how do
  * I make it" are the same question ten minutes apart, and the answer to the
- * second used to be three pages away.
+ * second used to be three pages away. A dash is a dinner nobody has picked; a
+ * day that needs none says nothing at all.
  */
 function ReadDay({ day }: { day: PlanDay }) {
   return (
@@ -232,9 +221,9 @@ function ReadDay({ day }: { day: PlanDay }) {
         >
           {day.dinner}
         </Link>
-      ) : (
+      ) : day.needs_dinner ? (
         <p className="text-[12px] leading-snug text-me-dim">—</p>
-      )}
+      ) : null}
 
       {day.tags.length ? (
         <p className="mt-1 font-dot text-[10px] leading-snug text-me-dim">

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { currentUser } from "@/lib/site-user";
 
@@ -25,7 +26,13 @@ function refresh() {
   revalidatePath("/me/meals", "layout");
 }
 
-/** Start a month: the range, two deliveries, and a day row for every date. */
+/**
+ * Start a month: the range, two deliveries, and a day row for every date.
+ *
+ * Every day starts not needing a dinner — the calendar is blank until somebody
+ * paints the days they eat on. Lands on the new month afterwards, because the
+ * page would otherwise go on showing whichever month you came from.
+ */
 export async function createPlan(
   _previous: MealState,
   formData: FormData,
@@ -72,10 +79,10 @@ export async function createPlan(
   await supabase.rpc("fill_meal_plan_days", { p_plan: plan.id });
 
   refresh();
-  return ok(`${name} created.`);
+  redirect(`/me/meals/settings?plan=${plan.id}`);
 }
 
-/** Place dinners against the delivery dates, respecting recipe windows. */
+/** Place dinners on the days that need one, against the delivery dates and recipe windows. */
 export async function schedulePlan(
   _previous: MealState,
   formData: FormData,
@@ -89,6 +96,10 @@ export async function schedulePlan(
   if (error) return { error: error.message, note: null };
 
   const result = (data ?? {}) as { assigned?: number; unfilled?: number; distinct_dishes?: number };
+  if (!result.assigned && !result.unfilled) {
+    return { error: "No day is marked as needing a dinner yet — paint some on the calendar first.", note: null };
+  }
+
   refresh();
   return ok(
     `${result.assigned ?? 0} dinners placed, ${result.distinct_dishes ?? 0} different dishes` +

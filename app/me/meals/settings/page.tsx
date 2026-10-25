@@ -1,47 +1,68 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { Panel, Well } from "@/components/me/Panel";
-import { MonthGrid, FreshnessKey } from "@/components/me/MonthGrid";
+import { FreshnessKey } from "@/components/me/MonthGrid";
+import { PlanCalendar } from "@/components/me/PlanCalendar";
 import { PlanControls } from "@/components/me/PlanControls";
+import { NEW_PLAN, PlanTabs } from "@/components/me/PlanTabs";
 import { NewPlanForm } from "@/components/me/NewPlanForm";
 import { RuleForm, RuleList, SettingsForm } from "@/components/me/SettingsForms";
 import { FullWidth } from "@/components/me/WithSidebar";
-import { getPlan, getRecipes, getRules, getSettings } from "@/lib/meal-queries";
+import {
+  getDayTypes,
+  getPlan,
+  getRecipes,
+  getRules,
+  getSettings,
+  listPlans,
+} from "@/lib/meal-queries";
 import { currentUser } from "@/lib/site-user";
 
 export const metadata: Metadata = { title: "Plan", robots: { index: false, follow: false } };
 export const dynamic = "force-dynamic";
 
-export default async function SettingsPage() {
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ plan?: string }>;
+}) {
   if (!(await currentUser())) redirect("/me/meals");
-  const [settings, rules, plan, recipes] = await Promise.all([
+  const [{ plan: wanted }, plans] = await Promise.all([searchParams, listPlans()]);
+
+  // The month asked for, else the newest. Not "the one containing today" as
+  // on This Month: this page is for planning, and the month being planned is
+  // nearly always the latest one made.
+  const starting = wanted === NEW_PLAN || !plans.length;
+  const chosen = starting ? null : (plans.find((p) => p.id === wanted) ?? plans[0]);
+
+  const [settings, rules, plan, recipes, dayTypes] = await Promise.all([
     getSettings(),
     getRules(),
-    getPlan(),
+    chosen ? getPlan(chosen.id) : null,
     getRecipes(),
+    getDayTypes(),
   ]);
 
   const dinnerOptions = recipes
     .filter((r) => r.kind === "dinner" || r.kind === "special")
     .map((r) => ({ id: r.id, name: r.name }));
 
-  // The kinds of day already in use this month, offered before anybody types a
-  // new one — after the first week the answer is nearly always one of these.
-  const dayTypes = [...new Set((plan?.days ?? []).flatMap((d) => d.tags))].sort();
-
   // The coverage problems, whose three fixes are all on this page.
   const warnings = (plan?.lines ?? []).filter((l) => l.coverage_warning);
 
   return (
     <FullWidth>
+      <PlanTabs plans={plans} current={plan?.id ?? NEW_PLAN} />
+
       {plan ? (
         <>
           <Panel title={plan.name.toLowerCase()}>
             <p className="text-[13px] leading-relaxed text-me-ink">
-              Tap a day to set its dinner or say what kind of day it is. Both
-              buttons rewrite things: placing the dinners replaces every night
-              the scheduler can fill, and building the list rebuilds it from the
-              calendar as it stands.
+              Paint the days you need a dinner and what kind of day each one
+              is, then place the dinners. Both buttons rewrite things: placing
+              the dinners replaces the dish on every marked night the scheduler
+              can fill, and building the list rebuilds it from the calendar as
+              it stands.
             </p>
             <div className="mt-3.5">
               <PlanControls planId={plan.id} />
@@ -74,10 +95,12 @@ export default async function SettingsPage() {
           ) : null}
 
           <Panel title="the calendar" bodyClassName="p-3">
-            <MonthGrid
+            {/* Keyed on the month so the brush in hand doesn't follow you
+                from one month into the next. */}
+            <PlanCalendar
+              key={plan.id}
               days={plan.days}
               dinnerOptions={dinnerOptions}
-              mode="plan"
               dayTypes={dayTypes}
             />
             <FreshnessKey />
@@ -86,10 +109,11 @@ export default async function SettingsPage() {
       ) : (
         <Panel title="start a month">
           <p className="mb-4 text-[13px] leading-relaxed text-me-ink">
-            A plan is a date range, two delivery days, and a dinner on each
-            weeknight — everything else is worked out from there.
+            Pick the dates and you get a blank calendar. Paint the days you need
+            a dinner and what kind of day each one is, and the dishes and the
+            shopping are worked out from there.
           </p>
-          <NewPlanForm />
+          <NewPlanForm after={plans[0]?.ends_on ?? null} />
         </Panel>
       )}
 

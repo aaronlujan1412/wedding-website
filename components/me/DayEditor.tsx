@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
-import { setDinner, toggleDayTag } from "@/app/actions/meal-library";
+import { setDayTag, setDinner } from "@/app/actions/meal-library";
 import { FIELD } from "@/components/me/form-bits";
-import type { PlanDay } from "@/lib/meal-types";
+import { longDate, type PlanDay } from "@/lib/meal-types";
 
 /**
  * A day, opened.
@@ -12,6 +12,11 @@ import type { PlanDay } from "@/lib/meal-types";
  * day. It used to be a bare <select> of thirty-five dishes sitting in a grid
  * square — unsearchable, and at 14% of a calendar's width it showed about
  * four characters of any dish's name.
+ *
+ * Literally the whole cell now — the trigger is laid over the day
+ * (`absolute inset-0`) and the face underneath is `DayFace`, drawn by the
+ * calendar, so a day reads the same whichever brush is in your hand. Tapping
+ * the date opens the day as surely as tapping the dish.
  *
  * A DIALOG, not a popover. The calendar lives inside a horizontally scrolling
  * container, and anything absolutely positioned inside that gets clipped by it
@@ -58,34 +63,25 @@ export function DayEditor({
     });
   }
 
-  function toggle(tag: string) {
+  function setTag(tag: string, on: boolean) {
     start(async () => {
       const data = new FormData();
       data.set("day_id", day.id);
       data.set("tag", tag);
-      await toggleDayTag({ error: null, note: null }, data);
+      data.set("on", String(on));
+      await setDayTag({ error: null, note: null }, data);
     });
   }
-
-  const label = day.dinner ?? "add a dinner";
 
   return (
     <>
       <button
         type="button"
+        aria-haspopup="dialog"
+        aria-label={`${longDate(day.on_date)}: ${day.dinner ?? "pick a dinner"}`}
         onClick={() => setOpen(true)}
-        className={`w-full rounded-xs text-left text-[12px] leading-snug underline underline-offset-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold ${
-          day.dinner ? "text-me-link hover:text-me-ink" : "text-me-dim hover:text-me-ink"
-        }`}
-      >
-        {label}
-      </button>
-
-      {day.tags.length ? (
-        <p className="mt-1 font-dot text-[10px] leading-snug text-me-gold">
-          {day.tags.join("  ")}
-        </p>
-      ) : null}
+        className="absolute inset-0 hover:bg-me-ink/5 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-me-gold"
+      />
 
       <dialog
         ref={dialog}
@@ -115,7 +111,7 @@ export function DayEditor({
               <TypeRow
                 current={day.tags}
                 known={dayTypes}
-                onToggle={toggle}
+                onSet={setTag}
                 busy={pending}
               />
             </label>
@@ -175,7 +171,7 @@ export function DayEditor({
                 onClick={() => choose(null)}
                 className="rounded-xs font-dot text-[11px] text-me-dim underline underline-offset-2 hover:text-me-live focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold"
               >
-                no dinner this day
+                clear the dish
               </button>
             ) : null}
             <span className="ml-auto text-[11px] text-me-dim">
@@ -200,12 +196,12 @@ export function DayEditor({
 function TypeRow({
   current,
   known,
-  onToggle,
+  onSet,
   busy,
 }: {
   current: string[];
   known: string[];
-  onToggle: (tag: string) => void;
+  onSet: (tag: string, on: boolean) => void;
   busy: boolean;
 }) {
   const [fresh, setFresh] = useState("");
@@ -221,7 +217,7 @@ function TypeRow({
             type="button"
             aria-pressed={on}
             disabled={busy}
-            onClick={() => onToggle(tag)}
+            onClick={() => onSet(tag, !on)}
             className={`border px-2 py-1 font-dot text-[11px] leading-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold ${
               on
                 ? "border-me-gold bg-me-gold/15 text-me-gold"
@@ -241,7 +237,7 @@ function TypeRow({
           event.preventDefault();
           const tag = fresh.trim();
           if (!tag) return;
-          onToggle(tag);
+          onSet(tag, true);
           setFresh("");
         }}
         placeholder="new kind…"
@@ -250,12 +246,4 @@ function TypeRow({
       />
     </span>
   );
-}
-
-function longDate(iso: string) {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
 }

@@ -148,7 +148,58 @@ export async function listPlans() {
 }
 
 /**
- * One plan, whole: calendar, deliveries and the costed list.
+ * Every kind of day ever used, across every plan.
+ *
+ * The calendar used to offer only the kinds already on this month's days,
+ * which on a new month is none — so the first thing a blank calendar asked of
+ * you was to type "daniel" again.
+ */
+export async function getDayTypes(): Promise<string[]> {
+  if (!(await currentUser())) return [];
+  const { data, error } = await supabase
+    .from("meal_plan_days")
+    .select("tags")
+    .not("tags", "eq", "{}");
+  if (error || !data) return [];
+  return [...new Set(data.flatMap((d) => d.tags))].sort();
+}
+
+/**
+ * Today's date where the household is, not where the server is.
+ *
+ * The server's clock is UTC, which is already tomorrow for the last six hours
+ * of every evening in Salt Lake — the hours somebody opens this to ask about
+ * dinner. `MonthGrid` dodges that by asking the browser, but choosing a plan
+ * happens before anything reaches a browser, so the zone is named here.
+ */
+const HOUSEHOLD_TZ = "America/Denver";
+
+function householdToday(): string {
+  // en-CA writes dates as YYYY-MM-DD, the same shape as a Postgres date.
+  return new Intl.DateTimeFormat("en-CA", { timeZone: HOUSEHOLD_TZ }).format(new Date());
+}
+
+/**
+ * Which plan "this month" means when nobody has said.
+ *
+ * The one containing today, else the next to start, else the latest. It used
+ * to be simply the latest, which was the same answer while there was only ever
+ * one plan — and the moment November was made on October 25th, the page you
+ * open to ask what's for dinner tonight would have answered with November.
+ * Same rule as `getCurrentTrip`. Expects plans newest-first.
+ */
+function planForToday<T extends { starts_on: string; ends_on: string }>(plans: T[]): T | undefined {
+  const today = householdToday();
+  return (
+    plans.find((p) => p.starts_on <= today && today <= p.ends_on) ??
+    plans.filter((p) => p.starts_on > today).at(-1) ??
+    plans[0]
+  );
+}
+
+/**
+ * One plan, whole: calendar, deliveries and the costed list. Without an id,
+ * the one for today (`planForToday`).
  *
  * `days_out` is computed here rather than stored, because it is a function of
  * two things that both move while a plan is a draft — the day and its supplying
@@ -164,7 +215,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     .order("starts_on", { ascending: false });
 
   if (plans.error || !plans.data?.length) return null;
-  const plan = id ? plans.data.find((p) => p.id === id) : plans.data[0];
+  const plan = id ? plans.data.find((p) => p.id === id) : planForToday(plans.data);
   if (!plan) return null;
 
   const [orders, days, lines] = await Promise.all([
@@ -176,7 +227,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
     supabase
       .from("meal_plan_days")
       .select(
-        "id, on_date, tags, notes, dinner_recipe_id, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
+        "id, on_date, tags, notes, needs_dinner, dinner_recipe_id, dinner:dinner_recipe_id (name, window_when), lunch:lunch_recipe_id (name)",
       )
       .eq("plan_id", plan.id)
       .order("on_date"),
@@ -223,6 +274,7 @@ export async function getPlan(id?: string): Promise<Plan | null> {
       dinner_recipe_id: d.dinner_recipe_id,
       dinner_window: (dinner?.window_when as Window) ?? null,
       lunch: lunch?.name ?? null,
+      needs_dinner: d.needs_dinner,
       tags: d.tags ?? [],
       notes: d.notes,
       days_out: supplying ? daysBetween(supplying.delivers_on as string, d.on_date) : null,
