@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   ArrowUp,
   BedDouble,
@@ -140,13 +141,31 @@ export function LodgingView({
   const [busy, startTransition] = useTransition();
   useLiveRefresh(draft !== null || confirm !== null || busy);
   const now = useNow(renderedAt);
+  // "show" or "hide" once someone has pressed the toggle; until then, null.
+  const searchParams = useSearchParams();
+  const [finderChoice, setFinderChoice] = useState(() =>
+    searchParams.get("finder"),
+  );
 
   const decided = staysIn(stays, "decided");
   const nights = tripNights(legs, stays, flights);
-  const proposed = routes.flatMap((r) => r.stays);
+  const open = nights.filter((n) => !n.stay && !n.onPlane).length;
+  // The finder answers nights nobody has a bed for, so it's on until every
+  // night has one. After that its rows and options are noise on a page you
+  // open to read your bookings — still a click away, and the click goes in
+  // the URL like the board's view, so a refresh keeps it. With no agreed
+  // nights there's nothing to quiet it for, and hiding it could leave the
+  // strip with no columns: the empty state, with the toggle gone too.
+  const canHideFinder = nights.length > 0;
+  const showFinder =
+    !canHideFinder ||
+    finderChoice === "show" ||
+    (finderChoice !== "hide" && open > 0);
+  const finderRoutes = showFinder ? routes : [];
+  const proposed = finderRoutes.flatMap((r) => r.stays);
   const columns = stripNights(legs, stays, proposed);
-  const blocks = planNights(nights, stays, routes, rate);
-  const anchors = anchorsForRoutes(blocks, routes);
+  const blocks = planNights(nights, stays, finderRoutes, rate);
+  const anchors = anchorsForRoutes(blocks, finderRoutes);
   const current = currentStay(stays, now);
   const tonight = utcToZoned(new Date(now).toISOString(), STAY_TZ).date;
   const itemsFor = (stay: TripStay) =>
@@ -226,7 +245,14 @@ export function LodgingView({
     });
   }
 
-  const open = nights.filter((n) => !n.stay && !n.onPlane).length;
+  function toggleFinder() {
+    const next = showFinder ? "hide" : "show";
+    setFinderChoice(next);
+    const params = new URLSearchParams(window.location.search);
+    params.set("finder", next);
+    window.history.replaceState(null, "", `?${params}`);
+  }
+
   const spend = sumYen(decided, rate);
 
   const actions: BlockActions = {
@@ -286,11 +312,21 @@ export function LodgingView({
                   />
                 </p>
               </div>
-              <div className="flex items-baseline gap-5">
+              <div className="flex flex-wrap items-baseline gap-x-5 gap-y-2">
                 {spend > 0 && (
                   <p className="font-mono text-xs text-muted-foreground tabular-nums slashed-zero">
                     {formatYen(spend)} / {yenAsUsd(spend, rate)} on beds
                   </p>
+                )}
+                {canHideFinder && (
+                  <button
+                    type="button"
+                    onClick={toggleFinder}
+                    className="flex items-center gap-1 rounded-sm font-raleway text-[0.65rem] uppercase tracking-[0.2em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  >
+                    <Compass className="h-3 w-3" strokeWidth={1.5} />
+                    {showFinder ? "Hide the finder" : "Show the finder"}
+                  </button>
                 )}
                 <button
                   type="button"
@@ -308,7 +344,7 @@ export function LodgingView({
               nights={nights}
               legs={legs}
               stays={stays}
-              routes={routes.slice(0, STRIP_ROUTES)}
+              routes={finderRoutes.slice(0, STRIP_ROUTES)}
               anchors={anchors}
               tonight={tonight}
               onCreate={create}
@@ -345,16 +381,18 @@ export function LodgingView({
               ))}
             </ol>
 
-            <FinderFoot
-              routes={routes}
-              busy={busy}
-              onSendRoute={(route, lane, planner) =>
-                send(
-                  () => sendRouteToLane(route.id, lane, planner),
-                  `${route.stays.length} stays are in ${PLANNERS[planner].label}'s ideas.`,
-                )
-              }
-            />
+            {showFinder && (
+              <FinderFoot
+                routes={routes}
+                busy={busy}
+                onSendRoute={(route, lane, planner) =>
+                  send(
+                    () => sendRouteToLane(route.id, lane, planner),
+                    `${route.stays.length} stays are in ${PLANNERS[planner].label}'s ideas.`,
+                  )
+                }
+              />
+            )}
           </>
         )}
 
