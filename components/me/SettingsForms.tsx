@@ -1,9 +1,10 @@
 "use client";
 
 import { useActionState } from "react";
-import { saveRule, saveSettings, toggleRule } from "@/app/actions/meal-library";
-import { EMPTY, Field, FIELD, Says, Submit } from "@/components/me/form-bits";
+import { saveDayType, saveRule, saveSettings, toggleRule } from "@/app/actions/meal-library";
+import { Area, EMPTY, Field, FIELD, Says, Submit } from "@/components/me/form-bits";
 import type { MealSettings, Rule } from "@/lib/meal-queries";
+import type { DayType } from "@/lib/meal-types";
 
 export function SettingsForm({ settings }: { settings: MealSettings | null }) {
   const [state, save] = useActionState(saveSettings, EMPTY);
@@ -120,6 +121,72 @@ export function RuleForm() {
         A banned word is checked against every plan automatically. Leave it blank
         for anything only a person can judge.
       </p>
+      <Says state={state} />
+    </form>
+  );
+}
+
+/**
+ * The kinds of day, each with what it means.
+ *
+ * One form per kind rather than one for the lot: you come here to fix the
+ * description of one, and a page-wide save would rewrite every other kind
+ * from whatever happened to be on screen.
+ */
+export function DayTypeList({ types }: { types: DayType[] }) {
+  if (!types.length) {
+    return (
+      <p className="text-[12px] text-me-dim">
+        No kinds of day yet. Make one below, or with &ldquo;new kind&rdquo; on the calendar.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {types.map((type) => (
+        // Keyed on the name alone. Keying on the description as well remounted
+        // the row on every save, which threw away its own "Saved" before
+        // anybody saw it. React resets the form to the stored text after the
+        // action anyway.
+        <DayTypeRow key={type.name} type={type} />
+      ))}
+    </div>
+  );
+}
+
+function DayTypeRow({ type }: { type: DayType }) {
+  const [state, save] = useActionState(saveDayType, EMPTY);
+
+  return (
+    <form action={save} className="bevel-in space-y-2 bg-me-void p-3">
+      <input type="hidden" name="name" value={type.name} />
+      <p className="flex items-baseline justify-between gap-3">
+        <span className="font-dot text-[13px] leading-snug text-me-gold">{type.name}</span>
+        <span className="font-dot text-[11px] text-me-dim">
+          {type.days ? `on ${type.days} ${type.days === 1 ? "day" : "days"}` : "not on any day yet"}
+        </span>
+      </p>
+      <Area
+        label="what it means"
+        name="description"
+        defaultValue={type.description}
+        rows={2}
+      />
+      <Submit busy="saving…">save</Submit>
+      <Says state={state} />
+    </form>
+  );
+}
+
+export function DayTypeForm() {
+  const [state, save] = useActionState(saveDayType, EMPTY);
+
+  return (
+    <form action={save} className="space-y-3">
+      <Field label="kind of day" name="name" placeholder="date night" width="w-full sm:w-64" />
+      <Area label="what it means" name="description" rows={2} />
+      <Submit busy="adding…">add the kind</Submit>
       <Says state={state} />
     </form>
   );

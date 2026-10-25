@@ -6,7 +6,13 @@ import { PlanCalendar } from "@/components/me/PlanCalendar";
 import { PlanControls } from "@/components/me/PlanControls";
 import { NEW_PLAN, PlanTabs } from "@/components/me/PlanTabs";
 import { NewPlanForm } from "@/components/me/NewPlanForm";
-import { RuleForm, RuleList, SettingsForm } from "@/components/me/SettingsForms";
+import {
+  DayTypeForm,
+  DayTypeList,
+  RuleForm,
+  RuleList,
+  SettingsForm,
+} from "@/components/me/SettingsForms";
 import { FullWidth } from "@/components/me/WithSidebar";
 import {
   getDayTypes,
@@ -116,6 +122,20 @@ export default async function SettingsPage({
           <NewPlanForm after={plans[0]?.ends_on ?? null} />
         </Panel>
       )}
+
+      <Panel title="kinds of day">
+        <p className="mb-3.5 text-[13px] leading-relaxed text-me-ink">
+          What each kind of day asks of whoever is cooking. Picking one up as a
+          brush on the calendar shows it. Nothing reads these mechanically — a
+          daniel day isn&apos;t cooked bigger by itself — so say it here and
+          plan for it.
+        </p>
+        <DayTypeList types={dayTypes} />
+      </Panel>
+
+      <Panel title="add a kind of day">
+        <DayTypeForm />
+      </Panel>
 
       <Panel title="the standing setup">
         <p className="mb-3.5 text-[13px] leading-relaxed text-me-ink">

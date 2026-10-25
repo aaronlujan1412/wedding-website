@@ -560,3 +560,32 @@ export async function setDayTag(
   refresh();
   return ok(null);
 }
+
+/**
+ * Say what a kind of day means.
+ *
+ * An empty description removes the row rather than storing a blank. A kind
+ * nobody uses and nobody has described has no reason to exist, and a kind that
+ * days still carry stays on the calendar either way — it is the days that
+ * make it exist, the row only explains it.
+ */
+export async function saveDayType(
+  _previous: LibraryState,
+  formData: FormData,
+): Promise<LibraryState> {
+  if (!(await currentUser())) return DENIED;
+
+  const name = dayType(String(formData.get("name") ?? ""));
+  if (!name) return fail("Name the kind of day.");
+  const description = text(formData.get("description"));
+
+  const { error } = description
+    ? await supabase
+        .from("meal_day_types")
+        .upsert({ name, description, updated_at: new Date().toISOString() })
+    : await supabase.from("meal_day_types").delete().eq("name", name);
+
+  if (error) return fail(error.message);
+  refresh();
+  return ok(description ? `Saved what ${name} means.` : `Cleared ${name}.`);
+}

@@ -3,7 +3,7 @@ import "server-only";
 import { supabase } from "./supabase";
 import { currentUser } from "./site-user";
 import { gramsOf } from "./meal-units";
-import type { Item, Plan, PlanDay, PlanLine, PlanOrder, Recipe, Window } from "./meal-types";
+import type { DayType, Item, Plan, PlanDay, PlanLine, PlanOrder, Recipe, Window } from "./meal-types";
 
 /**
  * Reads of the meal library and the plans.
@@ -148,20 +148,32 @@ export async function listPlans() {
 }
 
 /**
- * Every kind of day ever used, across every plan.
+ * Every kind of day ever used or described, across every plan.
  *
  * The calendar used to offer only the kinds already on this month's days,
  * which on a new month is none — so the first thing a blank calendar asked of
  * you was to type "daniel" again.
  */
-export async function getDayTypes(): Promise<string[]> {
+export async function getDayTypes(): Promise<DayType[]> {
   if (!(await currentUser())) return [];
-  const { data, error } = await supabase
-    .from("meal_plan_days")
-    .select("tags")
-    .not("tags", "eq", "{}");
-  if (error || !data) return [];
-  return [...new Set(data.flatMap((d) => d.tags))].sort();
+  const [days, described] = await Promise.all([
+    supabase.from("meal_plan_days").select("tags").not("tags", "eq", "{}"),
+    supabase.from("meal_day_types").select("name, description"),
+  ]);
+
+  const counts = new Map<string, number>();
+  for (const tag of (days.data ?? []).flatMap((d) => d.tags)) {
+    counts.set(tag, (counts.get(tag) ?? 0) + 1);
+  }
+  const descriptions = new Map((described.data ?? []).map((t) => [t.name, t.description]));
+
+  return [...new Set([...counts.keys(), ...descriptions.keys()])]
+    .sort()
+    .map((name) => ({
+      name,
+      description: descriptions.get(name) ?? null,
+      days: counts.get(name) ?? 0,
+    }));
 }
 
 /**

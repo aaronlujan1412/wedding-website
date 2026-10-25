@@ -584,6 +584,24 @@ export type Database = {
         }
         Relationships: []
       }
+      meal_day_types: {
+        Row: {
+          description: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          description?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          description?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       meal_food_portions: {
         Row: {
           food_id: string

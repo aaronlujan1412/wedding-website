@@ -5,7 +5,7 @@ import { setDayTag, setNeedsDinner } from "@/app/actions/meal-library";
 import { DayEditor } from "@/components/me/DayEditor";
 import { MonthGrid } from "@/components/me/MonthGrid";
 import { FIELD } from "@/components/me/form-bits";
-import { dayType, longDate, type PlanDay } from "@/lib/meal-types";
+import { dayType, longDate, type DayType, type PlanDay } from "@/lib/meal-types";
 
 /**
  * The calendar on Plan, painted rather than filled in.
@@ -47,8 +47,8 @@ export function PlanCalendar({
 }: {
   days: PlanDay[];
   dinnerOptions: { id: string; name: string }[];
-  /** Every kind of day ever used, across all plans. */
-  dayTypes: string[];
+  /** Every kind of day ever used or described, across all plans. */
+  dayTypes: DayType[];
 }) {
   // A month with dishes on it is being adjusted, not drawn, and "needs a
   // dinner" in hand would turn the first stray tap into a deleted dish.
@@ -64,7 +64,10 @@ export function PlanCalendar({
     current.map((d) => (d.id === change.id ? { ...d, ...change } : d)),
   );
 
-  const types = [...new Set([...dayTypes, ...invented, ...shown.flatMap((d) => d.tags)])].sort();
+  const types = [
+    ...new Set([...dayTypes.map((t) => t.name), ...invented, ...shown.flatMap((d) => d.tags)]),
+  ].sort();
+  const meaning = new Map(dayTypes.map((t) => [t.name, t.description]));
 
   function paint(day: PlanDay) {
     if (brush.kind === "dish") return;
@@ -112,6 +115,7 @@ export function PlanCalendar({
       <BrushBar
         brush={brush}
         types={types}
+        meaning={meaning}
         onPick={setBrush}
         onInvent={invent}
       />
@@ -121,6 +125,9 @@ export function PlanCalendar({
           <span className="text-me-live">{problem}</span>
         ) : (
           <span className="text-me-dim">
+            {brush.kind === "type" && meaning.get(brush.type) ? (
+              <span className="text-me-ink">{meaning.get(brush.type)} </span>
+            ) : null}
             {hint(brush)}
             {saving ? <span className="ml-2 font-dot text-[11px]">saving…</span> : null}
           </span>
@@ -177,11 +184,14 @@ function describe(day: PlanDay): string {
 function BrushBar({
   brush,
   types,
+  meaning,
   onPick,
   onInvent,
 }: {
   brush: Brush;
   types: string[];
+  /** What each kind means, where somebody has said. */
+  meaning: Map<string, string | null>;
   onPick: (brush: Brush) => void;
   onInvent: (raw: string) => void;
 }) {
@@ -203,6 +213,7 @@ function BrushBar({
         <BrushButton
           key={type}
           on={brush.kind === "type" && brush.type === type}
+          title={meaning.get(type) ?? undefined}
           onClick={() => onPick({ kind: "type", type })}
         >
           {type}
@@ -234,10 +245,12 @@ function BrushBar({
 
 function BrushButton({
   on,
+  title,
   onClick,
   children,
 }: {
   on: boolean;
+  title?: string;
   onClick: () => void;
   children: React.ReactNode;
 }) {
@@ -245,6 +258,7 @@ function BrushButton({
     <button
       type="button"
       aria-pressed={on}
+      title={title}
       onClick={onClick}
       className={`border px-2 py-1 font-dot text-[11px] leading-none pointer-coarse:py-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-me-gold ${
         on

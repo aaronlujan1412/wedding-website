@@ -112,6 +112,19 @@ export type PlanDay = {
 };
 
 /**
+ * A kind of day, and what it means.
+ *
+ * It exists if a day has it or somebody described it (`meal_day_types`), so a
+ * kind can be explained before the first day uses it.
+ */
+export type DayType = {
+  name: string;
+  description: string | null;
+  /** Days carrying it, across every plan. */
+  days: number;
+};
+
+/**
  * "  Party  Night " -> "party night": what every kind of day is stored as.
  *
  * Shared because the calendar draws a tap before the server has answered, and
