@@ -29,12 +29,13 @@ export const ROLES = [
     id: "photographers",
     label: "Photo & video",
     intro:
-      "For our two photographers and our videographer, from getting ready to the send-off.",
+      "For our two photographers and our videographer, from getting ready to the cake.",
   },
   {
     id: "coordinator",
     label: "Coordinator",
-    intro: "Every cue, from seating the ceremony to calling it a night.",
+    intro:
+      "From starting the food to the end of clean-up, with every music cue in between.",
   },
   {
     id: "setup-crew",

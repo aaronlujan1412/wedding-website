@@ -14,7 +14,7 @@ export type Dish = { name: string; prep?: Prep; toppings?: string[] };
 export type Station = { name: string; dishes: Dish[]; toppings?: string[] };
 
 export const CROCK_POT_ROUTINE =
-  "Every crock pot dish is frozen ahead of time. Thaw it in water for 30 minutes, put it in the slow cooker, and set it on low.";
+  "Every crock pot dish is frozen ahead of time. Thaw it in water for 30 minutes, put it in its slow cooker, and set it on low so it’s hot by dinner at 5:00.";
 
 export const menu: Station[] = [
   {
@@ -96,6 +96,7 @@ export const menu: Station[] = [
       {
         name: "Vanilla ice cream",
         toppings: [
+          "nuts",
           "fudge",
           "caramel, chocolate and strawberry sauces",
           "sprinkles",

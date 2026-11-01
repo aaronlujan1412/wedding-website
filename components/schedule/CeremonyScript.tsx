@@ -12,7 +12,7 @@ import {
 
 /**
  * The ceremony as a run of show. Every role sees every part and its time —
- * a photographer still needs to know the vows start at 4:38 — but only the
+ * a photographer still needs to know the vows start at 4:35 — but only the
  * lines meant for them, so Adrian's talking points stay in Adrian's copy.
  */
 export function CeremonyScript({
@@ -54,6 +54,11 @@ export function CeremonyScript({
                   </span>
                 ) : null}
               </h4>
+              {segment.goal && (
+                <p className="mt-0.5 font-garamond text-base italic text-muted-foreground">
+                  {segment.goal}
+                </p>
+              )}
               <Lines lines={visibleLines(segment.lines, role)} />
             </div>
           </li>

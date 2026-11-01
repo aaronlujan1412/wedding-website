@@ -20,6 +20,9 @@ export type Line =
       lines?: Line[];
       /** The children are an order to follow, so they're numbered. */
       ordered?: boolean;
+      /** The children are things to tick off — a shot list, a box to pack —
+          so they get boxes that still work once it's printed. */
+      checklist?: boolean;
       note?: string;
     };
 
