@@ -1,4 +1,4 @@
-import { ceremony } from "./ceremony";
+import { CEREMONY_END, CEREMONY_START, ceremony } from "./ceremony";
 import { crockPotCount, menu } from "./menu";
 import type { RoleEntry } from "./schedule";
 
@@ -195,7 +195,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "08:30",
     title: "Breakfast, served by the lodge",
-    roles: ["wedding-party", "officiant", "family"],
+    roles: ["wedding-party", "officiant", "family", "aaron-and-savea"],
     body: "For everyone who stayed the night:",
     lines: [
       "Aaron, Savea and Daniel",
@@ -221,7 +221,7 @@ export const roleEntries: RoleEntry[] = [
     time: "09:30",
     until: "12:30",
     title: "Get ready",
-    roles: ["wedding-party", "officiant", "family"],
+    roles: ["wedding-party", "officiant", "family", "aaron-and-savea"],
     body: "Hair, makeup and getting dressed.",
   },
   {
@@ -307,7 +307,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "13:45",
     title: "Family portraits and couple photos",
-    roles: ["photographers", "family"],
+    roles: ["photographers", "family", "aaron-and-savea"],
     lines: [
       "Start with the parents and Daniel, then the bigger family and parent photos",
       "Once their photos are done, the parents and Daniel head back early in Car 3",
@@ -355,7 +355,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "14:45",
     title: "Drive back to the lodge",
-    roles: ["photographers"],
+    roles: ["photographers", "aaron-and-savea"],
     body: "About 30 minutes.",
     lines: [
       "Car 1: the photo and video team",
@@ -393,7 +393,13 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "15:15",
     title: "Wedding party and family photos",
-    roles: ["photographers", "wedding-party", "family", "coordinator"],
+    roles: [
+      "photographers",
+      "wedding-party",
+      "family",
+      "coordinator",
+      "aaron-and-savea",
+    ],
     lines: [
       "Wedding party photos",
       "Extended family photos around the lodge",
@@ -463,7 +469,7 @@ export const roleEntries: RoleEntry[] = [
   },
   {
     day: "2026-12-01",
-    time: "16:15",
+    time: CEREMONY_START,
     title: "The ceremony, minute by minute",
     roles: [
       "officiant",
@@ -502,7 +508,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "17:00",
     title: "The grand entrance and dinner",
-    roles: ["coordinator", "photographers"],
+    roles: ["coordinator", "photographers", "aaron-and-savea"],
     lines: [
       {
         says: "Coordinator",
@@ -531,7 +537,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "18:00",
     title: "The dances",
-    roles: ["coordinator", "photographers"],
+    roles: ["coordinator", "photographers", "aaron-and-savea"],
     lines: [
       {
         text: "First dance",
@@ -563,7 +569,7 @@ export const roleEntries: RoleEntry[] = [
     time: "19:00",
     approx: true,
     title: "Cut the cake",
-    roles: ["coordinator", "photographers"],
+    roles: ["coordinator", "photographers", "aaron-and-savea"],
     body: "Not a set time: whenever the coordinator has finished eating.",
     lines: [
       "The coordinator brings Aaron and Savea to the cake table and announces that the newlyweds are cutting the cake",
@@ -589,7 +595,7 @@ export const roleEntries: RoleEntry[] = [
     day: "2026-12-01",
     time: "21:00",
     title: "The send-off",
-    roles: ["coordinator", "family"],
+    roles: ["coordinator", "family", "aaron-and-savea"],
     lines: [
       "The coordinator gathers everyone outside",
       "Inside, Aaron, Savea and Daniel share one last dance, just the three of them",
@@ -627,5 +633,111 @@ export const roleEntries: RoleEntry[] = [
     title: "Call it a night",
     roles: ["coordinator", "setup-crew"],
     body: "Once the main clean-up is done, or at 10:00, whichever comes first, the coordinator is free to go. Whatever’s left waits for Wednesday morning, when Aaron and Savea come back.",
+  },
+
+  // Aaron and Savea's own day ------------------------------------------
+  // Two-sided: an entry with a `side` sits on that person's side of the
+  // spine, paired with the other side's entry at the same minute. The
+  // moments they share are the entries above, tagged "aaron-and-savea".
+
+  {
+    day: "2026-12-01",
+    time: "12:00",
+    side: "aaron",
+    title: "Getting-ready photos",
+    roles: ["aaron-and-savea"],
+    body: "Photographer 1 is with you and Daniel, in your suits. The videographer floats between you both.",
+  },
+  {
+    day: "2026-12-01",
+    time: "12:00",
+    side: "savea",
+    title: "Getting-ready photos",
+    roles: ["aaron-and-savea"],
+    body: "Photographer 2 is with you, in your dress. The videographer floats between you both.",
+  },
+  {
+    day: "2026-12-01",
+    time: "12:30",
+    side: "aaron",
+    title: "Sibling photos",
+    roles: ["aaron-and-savea"],
+    body: "With Ammon, Evan, Easton and Alaysha.",
+  },
+  {
+    day: "2026-12-01",
+    time: "12:30",
+    side: "savea",
+    title: "Sibling photos",
+    roles: ["aaron-and-savea"],
+    body: "With Brenna, Annika, Connor, Finnley and Logan.",
+  },
+  {
+    day: "2026-12-01",
+    time: "13:00",
+    side: "aaron",
+    title: "Drive to Power Plant Park",
+    roles: ["aaron-and-savea"],
+    lines: ["Ride in Car 3 with Mom, Dad and Daniel", "Bring the rings"],
+  },
+  {
+    day: "2026-12-01",
+    time: "13:00",
+    side: "savea",
+    title: "Drive to Power Plant Park",
+    roles: ["aaron-and-savea"],
+    lines: ["Ride in Car 2 with Mom and Dad", "Bring the rings"],
+  },
+  {
+    day: "2026-12-01",
+    time: "13:30",
+    side: "aaron",
+    title: "The first look",
+    roles: ["aaron-and-savea"],
+    body: "Stand about 15 feet away, facing away from the aisle. Turn around when Savea walks up.",
+  },
+  {
+    day: "2026-12-01",
+    time: "13:30",
+    side: "savea",
+    title: "The first look",
+    roles: ["aaron-and-savea"],
+    body: "Get ready, then walk down the aisle to Aaron.",
+  },
+  {
+    day: "2026-12-01",
+    time: CEREMONY_START,
+    side: "aaron",
+    title: "The processional",
+    roles: ["aaron-and-savea"],
+    body: "Stop halfway down the aisle and wait for Savea.",
+  },
+  {
+    day: "2026-12-01",
+    time: CEREMONY_START,
+    side: "savea",
+    title: "The processional",
+    roles: ["aaron-and-savea"],
+    body: "Meet Aaron halfway down the aisle.",
+  },
+  {
+    day: "2026-12-01",
+    time: CEREMONY_START,
+    title: "The ceremony",
+    roles: ["aaron-and-savea"],
+    lines: [
+      "Walk together to Daniel, then up to the entrance as a trio, and hug everyone waiting",
+      "Put the Polaroid in the ornament and hang it on the tree",
+      "A private, unscripted moment with Daniel",
+      "Exchange your vows and rings",
+    ],
+  },
+  {
+    day: "2026-12-01",
+    time: CEREMONY_END,
+    approx: true,
+    title: "Just married",
+    roles: ["aaron-and-savea"],
+    body: "A spin and dip kiss at the end of the aisle, then downstairs with Adrian, Annie and Isaac to sign the marriage certificate.",
   },
 ];

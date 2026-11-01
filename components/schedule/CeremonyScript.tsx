@@ -1,14 +1,8 @@
-import type { Segment } from "./ceremony";
+import { segmentStarts, totalMinutes, type Segment } from "./ceremony";
+import { addMinutes, formatClock, formatTime } from "./clock";
 import { Lines } from "./Lines";
 import type { Role } from "./roles";
-import {
-  addMinutes,
-  formatClock,
-  formatTime,
-  segmentStarts,
-  totalMinutes,
-  visibleLines,
-} from "./timeline";
+import { visibleLines } from "./timeline";
 
 /**
  * The ceremony as a run of show. Every role sees every part and its time —

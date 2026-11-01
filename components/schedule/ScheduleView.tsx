@@ -4,7 +4,15 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { GuestStopRow } from "./GuestStopRow";
 import { RoleEntryRow } from "./RoleEntryRow";
-import { ROLES, roleById, roleFromPath, scheduleHref, type Role } from "./roles";
+import {
+  ROLES,
+  isSided,
+  roleById,
+  roleFromPath,
+  scheduleHref,
+  type Role,
+} from "./roles";
+import { SidedTimeline } from "./SidedTimeline";
 import { formatDay, timelineFor } from "./timeline";
 
 const GUEST_INTRO = "A cozy winter evening, from first cocoa to last dance.";
@@ -43,49 +51,53 @@ export function ScheduleView() {
         </p>
 
         <ViewSwitcher role={role} />
-        {role && <Legend />}
+        {role && <Legend shared={isSided(role) ? "Together" : "Your part"} />}
       </header>
 
       <div id="schedule">
-        {days.map(({ day, items }) => (
-          <section
-            key={day}
-            aria-labelledby={`day-${day}`}
-            className="mb-6 animate-in fade-in duration-500 motion-reduce:animate-none print:animate-none"
-          >
-            <h2
-              id={`day-${day}`}
-              className="mb-8 font-garamond text-2xl italic text-muted-foreground md:text-3xl"
+        {role && isSided(role) ? (
+          <SidedTimeline days={days} role={role} />
+        ) : (
+          days.map(({ day, items }) => (
+            <section
+              key={day}
+              aria-labelledby={`day-${day}`}
+              className="mb-6 animate-in fade-in duration-500 motion-reduce:animate-none print:animate-none"
             >
-              {formatDay(day)}
-            </h2>
-            <ol>
-              {items.map((item, i) => {
-                const isLast = i === items.length - 1;
-                return (
-                  <li key={item.key}>
-                    {item.kind === "stop" ? (
-                      <GuestStopRow
-                        stop={item.stop}
-                        underlay={role !== null}
-                        isLast={isLast}
-                      />
-                    ) : (
-                      role && (
-                        <RoleEntryRow
-                          entry={item.entry}
-                          role={role}
+              <h2
+                id={`day-${day}`}
+                className="mb-8 font-garamond text-2xl italic text-muted-foreground md:text-3xl"
+              >
+                {formatDay(day)}
+              </h2>
+              <ol>
+                {items.map((item, i) => {
+                  const isLast = i === items.length - 1;
+                  return (
+                    <li key={item.key}>
+                      {item.kind === "stop" ? (
+                        <GuestStopRow
+                          stop={item.stop}
+                          underlay={role !== null}
                           isLast={isLast}
-                          order={entryOrder.get(item.key) ?? 0}
                         />
-                      )
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
-          </section>
-        ))}
+                      ) : (
+                        role && (
+                          <RoleEntryRow
+                            entry={item.entry}
+                            role={role}
+                            isLast={isLast}
+                            order={entryOrder.get(item.key) ?? 0}
+                          />
+                        )
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))
+        )}
       </div>
     </main>
   );
@@ -97,10 +109,14 @@ function ViewSwitcher({ role }: { role: Role | null }) {
     ...ROLES,
   ];
 
-  function choose(event: React.MouseEvent<HTMLAnchorElement>, next: Role | null) {
+  function choose(
+    event: React.MouseEvent<HTMLAnchorElement>,
+    next: Role | null,
+  ) {
     // Leave modified clicks to the browser: a new tab, or copying the link
     // to text to someone, should get the real URL.
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+      return;
     event.preventDefault();
     window.history.replaceState(null, "", scheduleHref(next));
   }
@@ -124,7 +140,9 @@ function ViewSwitcher({ role }: { role: Role | null }) {
                   selected
                     ? cn(
                         "underline decoration-2",
-                        view.id ? "text-pop2 decoration-pop2" : "text-primary decoration-primary",
+                        view.id
+                          ? "text-pop2 decoration-pop2"
+                          : "text-primary decoration-primary",
                       )
                     : "text-muted-foreground hover:text-foreground hover:underline hover:decoration-border",
                 )}
@@ -139,16 +157,21 @@ function ViewSwitcher({ role }: { role: Role | null }) {
   );
 }
 
-/** Shown only once a role is on: what the two kinds of mark on the spine mean. */
-function Legend() {
+/** Shown only once a role is on: what the two kinds of mark on the spine
+    mean. `shared` names the cranberry diamond — "Your part", or "Together"
+    in a two-sided view, where the sides are named by their own columns. */
+function Legend({ shared }: { shared: string }) {
   return (
     <div className="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 font-raleway text-sm text-muted-foreground print:mt-2">
       <span className="flex items-center gap-2.5">
         <span aria-hidden="true" className="size-2.5 rotate-45 bg-pop2" />
-        Your part
+        {shared}
       </span>
       <span className="flex items-center gap-2">
-        <span aria-hidden="true" className="size-4 rounded-full bg-card ring-1 ring-border" />
+        <span
+          aria-hidden="true"
+          className="size-4 rounded-full bg-card ring-1 ring-border"
+        />
         What the guests are doing
       </span>
       <button

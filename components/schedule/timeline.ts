@@ -1,6 +1,6 @@
-import type { Segment } from "./ceremony";
+import { formatTime } from "./clock";
 import { roleEntries } from "./entries";
-import type { Role } from "./roles";
+import type { Role, Side } from "./roles";
 import {
   guestStops,
   type Day,
@@ -23,7 +23,8 @@ function compare(a: string, b: string) {
  * A view of the day: every guest stop, plus the entries tagged with `role`,
  * in time order and grouped by date. With no role it's the guest schedule.
  * At the same minute the guest stop comes first — it's the landmark the
- * role's entry is read against.
+ * role's entry is read against — and entries keep the order they're written
+ * in, which is what pairs a two-sided view's rows.
  */
 export function timelineFor(role: Role | null): TimelineDay[] {
   const items: TimelineItem[] = [
@@ -36,7 +37,7 @@ export function timelineFor(role: Role | null): TimelineDay[] {
       .filter((entry) => role !== null && entry.roles.includes(role))
       .map((entry) => ({
         kind: "entry" as const,
-        key: `entry|${entry.day}|${entry.time}|${entry.title}`,
+        key: `entry|${entry.day}|${entry.time}|${entry.side ?? ""}|${entry.title}`,
         entry,
       })),
   ];
@@ -61,6 +62,52 @@ export function timelineFor(role: Role | null): TimelineDay[] {
   return days;
 }
 
+export type SidedRow =
+  | { kind: "stop"; key: string; stop: GuestStop }
+  | { kind: "together"; key: string; entry: RoleEntry }
+  | {
+      kind: "apart";
+      key: string;
+      time: string;
+      bySide: Partial<Record<Side, RoleEntry>>;
+    };
+
+/**
+ * A day's items as rows of a two-sided view. Entries with a `side` at the
+ * same minute share a row, one each side of the spine; an entry without one
+ * is something both people do, drawn across the middle.
+ */
+export function sidedRows(items: TimelineItem[]): SidedRow[] {
+  const rows: SidedRow[] = [];
+  for (const item of items) {
+    if (item.kind === "stop") {
+      rows.push({ kind: "stop", key: item.key, stop: item.stop });
+      continue;
+    }
+    const { entry } = item;
+    if (!entry.side) {
+      rows.push({ kind: "together", key: item.key, entry });
+      continue;
+    }
+    const last = rows.at(-1);
+    if (
+      last?.kind === "apart" &&
+      last.time === entry.time &&
+      !last.bySide[entry.side]
+    ) {
+      last.bySide[entry.side] = entry;
+    } else {
+      rows.push({
+        kind: "apart",
+        key: item.key,
+        time: entry.time,
+        bySide: { [entry.side]: entry },
+      });
+    }
+  }
+  return rows;
+}
+
 /** A line as it's drawn: always an object, its children already filtered. */
 export type VisibleLine = Omit<Exclude<Line, string>, "lines"> & {
   lines?: VisibleLine[];
@@ -74,47 +121,6 @@ export function visibleLines(lines: Line[] = [], role: Role): VisibleLine[] {
     .map(({ lines: children, ...line }) =>
       children ? { ...line, lines: visibleLines(children, role) } : line,
     );
-}
-
-// Clock arithmetic. Times stay `HH:MM` strings all the way to the screen:
-// a Date would drag a time zone into a schedule that only ever happens in
-// one place.
-
-function toMinutes(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  return h * 60 + m;
-}
-
-export function addMinutes(time: string, minutes: number) {
-  const total = toMinutes(time) + minutes;
-  const h = Math.floor(total / 60) % 24;
-  const m = total % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-}
-
-/** Each segment's start, running the clock forward from `start`. */
-export function segmentStarts(start: string, segments: Segment[]) {
-  let clock = start;
-  return segments.map((segment) => {
-    const at = clock;
-    clock = addMinutes(clock, segment.minutes ?? 0);
-    return at;
-  });
-}
-
-export function totalMinutes(segments: Segment[]) {
-  return segments.reduce((sum, s) => sum + (s.minutes ?? 0), 0);
-}
-
-/** "4:15", for a column of times where the meridiem goes without saying. */
-export function formatClock(time: string) {
-  const [h, m] = time.split(":").map(Number);
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")}`;
-}
-
-/** "4:15 PM" */
-export function formatTime(time: string) {
-  return `${formatClock(time)} ${Number(time.slice(0, 2)) < 12 ? "AM" : "PM"}`;
 }
 
 /** The time label above a stop or an entry. */

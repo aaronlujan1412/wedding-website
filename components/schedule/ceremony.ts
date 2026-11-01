@@ -1,4 +1,9 @@
+import { addMinutes } from "./clock";
 import type { Line } from "./schedule";
+
+/** When the ceremony starts. The guest stop, the run of show and the
+    couple's view all read it, so moving the ceremony is one edit. */
+export const CEREMONY_START = "16:15";
 
 /**
  * One part of the ceremony. Only `minutes` is stored: each part's clock time
@@ -212,3 +217,20 @@ export const ceremony: Segment[] = [
     ],
   },
 ];
+
+/** Each segment's start, running the clock forward from `start`. */
+export function segmentStarts(start: string, segments: Segment[]) {
+  let clock = start;
+  return segments.map((segment) => {
+    const at = clock;
+    clock = addMinutes(clock, segment.minutes ?? 0);
+    return at;
+  });
+}
+
+export function totalMinutes(segments: Segment[]) {
+  return segments.reduce((sum, s) => sum + (s.minutes ?? 0), 0);
+}
+
+/** When the timed parts run out and the recessional starts. */
+export const CEREMONY_END = addMinutes(CEREMONY_START, totalMinutes(ceremony));

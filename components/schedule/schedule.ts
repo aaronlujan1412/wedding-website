@@ -1,5 +1,5 @@
-import type { Role } from "./roles";
-import type { Segment } from "./ceremony";
+import type { Role, Side } from "./roles";
+import { CEREMONY_START, type Segment } from "./ceremony";
 import type { Station } from "./menu";
 
 /** A calendar date, `YYYY-MM-DD`. */
@@ -47,6 +47,9 @@ export type GuestStop = Timed & {
 export type RoleEntry = Timed & {
   title: string;
   roles: Role[];
+  /** Whose side of the spine it sits on in a two-sided view. Absent: it's
+      something both people do, so it's drawn across the middle. */
+  side?: Side;
   /** The people this involves, when the doc names them. */
   who?: string[];
   body?: string;
@@ -66,7 +69,7 @@ export const guestStops: GuestStop[] = [
   },
   {
     day: "2026-12-01",
-    time: "16:15",
+    time: CEREMONY_START,
     icon: "💍",
     title: "The Ceremony",
     body: "Beneath the crisp winter sky, at the main entrance of the lodge, we’ll exchange our vows. This moment means everything to us — we’re not only joining together as husband and wife, but officially uniting our hearts as a family with our wonderful son, Daniel.",

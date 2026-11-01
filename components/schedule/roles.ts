@@ -43,6 +43,13 @@ export const ROLES = [
     intro:
       "Packing the cars on Monday, setting up the lodge, the food, and the clean-up.",
   },
+  {
+    id: "aaron-and-savea",
+    label: "Aaron & Savea",
+    intro:
+      "Our day side by side: Aaron on the left, Savea on the right, until we meet in the middle.",
+    layout: "sides",
+  },
 ] as const;
 
 export type RoleInfo = (typeof ROLES)[number];
@@ -50,6 +57,24 @@ export type Role = RoleInfo["id"];
 
 export function roleById(id: string): RoleInfo | undefined {
   return ROLES.find((r) => r.id === id);
+}
+
+/**
+ * The two sides of a two-sided view, left then right. The inks are their
+ * lanes from the honeymoon planner — her side is blue and his is violet
+ * everywhere the two of them are drawn apart.
+ */
+export const SIDES = [
+  { id: "aaron", name: "Aaron", ink: "text-lane-aaron", fill: "bg-lane-aaron" },
+  { id: "savea", name: "Savea", ink: "text-lane-savea", fill: "bg-lane-savea" },
+] as const;
+
+export type Side = (typeof SIDES)[number]["id"];
+
+/** Whether a role's view splits down the spine instead of hanging off it. */
+export function isSided(role: Role | null) {
+  const info = role ? roleById(role) : undefined;
+  return info !== undefined && "layout" in info && info.layout === "sides";
 }
 
 /** `/schedule` is everyone; `/schedule/<role>` is that role laid over it. */
