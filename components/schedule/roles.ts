@@ -1,0 +1,62 @@
+/**
+ * The people working the day, each with their own view of the schedule. A
+ * role's id is its URL (`/schedule/photographers`), so the link you text
+ * someone is the same word the data is tagged with.
+ *
+ * Nothing here is private: every view is one tap away from every guest. Keep
+ * anything that shouldn't be read by the whole guest list off this page.
+ */
+export const ROLES = [
+  {
+    id: "wedding-party",
+    label: "Wedding party",
+    intro:
+      "For Brenna, Easton and Alaysha, from the rehearsal on Monday night through the send-off.",
+  },
+  {
+    id: "officiant",
+    label: "Officiant",
+    intro:
+      "For Adrian. The whole ceremony is here, minute by minute, with ideas for each part.",
+  },
+  {
+    id: "family",
+    label: "Family",
+    intro:
+      "For our parents, Daniel, and everyone staying the night at the lodge.",
+  },
+  {
+    id: "photographers",
+    label: "Photo & video",
+    intro:
+      "For our two photographers and our videographer, from getting ready to the send-off.",
+  },
+  {
+    id: "coordinator",
+    label: "Coordinator",
+    intro: "Every cue, from seating the ceremony to calling it a night.",
+  },
+  {
+    id: "setup-crew",
+    label: "Setup crew",
+    intro:
+      "Packing the cars on Monday, setting up the lodge, the food, and the clean-up.",
+  },
+] as const;
+
+export type RoleInfo = (typeof ROLES)[number];
+export type Role = RoleInfo["id"];
+
+export function roleById(id: string): RoleInfo | undefined {
+  return ROLES.find((r) => r.id === id);
+}
+
+/** `/schedule` is everyone; `/schedule/<role>` is that role laid over it. */
+export function scheduleHref(role: Role | null) {
+  return role ? `/schedule/${role}` : "/schedule";
+}
+
+export function roleFromPath(pathname: string): Role | null {
+  const slug = pathname.split("/")[2];
+  return (slug && roleById(slug)?.id) || null;
+}

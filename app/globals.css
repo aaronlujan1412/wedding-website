@@ -402,6 +402,16 @@ body:has(#me) {
   body:has(#itinerary) {
     background: #fff;
   }
+
+  /* A role's schedule is printed and carried — Adrian's script, the
+     coordinator's cues — so it drops the site's chrome and the cream. */
+  body:has(#schedule) {
+    background: #fff;
+  }
+  body:has(#schedule) nav,
+  body:has(#schedule) footer {
+    display: none;
+  }
 }
 
 /* The flight route draws itself once, origin to destination, when the next
