@@ -6,7 +6,10 @@ import { Play, Square, Volume2, VolumeX } from "lucide-react";
 import {
   allCounts,
   clock,
+  DEFAULT_ENDING,
   type EightCount,
+  type Ending,
+  ENDINGS,
   type Movement,
   routine,
   SONG,
@@ -32,6 +35,7 @@ import { Reference } from "./Reference";
 import { Strip } from "./Strip";
 
 const TIER_ORDER: Tier[] = ["a", "b", "c"];
+const ENDING_ORDER: Ending[] = ["planned", "flow"];
 
 /**
  * Runs of eight-counts that hold. The source table wrote "Same." five times in
@@ -49,6 +53,7 @@ function group(counts: EightCount[]): EightCount[][] {
 
 export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) {
   const [tier, setTier] = useState<Tier>("a");
+  const [ending, setEnding] = useState<Ending>(DEFAULT_ENDING);
   const [bpm, setBpm] = useState<number>(SONG.bpm);
   const [sound, setSound] = useState(true);
 
@@ -61,8 +66,11 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
   const audioRef = useRef<HTMLAudioElement>(null);
   const urlRef = useRef<string | null>(null);
 
-  const movements = useMemo(() => routine(tier), [tier]);
-  const counts = useMemo(() => allCounts(tier), [tier]);
+  // Both endings are the same thirty-eight eight-counts, so switching one for
+  // the other mid-walk leaves you on the same count against the same second of
+  // the recording. That is the whole point: you A/B them with the song running.
+  const movements = useMemo(() => routine(tier, ending), [tier, ending]);
+  const counts = useMemo(() => allCounts(tier, ending), [tier, ending]);
   const indexOf = useMemo(
     () => new Map(counts.map((c, i) => [c.n, i])),
     [counts],
@@ -307,6 +315,42 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
             : "an eight-count of count-in and then the beat, live, down the sheet."}
         </p>
 
+        <section className="mt-8 rounded-sm border border-border bg-card p-4 sm:p-5">
+          <h2 className="font-garamond text-2xl leading-none text-pop">
+            The ending
+          </h2>
+          <p className="mt-2 max-w-[64ch] font-garamond text-base leading-relaxed text-muted-foreground">
+            Two arrangements of the last ten eight-counts. Everything before
+            E29 is the same dance either way, and both are exactly eighty
+            counts — so you can switch while the song is playing and stay on
+            the same beat.
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {ENDING_ORDER.map((e) => (
+              <button
+                key={e}
+                type="button"
+                onClick={() => setEnding(e)}
+                aria-pressed={e === ending}
+                className={cn(
+                  "rounded-full border px-3.5 py-1.5 font-garamond text-lg leading-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring motion-reduce:transition-none",
+                  e === ending
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-foreground hover:border-primary",
+                )}
+              >
+                {ENDINGS[e].name}
+              </button>
+            ))}
+            <span className="font-garamond text-lg text-muted-foreground">
+              {ENDINGS[ending].summary}
+            </span>
+          </div>
+          <p className="mt-2 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
+            {ENDINGS[ending].blurb}
+          </p>
+        </section>
+
         <SongPanel
           mode={mode}
           onMode={(next) => {
@@ -346,7 +390,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           ))}
         </div>
 
-        <Reference week={week} tier={tier} />
+        <Reference week={week} tier={tier} ending={ending} />
       </main>
     </>
   );

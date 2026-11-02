@@ -138,6 +138,12 @@ export type Footwork = {
 
 export type EightCount = {
   n: number;
+  /**
+   * Stable name for the move itself, where the same move appears in both
+   * endings. Tier edits key off this rather than off `n`, because the two
+   * endings put the catch, the dip and the spin at different numbers.
+   */
+  id?: string;
   /** Three to five words. The thing you read while moving. */
   cue: string;
   detail: string;
@@ -642,244 +648,482 @@ export const MOVEMENTS: Movement[] = [
           "Back to Gear 2. A big shape, arms extended, and recover the breath — you will need it.",
         gear: 2,
       },
-      {
-        n: 29,
-        cue: "Counterbalance",
-        detail:
-          "Forearm grip. Both lean into opposition at about 20° off vertical, and rotate as a single unit.",
-        gear: 2,
-        care: true,
-        figure: {
-          name: "Counterbalance",
-          lookUp: ["acroyoga counterbalance", "partner counterbalance two person"],
-          steps:
-            "Forearm to forearm, each hand closing below the other's elbow. Both lean away until the connection is carrying you, spines long, hips under you.",
-          effort: "session",
-          instead:
-            "Nothing — this is the best element in the routine to learn without a teacher. At near-equal mass it is self-correcting: too little lean and you simply stand up, too much and you feel it immediately. The acro videos are the clearest, because they explain the physics rather than the styling.",
-        },
-        footwork: {
-          lead: [
-            { from: 1, to: 2, text: "feet apart, plant, set the grip" },
-            { from: 3, to: 8, text: "shuffle round — small steps, never crossed" },
-          ],
-          follow: [
-            { from: 1, to: 2, text: "feet apart, plant, set the grip" },
-            { from: 3, to: 8, text: "shuffle round, weight back the whole way" },
-          ],
-          note: "Feet stay wide and never cross — a crossed foot is the one thing that can take the base out from under a counterbalance. You rotate by shuffling, not by stepping over.",
-        },
-        note: {
-          title: "Both of you lean away",
-          body: "The connection is what holds you up. Keep your spines long — the failure is bending at the waist, which collapses the shape and dumps the load onto arms. If it feels like either of you is holding the other up, the angle is wrong.",
-        },
-      },
-      {
-        n: 30,
-        cue: "Hold, rotating",
-        detail: "Stay in the counterbalance and keep rotating. Full eight-count.",
-        gear: 2,
-        care: true,
-      },
-      {
-        n: 31,
-        cue: "Vertical, and close",
-        detail:
-          "Recover to vertical and close the frame. This is the shared lead-in — every tier of the Peak starts from exactly here.",
-        gear: 2,
-      },
-    ],
-  },
-  {
-    id: "peak",
-    ord: 5,
-    name: "Peak",
-    gearLabel: "Gear 2, and the tier choice",
-    heat: 1,
-    intent:
-      "The only part of the routine that changes between tiers. It runs in from E31 and out through E37 identically whichever one you are dancing, so dropping a tier in November costs you nothing you have already rehearsed.",
-    counts: [
-      {
-        n: 32,
-        cue: "Travelling counterbalance",
-        detail:
-          "Forearm grip, both into full opposition at 30–35°. He walks a curved path; she counterbalances throughout, off her own balance the entire time.",
-        gear: 2,
-        care: true,
-        figure: {
-          name: "Travelling counterbalance",
-          lookUp: ["moving counterbalance partner", "acroyoga counterbalance walking"],
-          steps: "The same grip and the same physics as E29, but he walks it.",
-          effort: "careful",
-          instead:
-            "Take the angle in stages across the weeks — 20°, then 25°, then 30°. At 35° a broken connection puts both of you down, and the only thing that stops it breaking is having done it enough times to feel it going.",
-        },
-        footwork: {
-          lead: [
-            { from: 1, to: 8, text: "walk the curve — short steps, weight back against her the whole way" },
-          ],
-          follow: [
-            { from: 1, to: 8, text: "off your own balance throughout; feet follow his path, hips stay under you" },
-          ],
-          note: "Neither of you recovers to vertical until E33's 7. If one of you keeps drifting upright to feel safe, the other is suddenly holding a person — which is the failure this figure has, and it arrives without warning.",
-        },
-      },
-      {
-        n: 33,
-        cue: "Sweep the floor",
-        detail: "Carry the arc right across the floor.",
-        gear: 2,
-        care: true,
-        beats: [{ from: 7, to: 8, text: "recover to vertical" }],
-      },
-      {
-        n: 34,
-        cue: "Continuous spin",
-        detail:
-          "He leads her into three to four continuous rotations from a low connection and holds his own orientation, so he is square and still when she comes out of them. This is the visual peak of the whole thing.",
-        gear: 2,
-        figure: {
-          name: "Multiple free spins",
-          lookUp: ["multiple spins spotting", "how to do multiple turns dance"],
-          steps:
-            "The same spin as E17, repeated without stopping. Spotting is the only thing that makes more than one possible.",
-          effort: "careful",
-          instead:
-            "Cut it to two rotations. Three or four consecutive turns is months of work on its own, and this is the eight-count that hands you into the catch — she has to come out of it on her feet and knowing where he is.",
-        },
-        footwork: {
-          lead: [
-            { from: 1, text: "low cue, release" },
-            { from: 2, to: 6, text: "hold square, track her" },
-            { from: 7, to: 8, text: "square up, find her" },
-          ],
-          follow: [
-            { from: 1, text: "step out" },
-            { from: 2, to: 6, text: "turn, spotting every one" },
-            { from: 7, to: 8, text: "last turn, find him, feet under you" },
-          ],
-          note: "He stays square and still the whole way through, which is what gives her something to spot. The catch is on the next 5 and he has to be there for it. Her spot point has to be him, not a wall — she arrives needing to know where he is, not where the room is. This is the eight-count the whole Peak hangs on: everything after it assumes you both finish it facing each other and balanced.",
-        },
-      },
-      {
-        n: 35,
-        cue: "The catch",
-        detail:
-          "She exits the spin into his frame. He receives at the natural waist, above the skirt volume, on her jump. Hips rise about eighteen inches and he rotates 180° with her airborne for a second and a half.",
-        gear: 2,
-        care: true,
-        figure: {
-          name: "Waist lift, half turn",
-          lookUp: ["waist lift partner dance", "beginner dance lift technique"],
-          steps:
-            "She jumps on 5 and he redirects that jump upward, hands at the natural waist above the skirt. He turns 180° with her up, and sets her down on 7.",
-          effort: "careful",
-          instead:
-            "Dance Tier B. Not because the lift is beyond you, but because of what it is entered from: she has to find a jump on a specific count while dizzy out of a multi-turn spin, and he has to receive a body arriving with momentum he cannot predict. That combination is what drops people, and it is the one thing on this sheet that no amount of careful reading substitutes for someone spotting you.",
-        },
-        footwork: {
-          lead: [
-            { from: 1, to: 4, text: "feet apart, knees soft, hands ready at her waist" },
-            { from: 5, text: "catch, from the legs" },
-            { from: 6, text: "turn 180°" },
-            { from: 7, text: "set down" },
-            { from: 8, text: "settle" },
-          ],
-          follow: [
-            { from: 1, to: 4, text: "exit the spin, feet under you, find him" },
-            { from: 5, text: "jump" },
-            { from: 6, text: "stay long" },
-            { from: 7, text: "land, both feet" },
-            { from: 8, text: "settle" },
-          ],
-          note: "Her jump comes from the knees and she stays long in the air; he takes it with his legs, never by pulling with his arms. The timing is hers and he only redirects it. If he is pulling on 5, the count went wrong — stop and reset rather than finishing it. Practise the jump and catch standing still, on a count, dozens of times before it ever comes out of a spin.",
-        },
-        beats: [{ from: 7, text: "down" }],
-        note: {
-          title: "She jumps; he redirects",
-          body: "He is never hoisting dead weight. If it feels like lifting, the count is off — not the strength. The waist is the only viable grip on a structured ballgown: the bodice gives you something to hold, the skirt gives you nothing.",
-        },
-      },
-      {
-        n: 36,
-        cue: "The dip",
-        detail:
-          "Three seconds down. Head below hips, her supporting leg loaded, free leg extended. His descent is knee-driven, not a backward lean. Hold at the bottom.",
-        gear: 2,
-        care: true,
-        figure: {
-          name: "Dip",
-          lookUp: ["how to dip your partner", "ballroom dip technique"],
-          steps:
-            "She keeps a straight supporting leg under her and her own core loaded; he lowers by bending his knees, never by leaning back. Her head follows her spine rather than dropping on its own.",
-          effort: "careful",
-          instead:
-            "Take the standard depth, head above hips — Tier C's version. An inverted dip needs her to hold her own weight upside down and him to have a base that does not move, and on camera the difference between a clean standard dip and a wobbling deep one is all in the wobble.",
-        },
-        footwork: {
-          lead: [
-            { from: 1, to: 4, text: "down over three seconds — bend the knees, spine stays upright" },
-            { from: 5, to: 8, text: "hold, and keep breathing" },
-          ],
-          follow: [
-            { from: 1, to: 4, text: "supporting leg straight under you, free leg extends" },
-            { from: 5, to: 8, text: "hold — your core, not his arms" },
-          ],
-          note: "His feet are apart and staggered, front foot between hers, so the base is a triangle rather than a line. Her weight stays over the line between her standing foot and his front one; the moment it goes outside that, he is lifting instead of supporting.",
-        },
-        note: {
-          title: "Supported, not held",
-          body: "Her centre of mass stays over the line between her supporting foot and his, and she keeps her own core loaded. Watch for the skirt bunching behind her and wedging — practise this one in the actual crinoline.",
-        },
-      },
-      {
-        n: 37,
-        cue: "Up, and hold",
-        detail:
-          "Three seconds of recovery, straight up, into a held close position.",
-        gear: 2,
-        footwork: {
-          lead: [
-            { from: 1, to: 4, text: "straighten the knees — no pulling with the arms" },
-            { from: 5, to: 8, text: "close, held" },
-          ],
-          follow: [
-            { from: 1, to: 4, text: "come up through your own standing leg" },
-            { from: 5, to: 8, text: "close, held" },
-          ],
-          note: "Up the same way you went down and at the same speed. A dip that drops in three seconds and snaps up in one looks like a rescue.",
-        },
-      },
-    ],
-  },
-  {
-    id: "land",
-    ord: 6,
-    name: "Land",
-    gearLabel: "Near-motionless",
-    heat: 0.2,
-    intent:
-      "Hold until the audio actually stops. Breaking early undoes the whole ending, and the ending is the part people carry out of the room.",
-    counts: [
-      {
-        n: 38,
-        cue: "Land it",
-        detail:
-          "Closed frame, near-motionless, one slow quarter rotation. Kiss or held pose on the final chord — and stay there until the track has genuinely ended.",
-        gear: 2,
-        footwork: {
-          lead: [
-            { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
-          ],
-          follow: [
-            { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
-          ],
-          note: "There is no footwork left to get wrong here, which is the point. The only mistake available is moving too soon.",
-        },
-      },
     ],
   },
 ];
+
+/* The ending -------------------------------------------------------------- */
+
+/**
+ * Two arrangements of the last ten eight-counts.
+ *
+ * Everything through E28 is the same dance either way, and both endings are
+ * exactly eighty counts, which is the only reason they are interchangeable at
+ * all: the recording is fixed, so an ending that ran long would not be a
+ * variation, it would be a different edit of the song.
+ */
+export type Ending = "planned" | "flow";
+
+export const ENDINGS: Record<
+  Ending,
+  { name: string; summary: string; blurb: string }
+> = {
+  planned: {
+    name: "As planned",
+    summary: "Leans, then the lift",
+    blurb:
+      "The ending as it was choreographed: spin out, a dip, into and out of a colgada, then the spin, the lift and the second dip. The band's return at 3:33 lands on the colgada resolving.",
+  },
+  flow: {
+    name: "Flowed",
+    summary: "The lift on the return, the dip out of the turn",
+    blurb:
+      "The same material reordered so the lift lands on the band's return at 3:33, with stillness before it and a travelling turn between the lift and the dip. Three care moves instead of five, and no weight reversal without counts to recover in.",
+  },
+};
+
+/* Figures the two endings share. Written once so a correction to the mechanics
+   cannot land on one version of the ending and not the other. */
+
+const COLGADA: Figure = {
+  name: "Colgada",
+  lookUp: [
+    "tango colgada",
+    "colgada technique partner",
+    "acroyoga counterbalance",
+    "partner counterbalance two person",
+  ],
+  steps:
+    "Forearm to forearm, each hand closing below the other's elbow. Both lean away until the connection is carrying you, spines long, hips under you. A colgada is a counterbalance with a tango name — the physics is the same, and the acro videos explain it better because they talk about the forces rather than the styling.",
+  effort: "careful",
+  instead:
+    "Take the angle in stages across the weeks — 20°, then 25°, then 30°. At near-equal mass the shape is self-correcting at a shallow angle: too little lean and you simply stand up, too much and you feel it immediately. Deep is different. At 35° a broken connection puts both of you down, and the only thing that stops it breaking is having done it enough times to feel it going.",
+};
+
+const COLGADA_FOOTWORK: Footwork = {
+  lead: [
+    { from: 1, to: 2, text: "feet apart, plant, set the grip" },
+    { from: 3, to: 8, text: "shuffle round — small steps, never crossed" },
+  ],
+  follow: [
+    { from: 1, to: 2, text: "feet apart, plant, set the grip" },
+    { from: 3, to: 8, text: "shuffle round, weight back the whole way" },
+  ],
+  note: "Feet stay wide and never cross — a crossed foot is the one thing that can take the base out from under a colgada. You rotate by shuffling, not by stepping over.",
+};
+
+const LEAN_AWAY = {
+  title: "Both of you lean away",
+  body: "The connection is what holds you up. Keep your spines long — the failure is bending at the waist, which collapses the shape and dumps the load onto arms. If it feels like either of you is holding the other up, the angle is wrong.",
+};
+
+const SPIN: Figure = {
+  name: "Multiple free spins",
+  lookUp: ["multiple spins spotting", "how to do multiple turns dance"],
+  steps:
+    "The same spin as E17, repeated without stopping. Spotting is the only thing that makes more than one possible.",
+  effort: "careful",
+  instead:
+    "Cut it to two rotations. Three or four consecutive turns is months of work on its own, and this is the eight-count that hands you into the catch — she has to come out of it on her feet and knowing where he is.",
+};
+
+const SPIN_FOOTWORK: Footwork = {
+  lead: [
+    { from: 1, text: "low cue, release" },
+    { from: 2, to: 6, text: "hold square, track her" },
+    { from: 7, to: 8, text: "square up, find her" },
+  ],
+  follow: [
+    { from: 1, text: "step out" },
+    { from: 2, to: 6, text: "turn, spotting every one" },
+    { from: 7, to: 8, text: "last turn, find him, feet under you" },
+  ],
+  note: "He stays square and still the whole way through, which is what gives her something to spot. Her spot point has to be him, not a wall — she arrives needing to know where he is, not where the room is. This is the eight-count the whole ending hangs on: everything after it assumes you both finish it facing each other and balanced.",
+};
+
+const LIFT: Figure = {
+  name: "Waist lift, half turn",
+  lookUp: ["waist lift partner dance", "beginner dance lift technique"],
+  steps:
+    "She jumps and he redirects that jump upward, hands at the natural waist above the skirt. He turns 180° with her up, and sets her down on two feet.",
+  effort: "careful",
+  instead:
+    "Dance Tier B. Not because the lift is beyond you, but because of what it is entered from: she has to find a jump on a specific count while dizzy out of a multi-turn spin, and he has to receive a body arriving with momentum he cannot predict. That combination is what drops people, and it is the one thing on this sheet that no amount of careful reading substitutes for someone spotting you.",
+};
+
+const SHE_JUMPS = {
+  title: "She jumps; he redirects",
+  body: "He is never hoisting dead weight. If it feels like lifting, the count is off — not the strength. The waist is the only viable grip on a structured ballgown: the bodice gives you something to hold, the skirt gives you nothing.",
+};
+
+const DIP: Figure = {
+  name: "Dip",
+  lookUp: ["how to dip your partner", "ballroom dip technique"],
+  steps:
+    "She keeps a straight supporting leg under her and her own core loaded; he lowers by bending his knees, never by leaning back. Her head follows her spine rather than dropping on its own.",
+  effort: "careful",
+  instead:
+    "Take the standard depth, head above hips — Tier C's version. An inverted dip needs her to hold her own weight upside down and him to have a base that does not move, and on camera the difference between a clean standard dip and a wobbling deep one is all in the wobble.",
+};
+
+const SUPPORTED = {
+  title: "Supported, not held",
+  body: "Her centre of mass stays over the line between her supporting foot and his, and she keeps her own core loaded. Watch for the skirt bunching behind her and wedging — practise this one in the actual crinoline.",
+};
+
+const UP_AND_HOLD: EightCount = {
+  n: 0,
+  id: "up-and-hold",
+  cue: "Up, and hold",
+  detail: "Three seconds of recovery, straight up, into a held close position.",
+  gear: 2,
+  footwork: {
+    lead: [
+      { from: 1, to: 4, text: "straighten the knees — no pulling with the arms" },
+      { from: 5, to: 8, text: "close, held" },
+    ],
+    follow: [
+      { from: 1, to: 4, text: "come up through your own standing leg" },
+      { from: 5, to: 8, text: "close, held" },
+    ],
+    note: "Up the same way you went down and at the same speed. A dip that drops in three seconds and snaps up in one looks like a rescue.",
+  },
+};
+
+const LAND_IT: EightCount = {
+  n: 38,
+  id: "land-it",
+  cue: "Land it",
+  detail:
+    "Closed frame, near-motionless, one slow quarter rotation. Kiss or held pose on the final chord — and stay there until the track has genuinely ended.",
+  gear: 2,
+  footwork: {
+    lead: [
+      { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
+    ],
+    follow: [
+      { from: 1, to: 8, text: "a quarter turn across the whole eight-count. Almost nothing." },
+    ],
+    note: "There is no footwork left to get wrong here, which is the point. The only mistake available is moving too soon.",
+  },
+};
+
+const LAND: Movement = {
+  id: "land",
+  ord: 7,
+  name: "Land",
+  gearLabel: "Near-motionless",
+  heat: 0.2,
+  intent:
+    "Hold until the audio actually stops. Breaking early undoes the whole ending, and the ending is the part people carry out of the room.",
+  counts: [LAND_IT],
+};
+
+/**
+ * The closing movements, per ending. Both run out of E28 and both finish on
+ * E38, so the strip, the walk-through and every timecode on the page are
+ * computed the same way whichever one is on screen.
+ */
+export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
+  planned: [
+    {
+      id: "leans",
+      ord: 5,
+      name: "The leans",
+      gearLabel: "Gear 2",
+      heat: 0.8,
+      intent:
+        "Four eight-counts of weight thrown away from centre and caught: a spin out into a lean, a dip, and a colgada in and out of itself. It is the loudest thing in the routine before the lift.",
+      failure:
+        "The direction reverses on every count and there is nowhere to recover. Out, down, out, out — then E33 asks you both to be back on your own axis, spinning. Nothing here is beyond you individually; it is the joins that have no counts in them.",
+      counts: [
+        {
+          n: 29,
+          id: "spin-out",
+          cue: "Spin out",
+          detail:
+            "His left arm goes out and she spins out of the frame along it, then comes back in to a lean on his left shoulder.",
+          gear: 2,
+          care: true,
+          note: {
+            title: "The arm guides, it does not pull",
+            body: "She turns herself; his arm is the track she turns around. Her wrists cannot take load, so the moment the spin needs his hand to drive it, it has become the wrong figure — slow the lead down instead.",
+          },
+        },
+        {
+          n: 30,
+          id: "dramatic-dip",
+          cue: "Dramatic dip",
+          detail:
+            "She steps in on her left and commits her weight into a dip; he catches it and holds to about 5, then brings her up.",
+          gear: 2,
+          care: true,
+          figure: DIP,
+          note: {
+            title: "This is the first of two dips",
+            body: "E36 is a dip as well. Two dips eight eight-counts apart read as one idea repeated rather than two moments, and the second one is the one the song is paying for — so this one stays shallow and brisk, or it steals from the real one.",
+          },
+        },
+        {
+          n: 31,
+          id: "colgada",
+          cue: "Colgada",
+          detail:
+            "She comes back up and steps right to prep; he comes back up and steps left. Then both lean away into the colgada.",
+          gear: 2,
+          care: true,
+          figure: COLGADA,
+          footwork: COLGADA_FOOTWORK,
+          note: LEAN_AWAY,
+        },
+        {
+          n: 32,
+          id: "finish-colgada",
+          cue: "Finish the colgada",
+          detail:
+            "Come out of it, and he holds the lean at the end with his left foot extended out as the support.",
+          gear: 2,
+          care: true,
+          note: {
+            title: "The band comes back here",
+            body: "3:33 is the biggest event in the recording — a jump of about 35 dB out of six seconds of near-silence. In this version it arrives on a lean resolving, which is a shape finishing rather than a shape starting. That mismatch is the whole argument for the other ending.",
+          },
+        },
+      ],
+    },
+    {
+      id: "peak",
+      ord: 6,
+      name: "Peak",
+      gearLabel: "Gear 2, and the tier choice",
+      heat: 1,
+      intent:
+        "The spin into the lift into the dip, back to back. It runs in from E32 and out through E37 the same way at every tier, so dropping a tier in November costs you nothing you have already rehearsed.",
+      counts: [
+        {
+          n: 33,
+          id: "continuous-spin",
+          cue: "Continuous spin",
+          detail:
+            "He leads her into three to four continuous rotations from a low connection and holds his own orientation, so he is square and still when she comes out of them. This is the visual peak of the whole thing.",
+          gear: 2,
+          figure: SPIN,
+          footwork: SPIN_FOOTWORK,
+        },
+        {
+          n: 34,
+          cue: "Keep spinning",
+          detail: "",
+          gear: 2,
+          continues: true,
+        },
+        {
+          n: 35,
+          id: "the-catch",
+          cue: "The catch",
+          detail:
+            "She exits the spin into his frame. He receives at the natural waist, above the skirt volume, on her jump. Hips rise about eighteen inches and he rotates 180° with her airborne for a second and a half.",
+          gear: 2,
+          care: true,
+          figure: LIFT,
+          footwork: {
+            lead: [
+              { from: 1, to: 4, text: "feet apart, knees soft, hands ready at her waist" },
+              { from: 5, text: "catch, from the legs" },
+              { from: 6, text: "turn 180°" },
+              { from: 7, text: "set down" },
+              { from: 8, text: "settle" },
+            ],
+            follow: [
+              { from: 1, to: 4, text: "exit the spin, feet under you, find him" },
+              { from: 5, text: "jump" },
+              { from: 6, text: "stay long" },
+              { from: 7, text: "land, both feet" },
+              { from: 8, text: "settle" },
+            ],
+            note: "Her jump comes from the knees and she stays long in the air; he takes it with his legs, never by pulling with his arms. The timing is hers and he only redirects it. If he is pulling on 5, the count went wrong — stop and reset rather than finishing it. Practise the jump and catch standing still, on a count, dozens of times before it ever comes out of a spin.",
+          },
+          beats: [{ from: 7, text: "down" }],
+          note: SHE_JUMPS,
+        },
+        {
+          n: 36,
+          id: "the-dip",
+          cue: "The dip",
+          detail:
+            "Three seconds down. Head below hips, her supporting leg loaded, free leg extended. His descent is knee-driven, not a backward lean. Hold at the bottom.",
+          gear: 2,
+          care: true,
+          figure: DIP,
+          footwork: {
+            lead: [
+              { from: 1, to: 4, text: "down over three seconds — bend the knees, spine stays upright" },
+              { from: 5, to: 8, text: "hold, and keep breathing" },
+            ],
+            follow: [
+              { from: 1, to: 4, text: "supporting leg straight under you, free leg extends" },
+              { from: 5, to: 8, text: "hold — your core, not his arms" },
+            ],
+            note: "His feet are apart and staggered, front foot between hers, so the base is a triangle rather than a line. Her weight stays over the line between her standing foot and his front one; the moment it goes outside that, he is lifting instead of supporting.",
+          },
+          note: SUPPORTED,
+        },
+        { ...UP_AND_HOLD, n: 37 },
+      ],
+    },
+    LAND,
+  ],
+
+  flow: [
+    {
+      id: "peak",
+      ord: 5,
+      name: "Peak",
+      gearLabel: "Gear 2, and the tier choice",
+      heat: 1,
+      intent:
+        "Seven eight-counts built around one event: the band coming back at 3:33. The spin fills the last of the loud stretch, the hole gets stillness, the lift lands on the return, and the dip is what the lift's momentum turns into rather than a second thing that happens afterwards.",
+      failure:
+        "Stopping anywhere between E32 and E34. The lift, the travel and the dip are one shape; if the landing settles before the turn starts, it becomes a lift and then a dip, which is what the other ending already does.",
+      counts: [
+        {
+          n: 29,
+          id: "continuous-spin",
+          cue: "Continuous spin",
+          detail:
+            "He leads her into three to four continuous rotations from a low connection and holds his own orientation, so he is square and still when she comes out of them. The band is still at full height here — this is what spends the end of it.",
+          gear: 2,
+          figure: SPIN,
+          footwork: SPIN_FOOTWORK,
+        },
+        {
+          n: 30,
+          cue: "Keep spinning",
+          detail: "",
+          gear: 2,
+          continues: true,
+        },
+        {
+          n: 31,
+          id: "hold-breathe",
+          cue: "Hold, and breathe",
+          detail:
+            "The track falls away to almost nothing here — the quietest six seconds in the song, about −40 dB. Counts 1–5: closed position, weight settled, no rotation and no weight changes at all. Look at each other. Count 6: his hands find her waist, above the skirt volume. Counts 7–8: both sink into a plié together, slowly, so it reads as a breath rather than a prep.",
+          gear: 1,
+          beats: [
+            { from: 1, to: 5, text: "still" },
+            { from: 6, text: "hands set" },
+            { from: 7, to: 8, text: "sink" },
+          ],
+          note: {
+            title: "Stillness is not a seam",
+            body: "A pause mid-phrase while the band is going reads as something gone wrong. A pause in near-silence reads as tension and the room leans in. Same stillness, opposite effect — the difference is entirely whether the music is holding its breath with you. The sink on 7–8 is the only thing that moves in six seconds, and it is where the jump comes from: nobody jumps from straight legs.",
+          },
+        },
+        {
+          n: 32,
+          id: "the-catch",
+          cue: "The catch",
+          detail:
+            "She jumps out of the plié and he redirects it; hands at the natural waist, above the skirt volume. He completes the whole 180° while she is airborne so he is square and planted before she comes down, and sets her on two feet by 5. Then the landing does not stop — her weight transfers straight out of it and the two of you begin to turn.",
+          gear: 2,
+          care: true,
+          figure: LIFT,
+          footwork: {
+            lead: [
+              { from: 1, to: 2, text: "take the jump — lift from the legs" },
+              { from: 3, to: 4, text: "turn 180°, square and planted" },
+              { from: 5, text: "set her down, both feet" },
+              { from: 6, to: 8, text: "step out of it and start the rotation" },
+            ],
+            follow: [
+              { from: 1, to: 2, text: "jump out of the plié" },
+              { from: 3, to: 4, text: "airborne, stay long" },
+              { from: 5, text: "land, both feet" },
+              { from: 6, to: 8, text: "weight straight out of the landing, begin to turn" },
+            ],
+            note: "Everything is a count and a half earlier than it would be if the lift were the end of the phrase, and that is deliberate: counts 6–8 are what the travel is made of. Her jump comes from the knees; he takes it with his legs, never by pulling with his arms. If he is pulling, the count went wrong — stop and reset rather than finishing it. Practise the jump and the catch standing still, on a count, dozens of times before it ever comes out of a spin.",
+          },
+          beats: [
+            { from: 5, text: "down" },
+            { from: 6, to: 8, text: "and out, turning" },
+          ],
+          note: SHE_JUMPS,
+        },
+        {
+          n: 33,
+          id: "carry-the-turn",
+          cue: "Carry the turn",
+          detail:
+            "The horizontal part of the arc, and the reason the ending stops reading as two separate stunts. A travelling closed rotation, two or three steps, living off the momentum the landing gave you. Nothing technical here — this is just the two of you dancing.",
+          gear: 2,
+          note: {
+            title: "Why there is a plain eight-count here",
+            body: "A lift goes up and a dip goes down, so up-then-down is a reversal, and reversals always read as a stop. Put a horizontal between the two verticals and it becomes an arc: up, across, down. This is also why real routines dip out of a turn rather than from standing — the dip needs something to grow out of.",
+          },
+        },
+        {
+          n: 34,
+          id: "the-dip",
+          cue: "The dip",
+          detail:
+            "Led out of the rotation, never from a standstill. Counts 1–2: he checks the turn, and the momentum that was going around goes down instead — that redirection is the entry, so there is nothing to start and nothing to brace for. Counts 3–6: three seconds down, head below hips, her supporting leg straight and loaded, free leg extended, his descent knee-driven with a long back. Counts 7–8: hold at the bottom.",
+          gear: 2,
+          care: true,
+          figure: DIP,
+          footwork: {
+            lead: [
+              { from: 1, to: 2, text: "check the turn — the rotation becomes the descent" },
+              { from: 3, to: 6, text: "down over three seconds, knee-driven, spine upright" },
+              { from: 7, to: 8, text: "hold, and keep breathing" },
+            ],
+            follow: [
+              { from: 1, to: 2, text: "let the turn stop you, weight onto the supporting leg" },
+              { from: 3, to: 6, text: "supporting leg straight under you, free leg extends" },
+              { from: 7, to: 8, text: "hold — your core, not his arms" },
+            ],
+            note: "His feet are apart and staggered by the end of 2, front foot between hers, so the base is a triangle rather than a line. Her weight stays over the line between her standing foot and his front one; the moment it goes outside that, he is lifting instead of supporting. The entry is the new part — the descent itself is the same dip as ever.",
+          },
+          note: SUPPORTED,
+        },
+        { ...UP_AND_HOLD, n: 35 },
+      ],
+    },
+    {
+      id: "land",
+      ord: 6,
+      name: "Land",
+      gearLabel: "Gear 2, winding down",
+      heat: 0.3,
+      intent:
+        "The band is still big until about 4:08 and then goes. Three eight-counts that spend what is left of it and arrive at the final pose already nearly still, rather than stopping dead on the last chord.",
+      counts: [
+        {
+          n: 36,
+          id: "spin-out",
+          cue: "Spin out",
+          detail:
+            "His left arm goes out and she spins out of the frame along it, then comes back in to a lean on his left shoulder.",
+          gear: 2,
+          care: true,
+          note: {
+            title: "The arm guides, it does not pull",
+            body: "She turns herself; his arm is the track she turns around. Her wrists cannot take load, so the moment the spin needs his hand to drive it, it has become the wrong figure — slow the lead down instead.",
+          },
+        },
+        {
+          n: 37,
+          id: "slow-turn",
+          cue: "Slow the turn",
+          detail:
+            "The band starts dropping away around 4:10. Let the travel die into a slow closed rotation with the weight changes getting further apart, so you arrive at the final pose already nearly still.",
+          gear: 1,
+        },
+        LAND_IT,
+      ],
+    },
+  ],
+};
 
 /* Tiers ------------------------------------------------------------------- */
 
@@ -893,62 +1137,51 @@ export const TIERS: Record<
     name: "Tier A",
     summary: "Lift, inverted dip",
     blurb:
-      "The target. Travelling counterbalance, four rotations, the catch, and a full dip.",
+      "The target. Four rotations, the catch, and a full dip with her head below her hips.",
   },
   b: {
     name: "Tier B",
     summary: "No lift",
     blurb:
-      "Drop the altitude and nothing else. She exits the spin into a held shape with both feet down, straight into the dip.",
+      "Drop the altitude and nothing else. She exits the spin into a held shape with both feet down, and the ending carries on exactly as written.",
   },
   c: {
     name: "Tier C",
-    summary: "Nothing off the floor, nothing travelling",
+    summary: "Two spins, no lift, standard dip",
     blurb:
-      "The safety version, and still a routine: static counterbalance, two rotations, a standard-depth dip. It reads as confident and rehearsed, just with less altitude.",
+      "The safety version, and still a routine: two rotations instead of four, no altitude, and a standard-depth dip with her head above her hips. It reads as confident and rehearsed, just with less in it that can go wrong.",
   },
 };
 
-/** Only the interior of the Peak changes. E31 in and E37–E38 out are fixed. */
+/**
+ * Tier edits are keyed by an eight-count's `id` rather than its number,
+ * because the two endings put the same three moves at different numbers. An
+ * id the current ending does not contain is simply not applied, which is how
+ * one table covers both.
+ */
 const TIER_EDITS: Record<
   Exclude<Tier, "a">,
-  Record<number, Partial<EightCount>>
+  Record<string, Partial<EightCount>>
 > = {
   b: {
-    35: {
+    "the-catch": {
       cue: "The catch, feet down",
       detail:
-        "She exits the spin and he catches her into a held shape with both feet on the floor, straight on into the dip. Everything either side of this is unchanged.",
+        "She exits the spin and he catches her into a held shape with both feet on the floor. Everything either side of this is unchanged.",
       beats: undefined,
       figure: undefined,
+      footwork: undefined,
       note: {
         title: "Why this is the first thing to go",
-        body: "The lift is the only element carrying altitude, and it is the one the rest of the routine does not depend on. Removing it changes one eight-count.",
+        body: "The lift is the only element carrying altitude, and it is the one the rest of the ending does not depend on. Removing it changes one eight-count.",
       },
     },
   },
   c: {
-    32: {
-      cue: "Static counterbalance",
-      detail:
-        "Forearm grip into full opposition, but held on the spot — no travel across the floor.",
-      figure: {
-        name: "Counterbalance, held",
-        lookUp: ["acroyoga counterbalance", "partner counterbalance two person"],
-        steps:
-          "The grip and the physics of E29, taken to a deeper angle and held still. Standing still is the easy version: the connection only has to hold one shape rather than survive being walked.",
-        effort: "session",
-      },
-    },
-    33: {
-      cue: "Hold the opposition",
-      detail: "Stay in it, rotating slowly so every side of the room gets it.",
-      beats: [{ from: 7, to: 8, text: "recover to vertical" }],
-    },
-    34: {
+    "continuous-spin": {
       cue: "Spin, twice",
       detail:
-        "Two rotations from the low connection, with him square and still. Two is comfortably inside what a 3″ heel on suede will give you.",
+        "Two rotations from the low connection, taken slowly across the full sixteen counts, with him square and still. Two is comfortably inside what a 3″ heel on suede will give you.",
       figure: {
         name: "Double free spin",
         lookUp: ["double spin dance spotting", "how to spot a turn dancing"],
@@ -957,16 +1190,17 @@ const TIER_EDITS: Record<
         effort: "weeks",
       },
     },
-    35: {
+    "the-catch": {
       cue: "Close the frame",
       detail:
-        "She exits the spin into a closed frame, both feet down. Settle, and go straight into the dip.",
+        "She exits the spin into a closed frame, both feet down. Settle, and carry on.",
       beats: undefined,
-      note: undefined,
       figure: undefined,
+      footwork: undefined,
+      note: undefined,
       care: false,
     },
-    36: {
+    "the-dip": {
       cue: "The dip, standard depth",
       detail:
         "Three seconds down to a standard depth — no inversion, head stays above hips. Her supporting leg loaded, his descent knee-driven. Hold.",
@@ -985,29 +1219,36 @@ const TIER_EDITS: Record<
   },
 };
 
-/** The routine as danced at a given tier. */
-export function routine(tier: Tier): Movement[] {
-  if (tier === "a") return MOVEMENTS;
+/** Which ending the page opens on. */
+export const DEFAULT_ENDING: Ending = "planned";
+
+/** The routine as danced, at a given tier and with a given ending. */
+export function routine(tier: Tier, ending: Ending = DEFAULT_ENDING): Movement[] {
+  const all = [...MOVEMENTS, ...ENDING_MOVEMENTS[ending]];
+  if (tier === "a") return all;
   const edits = TIER_EDITS[tier];
-  return MOVEMENTS.map((m) =>
-    m.id === "peak"
-      ? {
-          ...m,
-          counts: m.counts.map((c) =>
-            edits[c.n] ? { ...c, ...edits[c.n] } : c,
-          ),
-        }
-      : m,
-  );
+  return all.map((movement) => {
+    if (!movement.counts.some((c) => c.id && edits[c.id])) return movement;
+    return {
+      ...movement,
+      counts: movement.counts.map((c) =>
+        c.id && edits[c.id] ? { ...c, ...edits[c.id] } : c,
+      ),
+    };
+  });
 }
 
 /** Flat, in order — what the walk-through steps through. */
-export function allCounts(tier: Tier): EightCount[] {
-  return routine(tier).flatMap((m) => m.counts);
+export function allCounts(tier: Tier, ending: Ending = DEFAULT_ENDING) {
+  return routine(tier, ending).flatMap((m) => m.counts);
 }
 
-export function movementOf(n: number, tier: Tier = "a") {
-  return routine(tier).find((m) => m.counts.some((c) => c.n === n));
+export function movementOf(
+  n: number,
+  tier: Tier = "a",
+  ending: Ending = DEFAULT_ENDING,
+) {
+  return routine(tier, ending).find((m) => m.counts.some((c) => c.n === n));
 }
 
 /**
@@ -1015,9 +1256,9 @@ export function movementOf(n: number, tier: Tier = "a") {
  * so the whole thing can be watched through in a sitting rather than hunted
  * down a movement at a time.
  */
-export function allFigures(tier: Tier = "a") {
+export function allFigures(tier: Tier = "a", ending: Ending = DEFAULT_ENDING) {
   const found: { where: string; figure: Figure }[] = [];
-  for (const movement of routine(tier)) {
+  for (const movement of routine(tier, ending)) {
     if (movement.figure) {
       found.push({ where: movement.name, figure: movement.figure });
     }

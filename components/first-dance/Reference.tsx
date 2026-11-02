@@ -4,6 +4,7 @@ import {
   CARE,
   CONVENTIONS,
   DECISION_WEEK,
+  type Ending,
   FLOOR,
   type Protocol,
   EFFORT,
@@ -27,11 +28,13 @@ import { Strip } from "./Strip";
 export function Reference({
   week,
   tier,
+  ending,
 }: {
   week: ReturnType<typeof trainingWeek>;
   tier: Tier;
+  ending: Ending;
 }) {
-  const figures = allFigures(tier);
+  const figures = allFigures(tier, ending);
   const careful = figures.filter((f) => f.figure.effort === "careful").length;
 
   return (
