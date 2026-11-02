@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">
+  <!--
+    The tab icon for /me: a bevel-out button with the masthead's initials on
+    it, drawn on a 16px grid because 16px is what a tab draws it at.
+
+    It has to be an SVG. Next lists the root favicon.ico first on every page,
+    and Firefox-family browsers pick an SVG over anything, then an icon of
+    exactly the tab size, then any .ico. A big PNG here loses to the wedding
+    favicon and /me wears the wrong icon.
+
+    The hexes are the color-me-* tokens from globals.css. A favicon is its
+    own document and cannot read the page's custom properties. (No double
+    hyphens anywhere in this file: XML forbids them inside a comment, and a
+    favicon that fails to parse is no icon at all.)
+  -->
+
+  <!-- Panel, then the bevel: light on the top-left, dark on the bottom-right -->
+  <rect width="16" height="16" fill="#211647" />
+  <path d="M0 0h15v1H1v15H0z" fill="#6a4fc0" />
+  <path d="M15 0h1v16H1v-1h14z" fill="#0b0718" />
+
+  <!-- The masthead's hard gold shadow, outer edges only: inside the A it
+       filled the counter, and the letters stopped reading at 16px -->
+  <g fill="#ffc93c">
+    <rect x="7" y="6" width="1" height="7" />
+    <rect x="10" y="5" width="1" height="6" />
+    <rect x="10" y="12" width="4" height="1" />
+  </g>
+
+  <g fill="#ece7fb">
+    <!-- A -->
+    <rect x="3" y="4" width="3" height="1" />
+    <rect x="2" y="5" width="1" height="7" />
+    <rect x="6" y="5" width="1" height="7" />
+    <rect x="3" y="8" width="3" height="1" />
+    <!-- L -->
+    <rect x="9" y="4" width="1" height="8" />
+    <rect x="10" y="11" width="3" height="1" />
+  </g>
+</svg>
