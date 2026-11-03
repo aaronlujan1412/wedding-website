@@ -92,7 +92,10 @@ export function SongPanel({
   };
 
   return (
-    <div className="mt-8 rounded-lg border border-border bg-card p-4 sm:p-5 print:hidden">
+    <div
+      id="song"
+      className="mt-8 scroll-mt-24 rounded-lg border border-border bg-card p-4 sm:p-5 print:hidden"
+    >
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-garamond text-lg text-foreground">
           Practise to

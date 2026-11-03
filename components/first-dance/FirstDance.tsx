@@ -32,6 +32,7 @@ import {
 import { useSongWalk } from "./useSongWalk";
 import { useWalkthrough as useWalk } from "./useWalkthrough";
 import { Reference } from "./Reference";
+import { Rail } from "./Rail";
 import { Strip } from "./Strip";
 
 const TIER_ORDER: Tier[] = ["a", "b", "c"];
@@ -205,6 +206,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
     [indexOf, park],
   );
 
+  const goTo = useCallback((id: string) => {
+    document.getElementById(id)?.scrollIntoView({ block: "start" });
+  }, []);
+
   const here = at === undefined ? undefined : counts[at]?.n;
 
   return (
@@ -281,6 +286,27 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           and deliberately not in `public/`, which proxy.ts does not guard. */}
       {song && <audio ref={audioRef} src={song.url} preload="auto" />}
 
+      <Rail
+        canWalk={canWalk}
+        stops={movements.map((m) => ({
+          key: m.id,
+          label: m.name,
+          detail: `E${m.counts[0].n}\u2013E${m.counts[m.counts.length - 1].n}`,
+          active: here !== undefined && m.counts.some((c) => c.n === here),
+          onSelect: () => jump(m),
+          onWalk: () => void start(indexOf.get(m.counts[0].n) ?? 0),
+        }))}
+        places={[
+          { key: "ending", label: "The ending", onSelect: () => goTo("ending") },
+          { key: "song", label: "The song", onSelect: () => goTo("song") },
+          {
+            key: "reference",
+            label: "Reference",
+            onSelect: () => goTo("reference"),
+          },
+        ]}
+      />
+
       <main className="mx-auto max-w-3xl px-4 pt-[calc(var(--spacing-planner-bar)+2.5rem)] pb-32 sm:px-6">
         <h2 className="font-garamond text-4xl leading-none text-pop sm:text-5xl">
           {SONG.title}
@@ -324,7 +350,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
             : "an eight-count of count-in and then the beat, live, down the sheet."}
         </p>
 
-        <section className="mt-8 rounded-sm border border-border bg-card p-4 sm:p-5">
+        <section
+          id="ending"
+          className="mt-8 scroll-mt-24 rounded-sm border border-border bg-card p-4 sm:p-5"
+        >
           <h2 className="font-garamond text-2xl leading-none text-pop">
             The ending
           </h2>

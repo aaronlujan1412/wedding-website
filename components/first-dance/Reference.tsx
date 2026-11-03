@@ -38,7 +38,7 @@ export function Reference({
   const careful = figures.filter((f) => f.figure.effort === "careful").length;
 
   return (
-    <div className="mt-24 border-t border-border pt-12">
+    <div id="reference" className="mt-24 scroll-mt-24 border-t border-border pt-12">
       <section className="mb-16">
         <h2 className="font-garamond text-3xl text-pop">
           Everything to look up
