@@ -140,10 +140,12 @@ export function useSongWalk(
       halt(follower);
 
       const { anchor, bpm } = clockRef.current;
-      // One eight-count of lead-in, so drilling E32 for the twentieth time
-      // still gives you the bar before it rather than dropping you onto the
-      // downbeat cold. Clamped, because E1's lead-in is the track's own intro.
-      const at = Math.max(0, anchor + (index - 1) * (60 / bpm) * 8);
+      // The section's own first count. This used to rewind an eight-count for
+      // a lead-in, which works for the metronome — its count-in is clicks, so
+      // nobody mistakes it for the dance — and does not work here: the lead-in
+      // is real music, you start counting it as 1, and you are a whole
+      // eight-count out for the rest of the run.
+      const at = Math.max(0, anchor + index * (60 / bpm) * 8);
       try {
         audio.currentTime = at;
         await audio.play();
