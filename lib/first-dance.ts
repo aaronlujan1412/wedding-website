@@ -657,17 +657,27 @@ export const MOVEMENTS: Movement[] = [
 /**
  * Two arrangements of the last ten eight-counts.
  *
- * Everything through E28 is the same dance either way, and both endings are
- * exactly eighty counts, which is the only reason they are interchangeable at
- * all: the recording is fixed, so an ending that ran long would not be a
- * variation, it would be a different edit of the song.
+ * Everything through E27 is the same dance in all of them, and each ending
+ * fills the same eight-counts out to E38 — which is the only reason they are
+ * interchangeable at all. The recording is fixed, so an ending that ran long
+ * would not be a variation, it would be a different edit of the song.
+ *
+ * "planned" and "flow" start at E29. "drop" also rewrites E28, because the
+ * four counts it takes out of the breath are exactly what buy its dip a place
+ * on the band's return.
  */
-export type Ending = "planned" | "flow";
+export type Ending = "planned" | "flow" | "drop";
 
 export const ENDINGS: Record<
   Ending,
   { name: string; summary: string; blurb: string }
 > = {
+  drop: {
+    name: "The drop",
+    summary: "Colgada into the silence, drop on the return",
+    blurb:
+      "Danced in on the floor, 1 November. The colgada run spends the last loud stretch, the spin-in and the lean happen inside the three and a half seconds where the track is genuinely silent, and the drop lands on the return at 3:32.5. E34 is still blank.",
+  },
   planned: {
     name: "As planned",
     summary: "Leans, then the lift",
@@ -820,11 +830,226 @@ const LAND: Movement = {
 };
 
 /**
- * The closing movements, per ending. Both run out of E28 and both finish on
- * E38, so the strip, the walk-through and every timecode on the page are
- * computed the same way whichever one is on screen.
+ * An ending may also rewrite a shared eight-count. Only "drop" does, and only
+ * E28: it spends four of those counts on the colgada spin, which is exactly
+ * what buys the drop its place on the band's return. Everything earlier than
+ * E28 is fixed in every ending.
+ */
+const ENDING_SPINE_EDITS: Partial<
+  Record<Ending, Record<number, Partial<EightCount>>>
+> = {
+  drop: {
+    28: {
+      cue: "Breathe, then the colgada",
+      detail:
+        "Back to Gear 2 on 1 — a big shape, arms extended, and recover the breath. The colgada spin starts on 5, four counts earlier than the other endings begin anything.",
+      beats: [
+        { from: 1, to: 4, text: "big shape, breathe" },
+        { from: 5, to: 8, text: "colgada spin" },
+      ],
+    },
+  },
+};
+
+/**
+ * The closing movements, per ending. All of them run out of the spine and
+ * finish on E38, so the strip, the walk-through and every timecode on the page
+ * are computed the same way whichever one is on screen.
  */
 export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
+  drop: [
+    {
+      id: "colgada",
+      ord: 5,
+      name: "The colgada",
+      gearLabel: "Gear 2, falling to Gear 1",
+      heat: 0.7,
+      intent:
+        "Twenty-four counts that spend the last of the loud stretch and then walk you into the quietest three seconds of the recording, loaded and still. Everything in here is in service of where it finishes.",
+      failure:
+        "Filling the silence. From E31's 5 there is nothing on the track at all, and the temptation is to keep dancing through it. Stop moving and let it be uncomfortable — that is the whole reason the next eight-count lands.",
+      counts: [
+        {
+          n: 29,
+          cue: "Lean out, and back up",
+          detail:
+            "Out of the colgada spin into the lean on 1, then recover and back up out of it on 5. The band is still at full height for both halves.",
+          gear: 2,
+          care: true,
+          figure: COLGADA,
+          footwork: COLGADA_FOOTWORK,
+          beats: [
+            { from: 1, to: 4, text: "lean out" },
+            { from: 5, to: 8, text: "back up" },
+          ],
+          note: LEAN_AWAY,
+        },
+        {
+          n: 30,
+          cue: "Back steps, and spin out",
+          detail:
+            "Four counts of back steps with her leading and him following, then she spins out on 5 and holds from 7. The band starts thinning on 5, so the spin out is the first thing that happens into the gap rather than against the full band.",
+          gear: 2,
+          beats: [
+            { from: 1, to: 4, text: "back steps — she leads, he follows" },
+            { from: 5, to: 6, text: "spin out" },
+            { from: 7, to: 8, text: "hold" },
+          ],
+        },
+        {
+          n: 31,
+          cue: "Into the silence",
+          detail:
+            "Spin in on 1, lean on 3, and from 5 hold it. The step on 8 is the load for the drop, and it is the only thing that moves in the last three seconds of this eight-count.",
+          gear: 1,
+          care: true,
+          beats: [
+            { from: 1, to: 2, text: "spin in" },
+            { from: 3, to: 4, text: "lean" },
+            { from: 5, to: 7, text: "hold the lean — nothing moves" },
+            { from: 8, text: "step. this is the load" },
+          ],
+          note: {
+            title: "The track is actually silent here",
+            body: "From 3:29 to 3:32.5 the recording sits at about −47 dB, which is not quiet, it is nothing: three and a half seconds of a room with no music in it, holding a lean. Measured off the file rather than estimated — the eight-counts either side of it are at −12.",
+          },
+        },
+      ],
+    },
+    {
+      id: "peak",
+      ord: 6,
+      name: "Peak",
+      gearLabel: "Gear 2, and the tier choice",
+      heat: 1,
+      intent:
+        "Five eight-counts hung off a single instant. The drop lands on the return and holds, you come up already travelling, and the lift sits in the middle of the loud stretch instead of crammed against the end of it.",
+      counts: [
+        {
+          n: 32,
+          id: "the-dip",
+          cue: "Fall into the dip",
+          detail:
+            "Down on 1–2, and hold for the rest of the eight-count. This is the moment the whole ending is built around, and the only count in four and a half minutes that has to be exact.",
+          gear: 2,
+          care: true,
+          figure: DIP,
+          beats: [
+            { from: 1, to: 2, text: "drop" },
+            { from: 3, to: 8, text: "hold" },
+          ],
+          footwork: {
+            lead: [
+              { from: 1, to: 2, text: "step under her and take it on the knees" },
+              { from: 3, to: 8, text: "hold, and keep breathing" },
+            ],
+            follow: [
+              { from: 1, to: 2, text: "commit out of the lean, supporting leg straight" },
+              { from: 3, to: 8, text: "hold — your core, not his arms" },
+            ],
+            note: "The lean on E31 has already put her weight outside her own base, so this is a release rather than a lower: his job on 1–2 is to arrive underneath it, not to catch it. His feet are apart and staggered, front foot between hers, so the base is a triangle rather than a line.",
+          },
+          note: {
+            title: "The return",
+            body: "The band comes back at 3:32.5 — about 35 dB in a single beat, out of silence. It is the biggest event in the recording and nothing else in the routine competes with it. A drop is also the right thing to put here rather than the lift: a dip's timing is leadable and forgiving, and a lift's is not.",
+          },
+        },
+        {
+          n: 33,
+          cue: "Up, and go",
+          detail:
+            "Up out of the dip and straight into travelling. The rise feeds the travel, so there is never a moment of standing still between the dip and whatever follows it.",
+          gear: 2,
+        },
+        {
+          n: 34,
+          cue: "Spin or something, idk",
+          detail:
+            "Still blank. Eight counts at the loudest point in the song, coming up off the floor and needing to arrive at a plié. The case for travel: you have just held the room still for six seconds, and held tension releases as movement through space — a spin is still standing in one spot, so it reads as more holding. It is also the only slot in the routine big enough to use a room with guests on four sides.",
+          gear: 2,
+          note: {
+            title: "Deliberately empty",
+            body: "Left blank rather than filled with a plausible move, because a slot with a placeholder in it stops getting looked at.",
+          },
+        },
+        {
+          n: 35,
+          id: "the-catch",
+          cue: "Step, plié, jump — and lift",
+          detail:
+            "Step and plié on 1–2, she jumps on 3, he takes it from the legs and turns 180° with her up, and sets her down on 7. Entered out of travel, so the momentum is already there and she is not generating the whole jump from standing.",
+          gear: 2,
+          care: true,
+          figure: LIFT,
+          footwork: {
+            lead: [
+              { from: 1, to: 2, text: "step under, knees soft, hands at her waist" },
+              { from: 3, text: "take the jump — from the legs" },
+              { from: 4, to: 6, text: "180° with her up" },
+              { from: 7, text: "set down, both feet" },
+              { from: 8, text: "settle, still travelling" },
+            ],
+            follow: [
+              { from: 1, to: 2, text: "step and plié" },
+              { from: 3, text: "jump" },
+              { from: 4, to: 6, text: "airborne, stay long" },
+              { from: 7, text: "land, both feet" },
+              { from: 8, text: "settle, weight already moving on" },
+            ],
+            note: "Her jump comes from the knees and she stays long in the air; he takes it with his legs, never by pulling with his arms. The timing is hers and he only redirects it. If he is pulling on 3, the count went wrong — stop and reset rather than finishing it. Practise the jump and the catch standing still, on a count, dozens of times before it is ever entered from travel.",
+          },
+          note: SHE_JUMPS,
+        },
+        {
+          n: 36,
+          cue: "Carry it out",
+          detail:
+            "A travelling closed rotation between the lift and the final dip, so the dip is a redirection of something already moving rather than a second stunt bolted onto the first. This is what turns up-then-down into up-across-down.",
+          gear: 2,
+        },
+      ],
+    },
+    {
+      id: "land",
+      ord: 7,
+      name: "Land",
+      gearLabel: "Gear 2, then nothing",
+      heat: 0.3,
+      intent:
+        "The band starts going at about 4:11 and is gone by 4:17. Sixteen counts that get smaller as it does, so the final pose arrives in silence rather than stopping dead on it.",
+      counts: [
+        {
+          n: 37,
+          cue: "Dip, and hold",
+          detail:
+            "Down over 1–4, hold from 5. The band starts falling away around 6, so this dip is the last thing it is loud for.",
+          gear: 2,
+          care: true,
+          beats: [
+            { from: 1, to: 4, text: "down" },
+            { from: 5, to: 8, text: "hold — the band starts going on 6" },
+          ],
+        },
+        {
+          n: 38,
+          cue: "Up, and the slow finish",
+          detail:
+            "Still through 1–4, then up and into the final pose. The track is at about −46 dB by 5 — near enough nothing — with one last swell underneath the pose. Stay there until it has genuinely ended.",
+          gear: 1,
+          beats: [
+            { from: 1, to: 4, text: "still, in the dip" },
+            { from: 5, to: 8, text: "up, slowly, into the pose" },
+          ],
+          footwork: {
+            lead: [{ from: 1, to: 8, text: "nothing travels. come up and stop." }],
+            follow: [{ from: 1, to: 8, text: "nothing travels. come up and stop." }],
+            note: "There is no footwork left to get wrong here, which is the point. The only mistake available is moving too soon.",
+          },
+        },
+      ],
+    },
+  ],
+
   planned: [
     {
       id: "leans",
@@ -1220,11 +1445,26 @@ const TIER_EDITS: Record<
 };
 
 /** Which ending the page opens on. */
-export const DEFAULT_ENDING: Ending = "planned";
+export const DEFAULT_ENDING: Ending = "drop";
 
 /** The routine as danced, at a given tier and with a given ending. */
 export function routine(tier: Tier, ending: Ending = DEFAULT_ENDING): Movement[] {
-  const all = [...MOVEMENTS, ...ENDING_MOVEMENTS[ending]];
+  const spine = ENDING_SPINE_EDITS[ending];
+  const all = [
+    ...(spine
+      ? MOVEMENTS.map((m) =>
+          m.counts.some((c) => spine[c.n])
+            ? {
+                ...m,
+                counts: m.counts.map((c) =>
+                  spine[c.n] ? { ...c, ...spine[c.n] } : c,
+                ),
+              }
+            : m,
+        )
+      : MOVEMENTS),
+    ...ENDING_MOVEMENTS[ending],
+  ];
   if (tier === "a") return all;
   const edits = TIER_EDITS[tier];
   return all.map((movement) => {

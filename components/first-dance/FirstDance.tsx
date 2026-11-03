@@ -35,7 +35,7 @@ import { Reference } from "./Reference";
 import { Strip } from "./Strip";
 
 const TIER_ORDER: Tier[] = ["a", "b", "c"];
-const ENDING_ORDER: Ending[] = ["planned", "flow"];
+const ENDING_ORDER: Ending[] = ["drop", "planned", "flow"];
 
 /**
  * Runs of eight-counts that hold. The source table wrote "Same." five times in
@@ -320,10 +320,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
             The ending
           </h2>
           <p className="mt-2 max-w-[64ch] font-garamond text-base leading-relaxed text-muted-foreground">
-            Two arrangements of the last ten eight-counts. Everything before
-            E29 is the same dance either way, and both are exactly eighty
-            counts — so you can switch while the song is playing and stay on
-            the same beat.
+            Three arrangements of the same closing material. Everything through
+            E27 is the same dance in all of them, and each one fills exactly the
+            same eleven eight-counts after it — so you can switch while the song
+            is playing and stay on the same beat.
           </p>
           <div className="mt-4 flex flex-wrap items-center gap-2">
             {ENDING_ORDER.map((e) => (
