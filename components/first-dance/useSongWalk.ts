@@ -140,12 +140,19 @@ export function useSongWalk(
       halt(follower);
 
       const { anchor, bpm } = clockRef.current;
-      // The section's own first count. This used to rewind an eight-count for
-      // a lead-in, which works for the metronome — its count-in is clicks, so
-      // nobody mistakes it for the dance — and does not work here: the lead-in
-      // is real music, you start counting it as 1, and you are a whole
-      // eight-count out for the rest of the run.
-      const at = Math.max(0, anchor + index * (60 / bpm) * 8);
+      // From the top of the sheet, play from the top of the FILE. What runs
+      // before count 1 is the walk-out — a bar of the song you are already
+      // standing in front of everyone for — and seeking to the anchor cut it
+      // off exactly the way the edit did. The follower counts it in on its own
+      // (`elapsed` is negative, so the readout says "in" and the pips stay
+      // dark), so those counts are heard rather than skipped.
+      //
+      // Any later section starts on its own first count. That used to rewind an
+      // eight-count for a lead-in, which works for the metronome — its count-in
+      // is clicks, so nobody mistakes it for the dance — and does not work
+      // here: the lead-in is real music, you start counting it as 1, and you
+      // are a whole eight-count out for the rest of the run.
+      const at = index === 0 ? 0 : Math.max(0, anchor + index * (60 / bpm) * 8);
       try {
         audio.currentTime = at;
         await audio.play();
