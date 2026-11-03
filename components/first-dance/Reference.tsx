@@ -190,11 +190,12 @@ export function Reference({
           ))}
         </ul>
         <p className="mt-6 max-w-[62ch] font-garamond text-lg leading-relaxed text-muted-foreground">
-          Times on this page are computed from {SONG.bpm}{" "}
-          beats a minute rather than transcribed, so the whole sheet stays
-          self-consistent. Once the edit is cut, tap the real bar lines in Reaper
-          and the boundaries can be renumbered against what is actually there —
-          everything downstream is relative, so a shifted section just slides.
+          Times on this page are positions in {SONG.file}, computed from{" "}
+          {SONG.bpm} beats a minute off the song&rsquo;s second downbeat rather
+          than transcribed, so the whole sheet stays self-consistent. A cut that
+          trims the opening puts every one of them out by however much it
+          trimmed — which is what happened — so if you load a different file,
+          tap the beat in on the song panel and the whole sheet slides to match.
         </p>
       </section>
     </div>

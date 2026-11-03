@@ -23,8 +23,25 @@ export const SONG = {
   bpm: 70,
   meter: "4/4",
   key: "F♯ major",
-  /** The edit: a hard cut at the musical resolution. */
-  endsAt: "4:20",
+  /** The album track, not an edit. A cut version trimmed the song's opening
+   *  bar and its outro so that the dance and the recording began and ended
+   *  together; the opening turned out to be worth more than the tidiness. */
+  file: "05 - Touching Heaven.flac",
+  /**
+   * Seconds of the recording before the dance's count 1.
+   *
+   * The song's own first downbeat is at 0:00.18 and E1 count 1 is the one
+   * after it, so a bar of the song plays before anything moves — which is what
+   * you want to walk out and settle on anyway. Measured off the file: a beat
+   * grid fitted across all four minutes comes out at 69.99bpm, so the nominal
+   * 70 holds and only the start had to be found.
+   */
+  lead: 3.609,
+  /** Where the dance's last eight-count runs out, and where the recording
+   *  actually stops. Not the same instant any more — that is what the opening
+   *  cost, and the sheet says so rather than letting it be a surprise. */
+  endsAt: "4:24",
+  stopsAt: "4:57",
 } as const;
 
 /** Both 5'7". Lead ~170 lb, follow ~160 lb — near-equal mass is why the
@@ -43,14 +60,18 @@ export const EIGHT_MS = BEAT_MS * 8; // 6.857s
 export const TOTAL_EIGHTS = 38;
 
 /**
- * Where an eight-count falls in the track, computed rather than transcribed.
- * The source sheet's timestamps were hand-estimated and drifted against their
- * own section headings — M1 was labelled 0:00–1:00 but its last eight-count was
- * written at 1:16. Deriving every time from the tempo keeps the whole strip
- * self-consistent, and the sheet said to renumber against the real file anyway.
+ * Where an eight-count falls in the recording, computed rather than
+ * transcribed. The source sheet's timestamps were hand-estimated and drifted
+ * against their own section headings — M1 was labelled 0:00–1:00 but its last
+ * eight-count was written at 1:16. Deriving every time from the tempo keeps
+ * the whole strip self-consistent.
+ *
+ * `SONG.lead` is applied here rather than only in the player, so a time
+ * printed on the sheet is a position in the file you can scrub to. Durations
+ * are taken as differences of this, where the lead cancels.
  */
 export function startOf(n: number) {
-  return ((n - 1) * EIGHT_MS) / 1000;
+  return SONG.lead + ((n - 1) * EIGHT_MS) / 1000;
 }
 
 export function clock(seconds: number) {
@@ -676,19 +697,19 @@ export const ENDINGS: Record<
     name: "The drop",
     summary: "Colgada into the silence, drop on the return",
     blurb:
-      "Danced in on the floor, 1 November. The colgada run spends the last loud stretch, the spin-in and the lean happen inside the three and a half seconds where the track is genuinely silent, and the drop lands on the return at 3:32.5. E34 is still blank.",
+      "Danced in on the floor, 1 November. The colgada run spends the last loud stretch, the spin-in and the lean happen inside the three and a half seconds where the track is genuinely silent, and the drop lands on the return at 3:36. E34 is still blank.",
   },
   planned: {
     name: "As planned",
     summary: "Leans, then the lift",
     blurb:
-      "The ending as it was choreographed: spin out, a dip, into and out of a colgada, then the spin, the lift and the second dip. The band's return at 3:33 lands on the colgada resolving.",
+      "The ending as it was choreographed: spin out, a dip, into and out of a colgada, then the spin, the lift and the second dip. The band's return at 3:36 lands on the colgada resolving.",
   },
   flow: {
     name: "Flowed",
     summary: "The lift on the return, the dip out of the turn",
     blurb:
-      "The same material reordered so the lift lands on the band's return at 3:33, with stillness before it and a travelling turn between the lift and the dip. Three care moves instead of five, and no weight reversal without counts to recover in.",
+      "The same material reordered so the lift lands on the band's return at 3:36, with stillness before it and a travelling turn between the lift and the dip. Three care moves instead of five, and no weight reversal without counts to recover in.",
   },
 };
 
@@ -805,7 +826,7 @@ const LAND_IT: EightCount = {
   id: "land-it",
   cue: "Land it",
   detail:
-    "Closed frame, near-motionless, one slow quarter rotation. Kiss or held pose on the final chord — and stay there until the track has genuinely ended.",
+    "Closed frame, near-motionless, one slow quarter rotation. Kiss or held pose on the final chord — and stay there through the quiet after it.",
   gear: 2,
   footwork: {
     lead: [
@@ -825,7 +846,7 @@ const LAND: Movement = {
   gearLabel: "Near-motionless",
   heat: 0.2,
   intent:
-    "Hold until the audio actually stops. Breaking early undoes the whole ending, and the ending is the part people carry out of the room.",
+    "Hold through the quiet, not until the file stops: on the album track the song picks back up after the pose and runs to 4:57. Breaking early undoes the whole ending, and the ending is the part people carry out of the room.",
   counts: [LAND_IT],
 };
 
@@ -911,7 +932,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
           ],
           note: {
             title: "The track is actually silent here",
-            body: "From 3:29 to 3:32.5 the recording sits at about −47 dB, which is not quiet, it is nothing: three and a half seconds of a room with no music in it, holding a lean. Measured off the file rather than estimated — the eight-counts either side of it are at −12.",
+            body: "From 3:33 to 3:36 the recording sits at about −47 dB, which is not quiet, it is nothing: three and a half seconds of a room with no music in it, holding a lean. Measured off the file rather than estimated — the eight-counts either side of it are at −12.",
           },
         },
       ],
@@ -951,7 +972,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
           },
           note: {
             title: "The return",
-            body: "The band comes back at 3:32.5 — about 35 dB in a single beat, out of silence. It is the biggest event in the recording and nothing else in the routine competes with it. A drop is also the right thing to put here rather than the lift: a dip's timing is leadable and forgiving, and a lift's is not.",
+            body: "The band comes back at 3:36 — about 30 dB inside a tenth of a second, out of silence. It is the biggest event in the recording and nothing else in the routine competes with it. A drop is also the right thing to put here rather than the lift: a dip's timing is leadable and forgiving, and a lift's is not.",
           },
         },
         {
@@ -1016,7 +1037,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
       gearLabel: "Gear 2, then nothing",
       heat: 0.3,
       intent:
-        "The band starts going at about 4:11 and is gone by 4:17. Sixteen counts that get smaller as it does, so the final pose arrives in silence rather than stopping dead on it.",
+        "The band falls away from about 4:14 and bottoms out near-silent at 4:21. Sixteen counts that get smaller as it does, so the final pose arrives in the quiet rather than stopping dead on a chord.",
       counts: [
         {
           n: 37,
@@ -1034,7 +1055,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
           n: 38,
           cue: "Up, and the slow finish",
           detail:
-            "Still through 1–4, then up and into the final pose. The track is at about −46 dB by 5 — near enough nothing — with one last swell underneath the pose. Stay there until it has genuinely ended.",
+            "Still through 1–4, then up and into the final pose. The track is at about −48 dB by 5 — near enough nothing — with one last swell under the pose on 8. That swell is not the end of the album track: the song comes back and runs to 4:57, so the pose finishes the dance rather than the recording.",
           gear: 1,
           beats: [
             { from: 1, to: 4, text: "still, in the dip" },
@@ -1111,7 +1132,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
           care: true,
           note: {
             title: "The band comes back here",
-            body: "3:33 is the biggest event in the recording — a jump of about 35 dB out of six seconds of near-silence. In this version it arrives on a lean resolving, which is a shape finishing rather than a shape starting. That mismatch is the whole argument for the other ending.",
+            body: "3:36 is the biggest event in the recording — a jump of about 30 dB out of six seconds of near-silence. In this version it arrives on a lean resolving, which is a shape finishing rather than a shape starting. That mismatch is the whole argument for the other ending.",
           },
         },
       ],
@@ -1207,7 +1228,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
       gearLabel: "Gear 2, and the tier choice",
       heat: 1,
       intent:
-        "Seven eight-counts built around one event: the band coming back at 3:33. The spin fills the last of the loud stretch, the hole gets stillness, the lift lands on the return, and the dip is what the lift's momentum turns into rather than a second thing that happens afterwards.",
+        "Seven eight-counts built around one event: the band coming back at 3:36. The spin fills the last of the loud stretch, the hole gets stillness, the lift lands on the return, and the dip is what the lift's momentum turns into rather than a second thing that happens afterwards.",
       failure:
         "Stopping anywhere between E32 and E34. The lift, the travel and the dip are one shape; if the landing settles before the turn starts, it becomes a lift and then a dip, which is what the other ending already does.",
       counts: [
@@ -1321,7 +1342,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
       gearLabel: "Gear 2, winding down",
       heat: 0.3,
       intent:
-        "The band is still big until about 4:08 and then goes. Three eight-counts that spend what is left of it and arrive at the final pose already nearly still, rather than stopping dead on the last chord.",
+        "The band is still big until about 4:14 and then goes. Three eight-counts that spend what is left of it and arrive at the final pose already nearly still, rather than stopping dead on the last chord.",
       counts: [
         {
           n: 36,
@@ -1341,7 +1362,7 @@ export const ENDING_MOVEMENTS: Record<Ending, Movement[]> = {
           id: "slow-turn",
           cue: "Slow the turn",
           detail:
-            "The band starts dropping away around 4:10. Let the travel die into a slow closed rotation with the weight changes getting further apart, so you arrive at the final pose already nearly still.",
+            "The band starts dropping away around 4:14. Let the travel die into a slow closed rotation with the weight changes getting further apart, so you arrive at the final pose already nearly still.",
           gear: 1,
         },
         LAND_IT,

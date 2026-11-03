@@ -59,9 +59,13 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
 
   const [mode, setMode] = useState<Mode>("metronome");
   const [song, setSong] = useState<{ file: File; url: string } | null>(null);
-  /** Measured against the actual file; 0 and 70 until someone taps them in. */
-  const [anchor, setAnchor] = useState(0);
+  // The sheet's own figures for the album track until someone taps a file in.
+  // `measured` is kept apart from the anchor because the anchor is no longer
+  // zero when nothing has been measured — it is `SONG.lead`, which is a real
+  // downbeat for a named recording rather than a stand-in.
+  const [anchor, setAnchor] = useState<number>(SONG.lead);
   const [songBpm, setSongBpm] = useState<number>(SONG.bpm);
+  const [measured, setMeasured] = useState(false);
   const [rate, setRate] = useState(1);
   const audioRef = useRef<HTMLAudioElement>(null);
   const urlRef = useRef<string | null>(null);
@@ -107,6 +111,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
       if (saved) {
         setAnchor(saved.anchor);
         setSongBpm(saved.bpm);
+        setMeasured(true);
       }
     });
     return () => {
@@ -136,8 +141,9 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
     urlRef.current = url;
     setSong({ file, url });
     const saved = readCalibration(file);
-    setAnchor(saved?.anchor ?? 0);
+    setAnchor(saved?.anchor ?? SONG.lead);
     setSongBpm(saved?.bpm ?? SONG.bpm);
+    setMeasured(saved !== null);
     void saveSong(file);
   }, []);
 
@@ -145,6 +151,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
     (nextAnchor: number, nextBpm: number) => {
       setAnchor(nextAnchor);
       setSongBpm(nextBpm);
+      setMeasured(true);
       if (song) {
         writeCalibration({
           name: song.file.name,
@@ -280,8 +287,10 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
         </h2>
         <p className="mt-3 max-w-[62ch] font-garamond text-lg leading-relaxed text-foreground/85">
           {SONG.artist}, from {SONG.album}. Seventy beats a minute in four,{" "}
-          {SONG.key}, cut hard on the resolution at {SONG.endsAt} — thirty-eight
-          eight-counts, a touch under seven seconds each.
+          {SONG.key}. One bar of the song before the dance&rsquo;s first count,
+          then thirty-eight eight-counts at a touch under seven seconds each —
+          the last of them over at {SONG.endsAt}, and the album track going on
+          to {SONG.stopsAt} after that.
         </p>
 
         <p className="mt-6 max-w-[62ch] border-l-2 border-primary pl-4 font-garamond text-lg leading-relaxed">
@@ -364,6 +373,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           bpm={bpm}
           onBpm={setBpm}
           anchor={anchor}
+          measured={measured}
           songBpm={songBpm}
           onCalibrate={calibrate}
           rate={rate}

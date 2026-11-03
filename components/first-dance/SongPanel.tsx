@@ -37,6 +37,7 @@ export function SongPanel({
   bpm,
   onBpm,
   anchor,
+  measured,
   songBpm,
   onCalibrate,
   rate,
@@ -51,6 +52,8 @@ export function SongPanel({
   bpm: number;
   onBpm: (bpm: number) => void;
   anchor: number;
+  /** Whether the anchor and tempo came off a tap rather than off the sheet. */
+  measured: boolean;
   songBpm: number;
   onCalibrate: (anchor: number, bpm: number) => void;
   rate: number;
@@ -61,6 +64,10 @@ export function SongPanel({
   const [taps, setTaps] = useState<number[] | null>(null);
 
   const fit = taps ? fitTaps(taps) : null;
+  // The one thing the page can check by itself: a file picked by hand is very
+  // easily the album track's neighbour on disk, and an edit that trims the
+  // opening puts the whole sheet out by however much it trimmed.
+  const knownFile = song?.file.name === SONG.file;
 
   const beginTapping = () => {
     const audio = audioRef.current;
@@ -216,27 +223,25 @@ export function SongPanel({
             <span
               className={cn(
                 "font-mono text-xs tabular-nums slashed-zero",
-                // Until it is measured every time on the page is a guess, and
-                // that is a thing to go and do — pending, as everywhere else.
-                anchor > 0 || songBpm !== SONG.bpm
+                // Pending only when the sheet's own figures are being applied
+                // to a file they were not measured on — then every time on the
+                // page is a guess, and that is a thing to go and do.
+                measured || knownFile
                   ? "text-muted-foreground"
                   : "text-pending",
               )}
             >
-              {anchor > 0 || songBpm !== SONG.bpm
-                ? `downbeat ${precise(anchor)} · ${songBpm.toFixed(1)} bpm`
-                : "downbeat not set"}
+              {`downbeat ${precise(anchor)} · ${songBpm.toFixed(1)} bpm`}
+              {measured ? "" : " · from the sheet"}
             </span>
-            {anchor > 0 && (
-              <Stepper
-                small
-                value="nudge"
-                onDown={() => onCalibrate(Math.max(0, anchor - NUDGE_S), songBpm)}
-                onUp={() => onCalibrate(anchor + NUDGE_S, songBpm)}
-                downLabel="Downbeat 25ms earlier"
-                upLabel="Downbeat 25ms later"
-              />
-            )}
+            <Stepper
+              small
+              value="nudge"
+              onDown={() => onCalibrate(Math.max(0, anchor - NUDGE_S), songBpm)}
+              onUp={() => onCalibrate(anchor + NUDGE_S, songBpm)}
+              downLabel="Downbeat 25ms earlier"
+              upLabel="Downbeat 25ms later"
+            />
             <button
               type="button"
               onClick={beginTapping}
@@ -246,11 +251,16 @@ export function SongPanel({
             </button>
           </div>
 
-          {anchor === 0 ? (
-            <p className="max-w-[58ch] font-garamond text-base leading-relaxed text-muted-foreground">
-              Until you tap it in, the sheet assumes the dance starts at 0:00 of
-              the file at exactly {SONG.bpm}. Tapping measures both against your
-              actual edit, and everything on the page moves with it.
+          {!measured ? (
+            <p
+              className={cn(
+                "max-w-[58ch] font-garamond text-base leading-relaxed",
+                knownFile ? "text-muted-foreground" : "text-pending",
+              )}
+            >
+              {knownFile
+                ? `Using the sheet's own figures: count 1 on the album track's second downbeat, at exactly ${SONG.bpm}. Tap the beat in if you would rather have it measured than assumed.`
+                : `That is not ${SONG.file}, which is the file every time on this sheet was measured against. The counts are being laid over it anyway, from the album track's downbeat at ${precise(SONG.lead)} — so if your file starts anywhere else, the whole sheet is out by the difference. Tap the beat in and the page measures yours instead.`}
             </p>
           ) : (
             Math.abs(songBpm - SONG.bpm) >= 0.5 && (
