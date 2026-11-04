@@ -19,6 +19,14 @@ export const dynamic = "force-dynamic";
  * navbar and footer are no use to the two people using this, and this page in
  * particular is read from several feet away while both of them are moving.
  */
-export default function FirstDancePage() {
-  return <FirstDance week={trainingWeek()} />;
+export default async function FirstDancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ floor?: string }>;
+}) {
+  // Which density the sheet opens at is read here rather than on the client,
+  // so the HTML already is the mode and there is nothing to reconcile. The
+  // page is dynamic anyway, for the week.
+  const { floor } = await searchParams;
+  return <FirstDance week={trainingWeek()} floor={floor === "1"} />;
 }

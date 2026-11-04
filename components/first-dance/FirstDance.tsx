@@ -52,7 +52,14 @@ function group(counts: EightCount[]): EightCount[][] {
   return out;
 }
 
-export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) {
+export function FirstDance({
+  week,
+  floor: openAt,
+}: {
+  week: ReturnType<typeof trainingWeek>;
+  /** What `?floor=1` said, which is where the sheet opens. */
+  floor: boolean;
+}) {
   const [tier, setTier] = useState<Tier>("a");
   const [ending, setEnding] = useState<Ending>(DEFAULT_ENDING);
   const [bpm, setBpm] = useState<number>(SONG.bpm);
@@ -64,7 +71,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
   // which beat) and folds the rest away. It is not a second page: it is the
   // same rows with the study layer hidden, so the walk-through, the lane and
   // every time on the sheet carry straight across.
-  const [floor, setFloor] = useState(false);
+  const [floor, setFloor] = useState(openAt);
 
   const [mode, setMode] = useState<Mode>("metronome");
   const [song, setSong] = useState<{ file: File; url: string } | null>(null);
@@ -214,6 +221,23 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
     [indexOf, park],
   );
 
+  // The URL carries the mode, the same way the planner's board carries its
+  // view, so a reload comes back the way you left it and the floor sheet is
+  // a bookmark rather than a thing to set up again. `replaceState` keeps it
+  // out of the back button: this is which page you are on, not where.
+  const showFloor = useCallback((next: boolean) => {
+    setFloor(next);
+    const params = new URLSearchParams(window.location.search);
+    if (next) params.set("floor", "1");
+    else params.delete("floor");
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      "",
+      query ? `?${query}` : window.location.pathname,
+    );
+  }, []);
+
   const goTo = useCallback((id: string) => {
     document.getElementById(id)?.scrollIntoView({ block: "start" });
   }, []);
@@ -267,7 +291,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
             <button
               type="button"
-              onClick={() => setFloor((f) => !f)}
+              onClick={() => showFloor(!floor)}
               aria-pressed={floor}
               title={
                 floor
