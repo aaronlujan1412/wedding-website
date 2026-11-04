@@ -17,6 +17,7 @@ import { Pips, Staff, type Voice } from "./Notation";
  */
 export function CountRow({
   count,
+  floor,
   active,
   beat,
   countIn,
@@ -24,6 +25,10 @@ export function CountRow({
   onStart,
 }: {
   count: EightCount;
+  /** Counts only: the detail, the figure, the note and both of your feet
+   *  fold away, and what is left is set larger because you are reading it
+   *  from further off. */
+  floor: boolean;
   active: boolean;
   beat?: number;
   countIn?: boolean;
@@ -39,12 +44,13 @@ export function CountRow({
       ? [
           {
             key: "both",
-            label: count.footwork ? "Both" : undefined,
+            label: count.footwork && !floor ? "Both" : undefined,
             beats: count.beats,
           },
         ]
       : []),
-    ...(count.footwork
+    // Whose foot goes where is learned at a wall, not read mid-count.
+    ...(count.footwork && !floor
       ? [
           { key: "lead", label: "Lead", beats: count.footwork.lead },
           { key: "follow", label: "Follow", beats: count.footwork.follow },
@@ -90,13 +96,15 @@ export function CountRow({
             "font-garamond leading-tight transition-[font-size] motion-reduce:transition-none",
             active
               ? "text-4xl text-primary sm:text-5xl"
-              : "text-xl text-foreground sm:text-2xl",
+              : floor
+                ? "text-2xl text-foreground sm:text-3xl"
+                : "text-xl text-foreground sm:text-2xl",
           )}
         >
           {count.cue}
         </h3>
 
-        {count.detail && (
+        {!floor && count.detail && (
           <p className="mt-1.5 max-w-[60ch] font-garamond text-base leading-relaxed text-foreground/75">
             {count.detail}
           </p>
@@ -106,13 +114,13 @@ export function CountRow({
           <Staff
             voices={voices}
             on={active && !countIn ? beat : undefined}
-            note={count.footwork?.note}
+            note={floor ? undefined : count.footwork?.note}
           />
         )}
 
-        {count.figure && <FigureLink figure={count.figure} />}
+        {!floor && count.figure && <FigureLink figure={count.figure} />}
 
-        {count.note && (
+        {!floor && count.note && (
           <div className="mt-3 max-w-[58ch] border-l-2 border-border pl-3">
             <p className="font-garamond text-base leading-snug text-foreground">
               {count.note.title}
@@ -149,6 +157,7 @@ export function CountRow({
  */
 export function HeldRow({
   counts,
+  floor,
   activeIndex,
   beat,
   countIn,
@@ -156,6 +165,9 @@ export function HeldRow({
   onStart,
 }: {
   counts: EightCount[];
+  /** Counts only. A held stretch is already one line; its cue grows to match
+   *  the rows either side of it. */
+  floor: boolean;
   /** Position within this stretch, or -1. */
   activeIndex: number;
   beat?: number;
@@ -199,7 +211,11 @@ export function HeldRow({
         <p
           className={cn(
             "font-garamond leading-tight",
-            active ? "text-3xl text-primary sm:text-4xl" : "text-xl text-foreground/80",
+            active
+              ? "text-3xl text-primary sm:text-4xl"
+              : floor
+                ? "text-2xl text-foreground/80 sm:text-3xl"
+                : "text-xl text-foreground/80",
           )}
         >
           {first.cue}

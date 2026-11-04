@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Play, Square, Volume2, VolumeX } from "lucide-react";
+import { Play, Rows3, Square, Volume2, VolumeX } from "lucide-react";
 import {
   allCounts,
   clock,
@@ -57,6 +57,14 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
   const [ending, setEnding] = useState<Ending>(DEFAULT_ENDING);
   const [bpm, setBpm] = useState<number>(SONG.bpm);
   const [sound, setSound] = useState(true);
+  // Two readers, one sheet. Everything the page knows is written for somebody
+  // sitting down — why the figure is called that, what the recording measures,
+  // which foot finishes the eight — and none of it can be read while dancing.
+  // Floor keeps the spine (the count, its rhythm, the cue, what happens on
+  // which beat) and folds the rest away. It is not a second page: it is the
+  // same rows with the study layer hidden, so the walk-through, the lane and
+  // every time on the sheet carry straight across.
+  const [floor, setFloor] = useState(false);
 
   const [mode, setMode] = useState<Mode>("metronome");
   const [song, setSong] = useState<{ file: File; url: string } | null>(null);
@@ -259,6 +267,26 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           <div className="ml-auto flex flex-none items-center gap-2 sm:gap-3">
             <button
               type="button"
+              onClick={() => setFloor((f) => !f)}
+              aria-pressed={floor}
+              title={
+                floor
+                  ? "Show the detail, the footwork and the figures again"
+                  : "Hide everything but the counts"
+              }
+              className={cn(
+                "flex flex-none items-center gap-1.5 rounded-full px-2.5 py-1 font-raleway text-[0.6rem] tracking-[0.15em] uppercase transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground motion-reduce:transition-none sm:px-3",
+                floor
+                  ? "bg-primary-foreground text-primary"
+                  : "text-primary-foreground/70 hover:text-primary-foreground",
+              )}
+            >
+              <Rows3 className="h-3.5 w-3.5" strokeWidth={1.5} />
+              Floor
+            </button>
+
+            <button
+              type="button"
               onClick={() => setSound((s) => !s)}
               title={sound ? "Silence the clicks" : "Click on every beat"}
               className="rounded-sm p-1 text-primary-foreground/70 transition-colors hover:text-primary-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-foreground motion-reduce:transition-none"
@@ -311,7 +339,12 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
         <h2 className="font-garamond text-4xl leading-none text-pop sm:text-5xl">
           {SONG.title}
         </h2>
-        <p className="mt-3 max-w-[62ch] font-garamond text-lg leading-relaxed text-foreground/85">
+        <p
+          className={cn(
+            "mt-3 max-w-[62ch] font-garamond text-lg leading-relaxed text-foreground/85",
+            floor && "hidden",
+          )}
+        >
           {SONG.artist}, from {SONG.album}. Seventy beats a minute in four,{" "}
           {SONG.key}. One bar of the song before the dance&rsquo;s first count,
           then thirty-eight eight-counts at a touch under seven seconds each —
@@ -343,7 +376,12 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
             title: `${m.counts.length} eight-counts`,
           }))}
         />
-        <p className="mt-2 font-garamond text-base text-muted-foreground">
+        <p
+          className={cn(
+            "mt-2 font-garamond text-base text-muted-foreground",
+            floor && "hidden",
+          )}
+        >
           Tap a movement to go to it. Press Walk, or the space bar, for{" "}
           {mode === "song" && song
             ? "the bar before it and then the song, with the sheet following the music."
@@ -357,7 +395,12 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           <h2 className="font-garamond text-2xl leading-none text-pop">
             The ending
           </h2>
-          <p className="mt-2 max-w-[64ch] font-garamond text-base leading-relaxed text-muted-foreground">
+          <p
+            className={cn(
+              "mt-2 max-w-[64ch] font-garamond text-base leading-relaxed text-muted-foreground",
+              floor && "hidden",
+            )}
+          >
             Three arrangements of the same closing material. Everything through
             E27 is the same dance in all of them, and each one fills exactly the
             same eleven eight-counts after it — so you can switch while the song
@@ -384,9 +427,11 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
               {ENDINGS[ending].summary}
             </span>
           </div>
-          <p className="mt-2 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
-            {ENDINGS[ending].blurb}
-          </p>
+          {!floor && (
+            <p className="mt-2 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
+              {ENDINGS[ending].blurb}
+            </p>
+          )}
         </section>
 
         <SongPanel
@@ -410,13 +455,14 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           audioRef={audioRef}
         />
 
-        <GearKey />
+        {!floor && <GearKey />}
 
         <div className="mt-16 space-y-20">
           {movements.map((movement) => (
             <MovementBlock
               key={movement.id}
               movement={movement}
+              floor={floor}
               tier={tier}
               onTier={setTier}
               indexOf={indexOf}
@@ -429,7 +475,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
           ))}
         </div>
 
-        <Reference week={week} tier={tier} ending={ending} />
+        {!floor && <Reference week={week} tier={tier} ending={ending} />}
       </main>
     </>
   );
@@ -438,6 +484,7 @@ export function FirstDance({ week }: { week: ReturnType<typeof trainingWeek> }) 
 
 function MovementBlock({
   movement,
+  floor,
   tier,
   onTier,
   indexOf,
@@ -448,6 +495,8 @@ function MovementBlock({
   onStart,
 }: {
   movement: Movement;
+  /** Counts only: the prose, the figures and the footwork fold away. */
+  floor: boolean;
   tier: Tier;
   onTier: (tier: Tier) => void;
   indexOf: Map<number, number>;
@@ -480,19 +529,23 @@ function MovementBlock({
         </span>
       </p>
 
-      <p className="mt-3 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
-        {movement.intent}
-      </p>
+      {!floor && (
+        <p className="mt-3 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
+          {movement.intent}
+        </p>
+      )}
 
+      {/* The one piece of prose Floor keeps. A warning you only read sitting
+          down is a warning you read after doing it wrong. */}
       {movement.failure && (
         <p className="mt-3 max-w-[64ch] border-l-2 border-warn pl-4 font-garamond text-lg leading-relaxed text-warn">
           {movement.failure}
         </p>
       )}
 
-      {movement.figure && <FigureLink figure={movement.figure} />}
+      {!floor && movement.figure && <FigureLink figure={movement.figure} />}
 
-      {movement.footwork && (
+      {!floor && movement.footwork && (
         <Footsteps
           footwork={movement.footwork}
           on={inThis && !countIn ? beat : undefined}
@@ -522,9 +575,11 @@ function MovementBlock({
               {TIERS[tier].summary}
             </span>
           </div>
-          <p className="mt-2 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
-            {TIERS[tier].blurb}
-          </p>
+          {!floor && (
+            <p className="mt-2 max-w-[64ch] font-garamond text-lg leading-relaxed text-foreground/85">
+              {TIERS[tier].blurb}
+            </p>
+          )}
         </div>
       )}
 
@@ -544,6 +599,7 @@ function MovementBlock({
             <CountRow
               key={block[0].n}
               count={block[0]}
+              floor={floor}
               active={here === block[0].n}
               beat={beat}
               countIn={countIn}
@@ -554,6 +610,7 @@ function MovementBlock({
             <HeldRow
               key={block[0].n}
               counts={block}
+              floor={floor}
               activeIndex={block.findIndex((c) => c.n === here)}
               beat={beat}
               countIn={countIn}
