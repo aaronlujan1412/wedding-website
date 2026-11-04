@@ -1,3 +1,5 @@
+import { Fragment } from "react";
+
 import { cn } from "@/lib/utils";
 import {
   type BeatSpan,
@@ -93,112 +95,158 @@ export function Pips({
   );
 }
 
+/** One line of the staff: whose feet, and what they do across the eight. */
+export type Voice = {
+  key: string;
+  /** Absent when the pair does one thing and there is nothing to tell apart. */
+  label?: string;
+  beats: BeatSpan[];
+};
+
 /**
- * The eight beats as columns, with the choreography written across them.
- *
- * Only appears on the eight-counts the source sheet wrote beat by beat — the
- * hand offered on 5 and taken on 7, the three steps back on 1·3·5, the mirrored
- * phrase in four pairs. Everywhere else the eight-count is the unit and a beat
- * grid would be eight empty boxes.
+ * The label column is a fixed width rather than `auto` because the ruler
+ * underneath is a second grid, and two grids only line up if they are told the
+ * same columns.
  */
-export function BeatStrip({
-  beats,
+const STAFF_COLUMNS = "3.5rem repeat(8, minmax(0, 1fr))";
+
+/**
+ * The eight beats as columns, with every voice written across them.
+ *
+ * One grid and one ruler, however many voices there are. These used to be a
+ * strip each — the count's own beats, then Lead, then Follow — stacked with a
+ * ruler apiece, which drew the same eight columns three times and still left
+ * you comparing them by eye. Stacked inside one grid the columns are shared,
+ * so you read DOWN a beat: on 3 she is walking the turn round while he holds
+ * his ground. It also makes the commonest beginner error checkable at a
+ * glance — whether you finish the eight-count on the foot that starts the
+ * next one.
+ *
+ * Only eight-counts the source sheet wrote beat by beat get one. Everywhere
+ * else the eight-count is the unit and a grid would be eight empty boxes.
+ */
+export function Staff({
+  voices,
   on,
-  label,
-  numbers = true,
+  note,
   className,
 }: {
-  beats: BeatSpan[];
+  voices: Voice[];
   on?: number;
-  /** Set when two strips are stacked and you need to know whose feet. */
-  label?: string;
-  numbers?: boolean;
+  /** The footwork's prose, which belongs to the staff rather than the row. */
+  note?: string;
   className?: string;
 }) {
   const covers = (span: BeatSpan) =>
     on !== undefined && on >= span.from && on <= (span.to ?? span.from);
 
-  // Whether the eight columns survive a phone. A column is about 41px at
+  const missing = (beats: BeatSpan[]) =>
+    BEATS.filter((b) => !beats.some((s) => b >= s.from && b <= (s.to ?? s.from)));
+
+  // Whether the eight columns survive a phone. A column is about 39px at
   // 390px wide, so roughly seven characters fit in one — and a span two beats
   // long has twice the room. Short enough and the grid is kept at every width,
   // because listing "L R L R" as sixteen rows of one letter buries the only
-  // thing it is for: seeing at a glance which foot you finish on.
-  const terse = beats.every(
-    (span) =>
-      span.text.length <= 7 * ((span.to ?? span.from) - span.from + 1),
+  // thing it is for: seeing at a glance which foot you finish on. One voice
+  // too wordy sends the whole staff to the list, since half a staff would be
+  // the comparison it exists for, broken.
+  const terse = voices.every((voice) =>
+    voice.beats.every(
+      (span) => span.text.length <= 7 * ((span.to ?? span.from) - span.from + 1),
+    ),
   );
 
   return (
     <div className={cn("mt-3", className)}>
-      {label && (
-        <p className="mb-1 font-raleway text-[0.65rem] tracking-[0.2em] text-muted-foreground uppercase">
-          {label}
-        </p>
-      )}
       {/* Below sm the eight columns come out around 37px and clip every label.
           The grid's information is WHERE in the eight-count, and at phone width
           the beat numbers say that in far less room. Both are in the DOM and
           CSS picks one, so there is no media-query hook and no hydration flash. */}
-      <ul className={cn("space-y-1 sm:hidden", terse && "hidden")}>
-        {beats.map((span) => (
-          <li
-            key={span.from}
-            className={cn(
-              "flex gap-3 rounded-sm px-2 py-1",
-              covers(span) ? "bg-primary text-primary-foreground" : "bg-card",
+      <div className={cn("space-y-2 sm:hidden", terse && "hidden")}>
+        {voices.map((voice) => (
+          <div key={voice.key}>
+            {voice.label && (
+              <p className="mb-1 font-raleway text-[0.6rem] tracking-[0.2em] text-muted-foreground uppercase">
+                {voice.label}
+              </p>
             )}
-          >
-            <span className="w-9 shrink-0 font-mono text-xs tabular-nums">
-              {span.to ? `${span.from}–${span.to}` : span.from}
-            </span>
-            <span className="font-garamond text-base leading-snug">
-              {span.text}
-            </span>
-          </li>
+            <ul className="space-y-1">
+              {voice.beats.map((span) => (
+                <li
+                  key={span.from}
+                  className={cn(
+                    "flex gap-3 rounded-sm px-2 py-1",
+                    covers(span)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card",
+                  )}
+                >
+                  <span className="w-9 shrink-0 font-mono text-xs tabular-nums">
+                    {span.to ? `${span.from}\u2013${span.to}` : span.from}
+                  </span>
+                  <span className="font-garamond text-base leading-snug">
+                    {span.text}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ))}
-      </ul>
+      </div>
 
       <div className={cn("max-w-lg", !terse && "max-sm:hidden")}>
-        <div className="grid grid-cols-8 gap-px overflow-hidden rounded-sm border border-border bg-border">
-          {beats.map((span) => (
-            <div
-              key={span.from}
-              // Every item placed explicitly. Leave the fillers to auto-flow and
-              // they land on a second, content-less row behind the first, which
-              // reads as the whole strip being one filled block.
-              style={{
-                gridRow: 1,
-                gridColumn: `${span.from} / ${(span.to ?? span.from) + 1}`,
-              }}
-              className={cn(
-                "px-1.5 py-1 font-garamond leading-snug",
-                terse ? "text-center text-xs sm:text-sm" : "text-sm",
-                covers(span)
-                  ? "bg-primary text-primary-foreground"
-                  : "bg-card text-foreground",
-              )}
-            >
-              {span.text}
-            </div>
-          ))}
-          {/* Beats nobody wrote anything on still hold their column open. */}
-          {BEATS.filter(
-            (b) => !beats.some((s) => b >= s.from && b <= (s.to ?? s.from)),
-          ).map((b) => (
-            <div
-              key={`gap-${b}`}
-              style={{ gridRow: 1, gridColumn: b }}
-              className="bg-background"
-            />
+        <div
+          className="grid gap-px overflow-hidden rounded-sm border border-border bg-border"
+          style={{ gridTemplateColumns: STAFF_COLUMNS }}
+        >
+          {voices.map((voice, row) => (
+            <Fragment key={voice.key}>
+              <span
+                style={{ gridRow: row + 1, gridColumn: 1 }}
+                className="flex items-center justify-end overflow-hidden bg-card px-1.5 py-1 font-raleway text-[0.55rem] tracking-[0.08em] text-muted-foreground uppercase"
+              >
+                {voice.label}
+              </span>
+              {voice.beats.map((span) => (
+                <div
+                  key={span.from}
+                  // Every item placed explicitly. Leave the fillers to
+                  // auto-flow and they land on a row of their own behind the
+                  // first, which reads as the whole strip being one block.
+                  style={{
+                    gridRow: row + 1,
+                    gridColumn: `${span.from + 1} / ${(span.to ?? span.from) + 2}`,
+                  }}
+                  className={cn(
+                    "px-1.5 py-1 font-garamond leading-snug",
+                    terse ? "text-center text-xs sm:text-sm" : "text-sm",
+                    covers(span)
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-card text-foreground",
+                  )}
+                >
+                  {span.text}
+                </div>
+              ))}
+              {/* Beats nobody wrote anything on still hold their column open. */}
+              {missing(voice.beats).map((b) => (
+                <div
+                  key={`gap-${b}`}
+                  style={{ gridRow: row + 1, gridColumn: b + 1 }}
+                  className="bg-background"
+                />
+              ))}
+            </Fragment>
           ))}
         </div>
-        {numbers && (
-        <div className="mt-1 grid grid-cols-8 px-1.5">
+
+        <div className="mt-1 grid" style={{ gridTemplateColumns: STAFF_COLUMNS }}>
+          <span />
           {BEATS.map((b) => (
             <span
               key={b}
               className={cn(
-                "font-mono text-[0.6rem] tabular-nums",
+                "px-1.5 font-mono text-[0.6rem] tabular-nums",
                 on === b ? "text-primary" : "text-muted-foreground/70",
               )}
             >
@@ -206,8 +254,13 @@ export function BeatStrip({
             </span>
           ))}
         </div>
-        )}
       </div>
+
+      {note && (
+        <p className="mt-2 max-w-[62ch] font-garamond text-base leading-relaxed text-muted-foreground">
+          {note}
+        </p>
+      )}
     </div>
   );
 }
@@ -215,10 +268,8 @@ export function BeatStrip({
 /**
  * Both of you, on the same eight beats.
  *
- * Stacked rather than side by side so the columns line up: the useful thing is
- * reading straight down a beat and seeing what each of you is doing on it. It
- * also makes the commonest beginner error checkable at a glance — whether you
- * finish the eight-count on the foot that lets you start the next one.
+ * A movement-level staff: the figure's footwork with no eight-count of its own
+ * to sit under.
  */
 export function Footsteps({
   footwork,
@@ -228,21 +279,15 @@ export function Footsteps({
   on?: number;
 }) {
   return (
-    <div className="mt-4">
-      <BeatStrip
-        beats={footwork.lead}
-        on={on}
-        label="Lead"
-        numbers={false}
-        className="mt-0"
-      />
-      <BeatStrip beats={footwork.follow} on={on} label="Follow" className="mt-2" />
-      {footwork.note && (
-        <p className="mt-2 max-w-[62ch] font-garamond text-base leading-relaxed text-muted-foreground">
-          {footwork.note}
-        </p>
-      )}
-    </div>
+    <Staff
+      className="mt-4"
+      on={on}
+      note={footwork.note}
+      voices={[
+        { key: "lead", label: "Lead", beats: footwork.lead },
+        { key: "follow", label: "Follow", beats: footwork.follow },
+      ]}
+    />
   );
 }
 

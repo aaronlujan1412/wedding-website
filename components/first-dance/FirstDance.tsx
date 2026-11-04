@@ -20,7 +20,7 @@ import {
 } from "@/lib/first-dance";
 import { cn } from "@/lib/utils";
 import { CountRow, HeldRow } from "./CountRow";
-import { FigureCard } from "./Figures";
+import { FigureLink } from "./Figures";
 import { Footsteps, GearKey } from "./Notation";
 import { type Mode, SongPanel } from "./SongPanel";
 import {
@@ -490,7 +490,7 @@ function MovementBlock({
         </p>
       )}
 
-      {movement.figure && <FigureCard figure={movement.figure} />}
+      {movement.figure && <FigureLink figure={movement.figure} />}
 
       {movement.footwork && (
         <Footsteps

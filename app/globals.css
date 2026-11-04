@@ -412,6 +412,12 @@ body:has(#me) {
   body:has(#schedule) footer {
     display: none;
   }
+
+  /* A figure on the first-dance sheet is a line you open. Paper has nothing to
+     open with, so a printed sheet carries every one of them unfolded. */
+  details.figure > *:not(summary) {
+    display: block !important;
+  }
 }
 
 /* The flight route draws itself once, origin to destination, when the next

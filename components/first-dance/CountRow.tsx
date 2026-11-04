@@ -3,8 +3,8 @@
 import { Play } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { clock, type EightCount, startOf } from "@/lib/first-dance";
-import { FigureCard } from "./Figures";
-import { BeatStrip, Footsteps, Pips } from "./Notation";
+import { FigureLink } from "./Figures";
+import { Pips, Staff, type Voice } from "./Notation";
 
 /**
  * One eight-count.
@@ -31,6 +31,27 @@ export function CountRow({
   canWalk: boolean;
   onStart: () => void;
 }) {
+  // The count's own beats and each of your feet are three readings of one
+  // eight-count, so they share a grid. The pair's line is only labelled when
+  // there is something to tell it apart from.
+  const voices: Voice[] = [
+    ...(count.beats
+      ? [
+          {
+            key: "both",
+            label: count.footwork ? "Both" : undefined,
+            beats: count.beats,
+          },
+        ]
+      : []),
+    ...(count.footwork
+      ? [
+          { key: "lead", label: "Lead", beats: count.footwork.lead },
+          { key: "follow", label: "Follow", beats: count.footwork.follow },
+        ]
+      : []),
+  ];
+
   return (
     <li
       data-counts={count.n}
@@ -44,8 +65,8 @@ export function CountRow({
       <div className="w-[4.5rem] flex-none pt-1">
         <div
           className={cn(
-            "font-mono text-sm tabular-nums slashed-zero",
-            active ? "text-primary" : "text-foreground/70",
+            "font-mono text-base tabular-nums slashed-zero",
+            active ? "text-primary" : "text-foreground/80",
           )}
         >
           E{count.n}
@@ -69,37 +90,31 @@ export function CountRow({
             "font-garamond leading-tight transition-[font-size] motion-reduce:transition-none",
             active
               ? "text-4xl text-primary sm:text-5xl"
-              : "text-2xl text-foreground sm:text-[1.75rem]",
+              : "text-xl text-foreground sm:text-2xl",
           )}
         >
           {count.cue}
         </h3>
 
         {count.detail && (
-          <p className="mt-1.5 max-w-[60ch] font-garamond text-lg leading-relaxed text-foreground/85">
+          <p className="mt-1.5 max-w-[60ch] font-garamond text-base leading-relaxed text-foreground/75">
             {count.detail}
           </p>
         )}
 
-        {count.beats && (
-          <BeatStrip
-            beats={count.beats}
+        {voices.length > 0 && (
+          <Staff
+            voices={voices}
             on={active && !countIn ? beat : undefined}
+            note={count.footwork?.note}
           />
         )}
 
-        {count.footwork && (
-          <Footsteps
-            footwork={count.footwork}
-            on={active && !countIn ? beat : undefined}
-          />
-        )}
-
-        {count.figure && <FigureCard figure={count.figure} />}
+        {count.figure && <FigureLink figure={count.figure} />}
 
         {count.note && (
           <div className="mt-3 max-w-[58ch] border-l-2 border-border pl-3">
-            <p className="font-garamond text-lg leading-snug text-foreground">
+            <p className="font-garamond text-base leading-snug text-foreground">
               {count.note.title}
             </p>
             <p className="mt-0.5 font-garamond text-base leading-relaxed text-muted-foreground">
@@ -165,8 +180,8 @@ export function HeldRow({
       <div className="w-[4.5rem] flex-none">
         <div
           className={cn(
-            "font-mono text-sm tabular-nums slashed-zero",
-            active ? "text-primary" : "text-foreground/70",
+            "font-mono text-base tabular-nums slashed-zero",
+            active ? "text-primary" : "text-foreground/80",
           )}
         >
           {counts.length === 1 ? `E${first.n}` : `E${first.n}–${last.n}`}

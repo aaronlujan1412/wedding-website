@@ -1,3 +1,5 @@
+import { ChevronRight } from "lucide-react";
+
 import { EFFORT, type Figure } from "@/lib/first-dance";
 import { cn } from "@/lib/utils";
 
@@ -9,45 +11,61 @@ import { cn } from "@/lib/utils";
  * search for "single slow 360°, led low at waist height". Each search phrase is
  * a link, so the gap between reading the sheet and watching the move is a
  * click rather than an evening of guessing at vocabulary.
+ *
+ * It is a line until you ask for it. Open, this is three paragraphs and a row
+ * of chips — roughly four hundred pixels — and there are ten of them against
+ * thirty-eight eight-counts, which made the page read as figures with some
+ * choreography between them. Closed, it still says the two things you scan
+ * for: what the move is called, and how long it takes to learn.
  */
-export function FigureCard({ figure }: { figure: Figure }) {
+export function FigureLink({ figure }: { figure: Figure }) {
+  const careful = figure.effort === "careful";
+
   return (
-    <div className="mt-5 rounded-lg border border-border bg-card p-4 sm:p-5">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
-        <h3 className="font-garamond text-2xl text-foreground">{figure.name}</h3>
-        <p
+    <details className="figure group mt-3 max-w-[62ch]">
+      {/* Wrapping, because in a count row's column the effort note otherwise
+          squeezes the name down to one word per line. */}
+      <summary className="flex cursor-pointer list-none flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-sm py-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <ChevronRight
+          className="h-3 w-3 flex-none translate-y-px text-muted-foreground transition-transform group-open:rotate-90 motion-reduce:transition-none"
+          strokeWidth={2}
+        />
+        <span className="font-garamond text-base text-foreground group-hover:text-primary">
+          {figure.name}
+        </span>
+        <span
           className={cn(
-            "font-garamond text-base",
-            figure.effort === "careful" ? "text-warn" : "text-muted-foreground",
+            "font-garamond text-sm",
+            careful ? "text-warn" : "text-muted-foreground",
           )}
         >
           {EFFORT[figure.effort]}
-        </p>
-      </div>
+        </span>
+      </summary>
 
-      {figure.steps && (
-        <p className="mt-2 max-w-[62ch] font-garamond text-lg leading-relaxed text-foreground/85">
-          {figure.steps}
-        </p>
-      )}
+      <div className="mt-2 ml-[0.9rem] border-l-2 border-border pl-3">
+        {figure.steps && (
+          <p className="font-garamond text-base leading-relaxed text-foreground/85">
+            {figure.steps}
+          </p>
+        )}
 
-      {figure.timing && (
-        <p className="mt-2 max-w-[62ch] font-garamond text-base leading-relaxed text-muted-foreground">
-          {figure.timing}
-        </p>
-      )}
+        {figure.timing && (
+          <p className="mt-2 font-garamond text-base leading-relaxed text-muted-foreground">
+            {figure.timing}
+          </p>
+        )}
 
-      <LookUp terms={figure.lookUp} />
+        <LookUp terms={figure.lookUp} />
 
-      {figure.instead && (
-        <div className="mt-4 border-t border-border pt-3">
-          <p className="max-w-[62ch] font-garamond text-lg leading-relaxed text-foreground/85">
+        {figure.instead && (
+          <p className="mt-3 font-garamond text-base leading-relaxed text-foreground/85">
             <span className="text-pop">Worth changing. </span>
             {figure.instead}
           </p>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </details>
   );
 }
 
