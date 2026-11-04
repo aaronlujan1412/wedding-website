@@ -23,8 +23,14 @@ export const shotList: ShotSection[] = [
       "Aaron’s suit, tan vest and tie",
       "The rings",
       "The venue",
-      "Savea and her siblings",
-      "Aaron and his siblings",
+      {
+        text: "Savea and her siblings",
+        people: ["brenna", "logan", "annika", "connor", "finnley"],
+      },
+      {
+        text: "Aaron and his siblings",
+        people: ["ammon", "evan", "easton", "alaysha"],
+      },
     ],
   },
   {
@@ -44,10 +50,22 @@ export const shotList: ShotSection[] = [
     title: "Family portraits",
     shots: [
       "Aaron, Savea and Daniel: the Lujan family",
-      "The three of them with Aaron’s mom and dad",
-      "The three of them with Savea’s mom and dad",
-      "The three of them with Savea’s mom",
-      "The three of them with all the parents",
+      {
+        text: "The three of them with Aaron’s mom and dad",
+        people: ["aarons-mom", "aarons-dad"],
+      },
+      {
+        text: "The three of them with Savea’s mom and dad",
+        people: ["renee", "brian"],
+      },
+      {
+        text: "The three of them with Savea’s mom",
+        people: ["renee"],
+      },
+      {
+        text: "The three of them with all the parents",
+        people: ["aarons-mom", "aarons-dad", "renee", "brian", "mike"],
+      },
       "Aaron and Savea’s couple portraits",
     ],
   },
@@ -56,17 +74,69 @@ export const shotList: ShotSection[] = [
     time: "15:15",
     title: "Wedding party and family",
     shots: [
-      "Aaron and Adrian",
-      "Aaron and Savea with Adrian",
-      "Aaron and Savea with Daniel, Adrian, Brenna, Easton and Alaysha",
-      "Aaron and Savea with Daniel, Savea’s parents, Mike and the siblings",
-      "Aaron and Savea with Daniel, Savea’s dad, Brenna and Logan",
-      "Aaron and Savea with Daniel, Savea’s mom, Mike, Connor, Brenna, Annika and Finnley",
+      {
+        text: "Aaron and Adrian",
+        people: ["adrian"],
+      },
+      {
+        text: "Aaron and Savea with Adrian",
+        people: ["adrian"],
+      },
+      {
+        text: "Aaron and Savea with Daniel, Adrian, Brenna, Easton and Alaysha",
+        people: ["adrian", "brenna", "easton", "alaysha"],
+      },
+      {
+        text: "Aaron and Savea with Daniel, Savea’s parents, Mike and the siblings",
+        people: [
+          "renee",
+          "brian",
+          "mike",
+          "brenna",
+          "logan",
+          "annika",
+          "connor",
+          "finnley",
+        ],
+      },
+      {
+        text: "Aaron and Savea with Daniel, Savea’s dad, Brenna and Logan",
+        people: ["brian", "brenna", "logan"],
+      },
+      {
+        text: "Aaron and Savea with Daniel, Savea’s mom, Mike, Connor, Brenna, Annika and Finnley",
+        people: ["renee", "mike", "connor", "brenna", "annika", "finnley"],
+      },
       "Aaron and Savea with Daniel, all the parents, all the siblings, spouses, nieces and nephews, and Granny",
-      "Aaron and Savea with Daniel, Aaron’s parents, siblings, spouses, nieces and nephews",
-      "Aaron and Savea with Granny",
-      "Aaron and Savea with Daniel and Granny",
-      "Aaron and Savea with Isaac and Annie",
+      {
+        text: "Aaron and Savea with Daniel, Aaron’s parents, siblings, spouses, nieces and nephews",
+        people: [
+          "aarons-mom",
+          "aarons-dad",
+          "ammon",
+          "emily",
+          "evan",
+          "tj",
+          "kristy",
+          "iris",
+          "james",
+          "easton",
+          "alaysha",
+          "harrison",
+        ],
+      },
+      {
+        text: "Aaron and Savea with Granny",
+        people: ["granny"],
+      },
+      {
+        text: "Aaron and Savea with Daniel and Granny",
+        people: ["granny"],
+      },
+      {
+        text: "Aaron and Savea with Isaac and Annie",
+        people: ["isaac", "annie"],
+      },
       "Aaron and Savea with friend groups pulled from cocoa hour",
     ],
   },
@@ -75,18 +145,30 @@ export const shotList: ShotSection[] = [
     time: CEREMONY_START,
     title: "The ceremony",
     shots: [
-      "The parents walking down the aisle",
-      "Easton, Alaysha and Brenna walking down the aisle",
+      {
+        text: "The parents walking down the aisle",
+        people: ["aarons-mom", "aarons-dad", "renee", "brian"],
+      },
+      {
+        text: "Easton, Alaysha and Brenna walking down the aisle",
+        people: ["easton", "alaysha", "brenna"],
+      },
       "Daniel stopping before the entrance",
       "Aaron and Savea meeting in the aisle and walking to Daniel",
       "The family hugging at the front",
-      "Adrian snapping the Polaroid of the family",
+      {
+        text: "Adrian snapping the Polaroid of the family",
+        people: ["adrian"],
+      },
       "Aaron, Savea and Daniel hanging the ornament on the tree",
       "Daniel presenting the rings, made from apple tree wood",
       "The vows and the ring exchange",
       "The first kiss",
       "The spin and dip kiss at the end of the aisle",
-      "Signing the marriage certificate downstairs with Adrian, Annie and Isaac",
+      {
+        text: "Signing the marriage certificate downstairs with Adrian, Annie and Isaac",
+        people: ["adrian", "annie", "isaac"],
+      },
     ],
   },
   {

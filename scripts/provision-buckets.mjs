@@ -25,6 +25,8 @@ const BUCKETS = [
   { name: "guest-photo-originals", public: false },
   { name: "backups", public: false },
   { name: "trip-papers", public: false },
+  // Who's who on the helper pages. Signed URLs only, after the helpers' code.
+  { name: "helper-faces", public: false },
 ];
 
 console.log(`Provisioning buckets on ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);

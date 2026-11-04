@@ -9,15 +9,27 @@ import { roleById, scheduleHref, type Role } from "@/components/schedule/roles";
 import { visibleLines } from "@/components/schedule/timeline";
 import { CardLinks } from "./CardLinks";
 import { cardsFor, type Card } from "./cards";
+import { FaceAlbum } from "./FaceAlbum";
+import type { FaceIndex } from "./faces";
 import { cleanUpList, lodgeSetup, packingList } from "./lists";
 import { ShotList } from "./ShotList";
+import { UnlockFaces } from "./UnlockFaces";
 
 /**
  * A role's helper page: every card tagged with the role, in the order the
  * day needs them. The schedule is when; this is how. It's a server
  * component, so the lists on it never ship to the schedule's browser bundle.
+ *
+ * `faces` is who's who, loaded only once the page has checked for the
+ * helpers' code. Null draws the code form in its place.
  */
-export function HelperView({ role }: { role: Role }) {
+export function HelperView({
+  role,
+  faces,
+}: {
+  role: Role;
+  faces: FaceIndex | null;
+}) {
   const cards = cardsFor(role);
 
   return (
@@ -53,7 +65,7 @@ export function HelperView({ role }: { role: Role }) {
       <div id="helpers" className="space-y-20">
         {cards.map((card) => (
           <CardSection key={card.id} card={card}>
-            <CardBody card={card} role={role} />
+            <CardBody card={card} role={role} faces={faces} />
           </CardSection>
         ))}
       </div>
@@ -93,7 +105,15 @@ function CardSection({ card, children }: { card: Card; children: ReactNode }) {
   );
 }
 
-function CardBody({ card, role }: { card: Card; role: Role }): ReactNode {
+function CardBody({
+  card,
+  role,
+  faces,
+}: {
+  card: Card;
+  role: Role;
+  faces: FaceIndex | null;
+}): ReactNode {
   switch (card.id) {
     case "packing":
       return <Lines lines={visibleLines(packingList, role)} />;
@@ -101,8 +121,10 @@ function CardBody({ card, role }: { card: Card; role: Role }): ReactNode {
       return <Lines lines={visibleLines(lodgeSetup, role)} />;
     case "food":
       return <MenuCard stations={menu} />;
+    case "faces":
+      return faces ? <FaceAlbum faces={faces} /> : <UnlockFaces />;
     case "shots":
-      return <ShotList role={role} />;
+      return <ShotList role={role} faces={faces} />;
     case "ceremony":
       return (
         <CeremonyScript start={CEREMONY_START} segments={ceremony} role={role} />

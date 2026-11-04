@@ -4,6 +4,7 @@ import {
   Package,
   ScrollText,
   Sparkles,
+  Users,
   Warehouse,
 } from "lucide-react";
 import type { Role } from "@/components/schedule/roles";
@@ -37,6 +38,13 @@ export const CARDS = [
     title: "The buffet",
     icon: CookingPot,
     roles: ["coordinator", "setup-crew"],
+  },
+  {
+    // The one card behind a code: photos of family and friends, named.
+    id: "faces",
+    title: "Who’s who",
+    icon: Users,
+    roles: ["photographers", "coordinator"],
   },
   {
     id: "shots",

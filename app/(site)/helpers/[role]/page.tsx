@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cardsFor } from "@/components/helpers/cards";
+import { canSeeFaces, loadFaces } from "@/components/helpers/faces";
 import { HelperView } from "@/components/helpers/HelperView";
 import { ROLES, roleById } from "@/components/schedule/roles";
 
@@ -23,7 +24,12 @@ export async function generateMetadata({
   return { title: `${label} helper page | Savea and Aaron's Wedding` };
 }
 
-/** A role's lists and notes. Its schedule is `/schedule/<role>`. */
+/**
+ * A role's lists and notes. Its schedule is `/schedule/<role>`.
+ *
+ * A page with who's who reads the cookies, so it renders per request; the
+ * faces are fetched only after the code checks out, never to be hidden later.
+ */
 export default async function RoleHelperPage({
   params,
 }: {
@@ -33,5 +39,8 @@ export default async function RoleHelperPage({
   const info = roleById(role);
   if (!info) notFound();
 
-  return <HelperView role={info.id} />;
+  const hasFaces = cardsFor(info.id).some((card) => card.id === "faces");
+  const faces = hasFaces && (await canSeeFaces()) ? await loadFaces() : null;
+
+  return <HelperView role={info.id} faces={faces} />;
 }

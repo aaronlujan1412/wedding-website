@@ -4,7 +4,10 @@ import { supabase } from "./supabase";
 import { fingerprint } from "./rate-limit";
 
 /**
- * Throttle for /me sign-ins.
+ * Throttle for /me sign-ins, and for the helpers' four-digit code
+ * (`app/actions/helpers.ts`), which wants the same failing-closed and the
+ * tighter count: at five a window, sweeping all 10,000 codes from one address
+ * takes about three weeks.
  *
  * Callers are identified the same way the RSVP throttle identifies them — an
  * HMAC of the IP, never the IP — so this is something to count against rather

@@ -1,4 +1,5 @@
 import type { CardLink } from "@/components/helpers/cards";
+import type { PersonId } from "@/components/helpers/people";
 import type { Role, Side } from "./roles";
 import { CEREMONY_START, type Segment } from "./ceremony";
 
@@ -24,6 +25,10 @@ export type Line =
           so they get boxes that still work once it's printed. */
       checklist?: boolean;
       note?: string;
+      /** Who's in it, so a shot can show their faces to anyone with the
+          helpers' code. The couple and Daniel go without: by the time the
+          photographers read the list, they've spent the morning with them. */
+      people?: PersonId[];
     };
 
 type Timed = {

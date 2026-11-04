@@ -69,6 +69,7 @@ const lines = [
   `SUPABASE_SECRET_KEY=${secret}`,
   "",
   carry("RSVP_ADMIN_PASSCODE"),
+  carry("HELPERS_PASSCODE"),
   carry("CRON_SECRET"),
   "",
   "# Deliberately different from production's.",

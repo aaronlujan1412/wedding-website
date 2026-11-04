@@ -1,3 +1,5 @@
+import { FaceChips } from "@/components/helpers/FaceChips";
+import type { FaceIndex } from "@/components/helpers/faces";
 import { cn } from "@/lib/utils";
 import type { VisibleLine } from "./timeline";
 
@@ -34,6 +36,7 @@ export function Lines({
   kind = "dash",
   align = "start",
   small = false,
+  faces,
   depth = 0,
 }: {
   lines: VisibleLine[];
@@ -41,6 +44,9 @@ export function Lines({
   align?: Align;
   /** Top-level lines at body size, for a narrow column. */
   small?: boolean;
+  /** Who's who, once the helpers' code is in: a line naming `people` shows
+      their faces. Only the helper page has it, and only after the code. */
+  faces?: FaceIndex;
   depth?: number;
 }) {
   if (lines.length === 0) return null;
@@ -99,6 +105,10 @@ export function Lines({
             line.text
           )}
 
+          {line.people && faces && (
+            <FaceChips people={line.people} faces={faces} />
+          )}
+
           {line.note && (
             <p className="mt-0.5 font-raleway text-sm text-muted-foreground">
               {line.note}
@@ -110,6 +120,7 @@ export function Lines({
               lines={line.lines}
               kind={line.ordered ? "ordered" : line.checklist ? "checklist" : "dash"}
               align={align}
+              faces={faces}
               depth={depth + 1}
             />
           )}
