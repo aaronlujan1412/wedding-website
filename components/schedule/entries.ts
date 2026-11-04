@@ -6,6 +6,11 @@ import type { RoleEntry } from "./schedule";
  * Everything the guest schedule doesn't say, tagged with who needs it. One
  * moment is one entry however many roles share it, so the 4:15 ceremony is
  * written once and each view filters it — never copied out per role.
+ *
+ * An entry is what happens when: a sentence, or a few short steps you need
+ * in the moment. Anything you'd tick off or read up on — a shot list, the
+ * buffet, the packing boxes — is a helper card, and the entry links to it
+ * with `see`.
  */
 export const roleEntries: RoleEntry[] = [
   // Monday, November 30 ------------------------------------------------
@@ -15,89 +20,8 @@ export const roleEntries: RoleEntry[] = [
     time: "10:00",
     title: "Pack up the cars",
     roles: ["setup-crew"],
-    lines: [
-      {
-        text: "Savea and Aaron’s car",
-        checklist: true,
-        lines: ["Table decor", "Mugs", "The misc. decor box"],
-      },
-      {
-        text: "Mom and Dad’s truck",
-        checklist: true,
-        lines: ["Christmas trees", "The kitchen box", "Food coolers"],
-      },
-      {
-        text: "In the misc. decor box",
-        checklist: true,
-        lines: [
-          "The Jingle Jangle sign and seat-assignment gift tags",
-          "The guestbook sign, deck of cards and markers",
-          "Tablecloths, centerpieces and candle batteries",
-          "Table numbers",
-          "Lanterns and garland for the lovers’ table",
-          "Wall garland, fireplace garland, command hooks and the wreath",
-          "The LED Lujan sign",
-          "The Polaroid camera and the ornament for the unity ceremony",
-        ],
-      },
-      {
-        text: "In the kitchen box and coolers",
-        checklist: true,
-        lines: [
-          // Counted from the menu, so the box can't disagree with the buffet.
-          `${crockPotCount(menu)} crock pots, ladles, tongs, the spaghetti spoon and a serving spoon`,
-          "Chili verde, beef chili, pulled pork, spaghetti sauce, mac and cheese and Zuppa Toscana, all frozen ahead",
-          "Frozen spaghetti noodles",
-          "The lasagna, prepped in foil pans",
-          "Prepped fruit and veggies",
-          "Sam’s Club mini cheesecakes and the mosaic cake balls",
-          "Vanilla ice cream, nuts, fudge, caramel, chocolate and strawberry sauces, sprinkles, whipped cream and graham crackers",
-          "Bread, cheese, sour cream, chips, tomatoes, salsa and pico, black olives and parmesan",
-        ],
-      },
-      {
-        text: "Supplies: decor and tech",
-        checklist: true,
-        lines: [
-          "Extra fairy lights",
-          "Extension cords and power strips",
-          "Extra batteries",
-          "A tripod or phone mount for the livestream",
-          "A portable power bank",
-          "Extra Polaroid film",
-        ],
-      },
-      {
-        text: "Supplies: dining",
-        checklist: true,
-        lines: [
-          "Heavy-duty dinnerware, cutlery and thick napkins",
-          "Insulated cocoa cups and cold drink cups",
-          "Extra drinks: soda and sparkling water",
-          "Bags of ice",
-        ],
-      },
-      {
-        text: "Supplies: clean-up",
-        checklist: true,
-        lines: [
-          "30-gallon heavy-duty trash bags",
-          "Foil pans, Ziploc bags and Tupperware for leftovers",
-          "Dish soap, a fresh sponge and paper towels",
-        ],
-      },
-      {
-        text: "Emergency kit",
-        checklist: true,
-        lines: [
-          "Mini sewing kit",
-          "Ibuprofen and Tylenol",
-          "Band-Aids and antacids",
-          "A stain remover pen",
-          "A lighter or matches",
-        ],
-      },
-    ],
+    body: "Savea and Aaron’s car, and Mom and Dad’s truck.",
+    see: [{ card: "packing" }],
   },
   {
     day: "2026-11-30",
@@ -111,27 +35,8 @@ export const roleEntries: RoleEntry[] = [
     time: "15:00",
     title: "Set up the lodge",
     roles: ["setup-crew"],
-    lines: [
-      "Lay out the tables and chairs",
-      {
-        text: "Inside",
-        lines: [
-          "Guest tables: tablecloths, centerpieces, batteries in the candles, table numbers",
-          "Lovers’ table: tablecloth, lanterns, garland",
-          "Welcome table: tablecloth, the Jingle Jangle sign and gift tags (names and table numbers), and the guestbook sign, deck of cards and markers",
-          "Wall garland: space out the command hooks, then hang the garland",
-          "Fireplace: hang the garland, the wreath and the LED Lujan sign",
-          "Trees: set them up and string the lights",
-        ],
-      },
-      {
-        text: "Outside",
-        lines: [
-          "Hang the garland",
-          "Get the outside tree ready, but leave it inside until Tuesday",
-        ],
-      },
-    ],
+    body: "Tables and chairs first, then the decor, inside and out.",
+    see: [{ card: "lodge-setup" }],
   },
   {
     day: "2026-11-30",
@@ -251,19 +156,8 @@ export const roleEntries: RoleEntry[] = [
       "Photographer 1: Aaron and his siblings, Ammon, Evan, Easton and Alaysha",
       "Photographer 2: Savea and her siblings, Brenna, Annika, Connor, Finnley and Logan",
       "The videographer floats between the two",
-      {
-        text: "Shot list",
-        checklist: true,
-        lines: [
-          "Savea’s dress, veil and gold jewelry",
-          "Aaron’s suit, tan vest and tie",
-          "The rings",
-          "The venue",
-          "Savea and her siblings",
-          "Aaron and his siblings",
-        ],
-      },
     ],
+    see: [{ card: "shots", section: "siblings" }],
   },
 
   // The first look -----------------------------------------------------
@@ -290,18 +184,8 @@ export const roleEntries: RoleEntry[] = [
       "Savea gets ready",
       "Savea walks down the aisle toward Aaron, and he turns around to see her",
       "The family waits in the cars until after they meet",
-      {
-        text: "Shot list",
-        roles: ["photographers"],
-        checklist: true,
-        lines: [
-          "Wide establishing shots of the park",
-          "Aaron’s reaction as he turns around",
-          "Savea’s approach down the aisle",
-          "The two of them embracing",
-        ],
-      },
     ],
+    see: [{ card: "shots", section: "first-look" }],
   },
   {
     day: "2026-12-01",
@@ -312,19 +196,8 @@ export const roleEntries: RoleEntry[] = [
       "Start with the parents and Daniel, then the bigger family and parent photos",
       "Once their photos are done, the parents and Daniel head back early in Car 3",
       "The rest of the time is Aaron and Savea’s couple portraits",
-      {
-        text: "Shot list",
-        checklist: true,
-        lines: [
-          "Aaron, Savea and Daniel: the Lujan family",
-          "The three of them with Aaron’s mom and dad",
-          "The three of them with Savea’s mom and dad",
-          "The three of them with Savea’s mom",
-          "The three of them with all the parents",
-          "Aaron and Savea’s couple portraits",
-        ],
-      },
     ],
+    see: [{ card: "shots", section: "family-portraits" }],
   },
   {
     day: "2026-12-01",
@@ -333,11 +206,11 @@ export const roleEntries: RoleEntry[] = [
     roles: ["coordinator", "setup-crew"],
     body: "Aaron and Savea are off taking photos, and the wedding party is at the lodge to help with any last setup.",
     lines: [
-      `Get all ${crockPotCount(menu)} crock pots going. The buffet card below has how`,
+      `Get all ${crockPotCount(menu)} crock pots going`,
       "Start on the hot cocoa bar: mix the ingredients, set out the mix-ins, fill the water carafes and arrange the cups on the tables",
       "Check the welcome table has the Jingle Jangle gift tags, the deck-of-cards guestbook and the markers",
     ],
-    menu,
+    see: [{ card: "food" }],
   },
   {
     day: "2026-12-01",
@@ -408,25 +281,8 @@ export const roleEntries: RoleEntry[] = [
         text: "The coordinator helps the photographers round everyone up.",
         roles: ["coordinator"],
       },
-      {
-        text: "Shot list",
-        checklist: true,
-        lines: [
-          "Aaron and Adrian",
-          "Aaron and Savea with Adrian",
-          "Aaron and Savea with Daniel, Adrian, Brenna, Easton and Alaysha",
-          "Aaron and Savea with Daniel, Savea’s parents, Mike and the siblings",
-          "Aaron and Savea with Daniel, Savea’s dad, Brenna and Logan",
-          "Aaron and Savea with Daniel, Savea’s mom, Mike, Connor, Brenna, Annika and Finnley",
-          "Aaron and Savea with Daniel, all the parents, all the siblings, spouses, nieces and nephews, and Granny",
-          "Aaron and Savea with Daniel, Aaron’s parents, siblings, spouses, nieces and nephews",
-          "Aaron and Savea with Granny",
-          "Aaron and Savea with Daniel and Granny",
-          "Aaron and Savea with Isaac and Annie",
-          "Aaron and Savea with friend groups pulled from cocoa hour",
-        ],
-      },
     ],
+    see: [{ card: "shots", section: "group-photos" }],
   },
   {
     day: "2026-12-01",
@@ -478,28 +334,8 @@ export const roleEntries: RoleEntry[] = [
       "family",
       "photographers",
     ],
-    lines: [
-      {
-        text: "Shot list",
-        roles: ["photographers"],
-        checklist: true,
-        lines: [
-          "The parents walking down the aisle",
-          "Easton, Alaysha and Brenna walking down the aisle",
-          "Daniel stopping before the entrance",
-          "Aaron and Savea meeting in the aisle and walking to Daniel",
-          "The family hugging at the front",
-          "Adrian snapping the Polaroid of the family",
-          "Aaron, Savea and Daniel hanging the ornament on the tree",
-          "Daniel presenting the rings, made from apple tree wood",
-          "The vows and the ring exchange",
-          "The first kiss",
-          "The spin and dip kiss at the end of the aisle",
-          "Signing the marriage certificate downstairs with Adrian, Annie and Isaac",
-        ],
-      },
-    ],
     segments: ceremony,
+    see: [{ card: "ceremony" }, { card: "shots", section: "ceremony" }],
   },
 
   // The reception ------------------------------------------------------
@@ -520,18 +356,8 @@ export const roleEntries: RoleEntry[] = [
       "After their speech, the coordinator announces that once everyone has been through the buffet, the mic is open for anyone who’d like to give the bride and groom a shout-out",
       "The coordinator releases tables to the buffet one at a time",
       "Aaron and Savea eat, then everyone else",
-      {
-        text: "Shot list",
-        roles: ["photographers"],
-        checklist: true,
-        lines: [
-          "The grand entrance from the stairs",
-          "The welcome speech on the dance floor",
-          "Candids at the buffet",
-          "Guests giving their open mic shout-outs",
-        ],
-      },
     ],
+    see: [{ card: "shots", section: "reception" }],
   },
   {
     day: "2026-12-01",
@@ -611,20 +437,8 @@ export const roleEntries: RoleEntry[] = [
     time: "21:15",
     title: "Clean up",
     roles: ["coordinator", "setup-crew", "wedding-party", "family"],
-    body: "The coordinator shows everyone staying the night how to help:",
-    lines: [
-      {
-        text: "Clean-up list",
-        checklist: true,
-        lines: [
-          "Pack the leftover food into containers",
-          "Empty the hot cocoa carafes and station",
-          "Rinse the dishes and the crock pots",
-          "Pack away the table decor",
-          "Take down the garlands, signs, trees and the rest of the decorations, inside and out",
-        ],
-      },
-    ],
+    body: "The coordinator shows everyone staying the night how to help.",
+    see: [{ card: "clean-up" }],
   },
   {
     day: "2026-12-01",

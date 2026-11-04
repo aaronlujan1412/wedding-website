@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { segmentStarts, totalMinutes, type Segment } from "./ceremony";
 import { addMinutes, formatClock, formatTime } from "./clock";
 import { Lines } from "./Lines";
@@ -8,15 +9,20 @@ import { visibleLines } from "./timeline";
  * The ceremony as a run of show. Every role sees every part and its time —
  * a photographer still needs to know the vows start at 4:35 — but only the
  * lines meant for them, so Adrian's talking points stay in Adrian's copy.
+ *
+ * `compact` is the schedule's copy: each part's time and name and nothing
+ * else, since the schedule is for when. The full script is the ceremony card.
  */
 export function CeremonyScript({
   start,
   segments,
   role,
+  compact = false,
 }: {
   start: string;
   segments: Segment[];
   role: Role;
+  compact?: boolean;
 }) {
   const starts = segmentStarts(start, segments);
   const minutes = totalMinutes(segments);
@@ -28,19 +34,35 @@ export function CeremonyScript({
         {formatTime(addMinutes(start, minutes))}.
       </p>
 
-      <ol className="mt-5 border-t border-border">
+      <ol className={cn("border-t border-border", compact ? "mt-3" : "mt-5")}>
         {segments.map((segment, i) => (
           <li
             key={segment.title}
-            className="border-b border-border py-4 break-inside-avoid md:grid md:grid-cols-[3.5rem_1fr] md:gap-x-4"
+            className={cn(
+              "border-b border-border break-inside-avoid",
+              compact
+                ? "grid grid-cols-[3.5rem_1fr] items-baseline gap-x-4 py-2"
+                : "py-4 md:grid md:grid-cols-[3.5rem_1fr] md:gap-x-4",
+            )}
           >
             {/* Above the title on a phone, where a column of times would
-                cost the nested lines most of their width. */}
-            <span className="block font-raleway text-sm lining-nums tabular-nums text-pop2 md:pt-1.5">
+                cost the nested lines most of their width. A compact row has
+                no nested lines, so it keeps its column. */}
+            <span
+              className={cn(
+                "block font-raleway text-sm lining-nums tabular-nums text-pop2",
+                !compact && "md:pt-1.5",
+              )}
+            >
               {formatClock(starts[i])}
             </span>
             <div>
-              <h4 className="flex items-baseline justify-between gap-3 font-garamond text-xl text-foreground">
+              <h4
+                className={cn(
+                  "flex items-baseline justify-between gap-3 font-garamond text-foreground",
+                  compact ? "text-lg" : "text-xl",
+                )}
+              >
                 {segment.title}
                 {segment.minutes ? (
                   <span className="shrink-0 font-raleway text-xs lining-nums tabular-nums text-muted-foreground">
@@ -48,12 +70,12 @@ export function CeremonyScript({
                   </span>
                 ) : null}
               </h4>
-              {segment.goal && (
+              {!compact && segment.goal && (
                 <p className="mt-0.5 font-garamond text-base italic text-muted-foreground">
                   {segment.goal}
                 </p>
               )}
-              <Lines lines={visibleLines(segment.lines, role)} />
+              {!compact && <Lines lines={visibleLines(segment.lines, role)} />}
             </div>
           </li>
         ))}

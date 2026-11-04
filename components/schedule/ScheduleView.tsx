@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cardsFor, describeCards, helpersHref } from "@/components/helpers/cards";
 import { cn } from "@/lib/utils";
 import { GuestStopRow } from "./GuestStopRow";
 import { RoleEntryRow } from "./RoleEntryRow";
@@ -50,6 +52,7 @@ export function ScheduleView() {
           {role ? roleById(role)?.intro : GUEST_INTRO}
         </p>
 
+        {role && <HelperPageLink role={role} />}
         <ViewSwitcher role={role} />
         {role && <Legend shared={isSided(role) ? "Together" : "Your part"} />}
       </header>
@@ -123,37 +126,65 @@ function ViewSwitcher({ role }: { role: Role | null }) {
 
   return (
     <nav aria-label="Whose schedule" className="mt-10 print:hidden">
-      <p className="font-garamond text-lg text-foreground/80">
-        Helping out on the day? See the schedule for
-      </p>
-      <ul className="mt-2 flex flex-wrap justify-center gap-x-0.5 gap-y-0.5">
-        {views.map((view) => {
-          const selected = view.id === role;
-          return (
-            <li key={view.id ?? "everyone"}>
-              <a
-                href={scheduleHref(view.id)}
-                aria-current={selected ? "page" : undefined}
-                onClick={(event) => choose(event, view.id)}
-                className={cn(
-                  "inline-block rounded-sm px-2 py-1.5 font-garamond text-lg underline-offset-[0.35em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:py-2.5",
-                  selected
-                    ? cn(
-                        "underline decoration-2",
-                        view.id
-                          ? "text-pop2 decoration-pop2"
-                          : "text-primary decoration-primary",
-                      )
-                    : "text-muted-foreground hover:text-foreground hover:underline hover:decoration-border",
-                )}
-              >
-                {view.label}
-              </a>
-            </li>
-          );
-        })}
-      </ul>
+      {/* Folded on the guest schedule, where nearly everyone reading is a
+          guest and seven jobs are noise between them and the cocoa. Open on
+          a role's, where switching is the point. */}
+      <details open={role !== null} className="group">
+        <summary className="mx-auto w-fit cursor-pointer list-none rounded-sm font-garamond text-lg text-foreground/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+          Helping out on the day?{" "}
+          <span className="text-primary underline decoration-primary/40 underline-offset-[0.25em] group-open:hidden">
+            Find your part
+          </span>
+          <span className="hidden group-open:inline">See the schedule for</span>
+        </summary>
+        <ul className="mt-2 flex flex-wrap justify-center gap-x-0.5 gap-y-0.5">
+          {views.map((view) => {
+            const selected = view.id === role;
+            return (
+              <li key={view.id ?? "everyone"}>
+                <a
+                  href={scheduleHref(view.id)}
+                  aria-current={selected ? "page" : undefined}
+                  onClick={(event) => choose(event, view.id)}
+                  className={cn(
+                    "inline-block rounded-sm px-2 py-1.5 font-garamond text-lg underline-offset-[0.35em] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:py-2.5",
+                    selected
+                      ? cn(
+                          "underline decoration-2",
+                          view.id
+                            ? "text-pop2 decoration-pop2"
+                            : "text-primary decoration-primary",
+                        )
+                      : "text-muted-foreground hover:text-foreground hover:underline hover:decoration-border",
+                  )}
+                >
+                  {view.label}
+                </a>
+              </li>
+            );
+          })}
+        </ul>
+      </details>
     </nav>
+  );
+}
+
+/** Where a role's lists went: the line that sends a helper from the
+    schedule to their cards. A role with no cards has nowhere to send. */
+function HelperPageLink({ role }: { role: Role }) {
+  const cards = cardsFor(role);
+  if (cards.length === 0) return null;
+
+  return (
+    <p className="mx-auto mt-6 max-w-xl font-garamond text-lg text-foreground/90 print:hidden">
+      <Link
+        href={helpersHref(role)}
+        className="rounded-sm text-primary underline decoration-primary/40 underline-offset-[0.25em] hover:decoration-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        Your helper page
+      </Link>{" "}
+      has {describeCards(cards)}.
+    </p>
   );
 }
 

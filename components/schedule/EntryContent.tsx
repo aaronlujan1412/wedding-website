@@ -1,7 +1,7 @@
+import { CardLinks } from "@/components/helpers/CardLinks";
 import { cn } from "@/lib/utils";
 import { CeremonyScript } from "./CeremonyScript";
 import { Lines } from "./Lines";
-import { MenuCard } from "./MenuCard";
 import type { Role } from "./roles";
 import type { RoleEntry } from "./schedule";
 import { formatWhen, joinNames, visibleLines } from "./timeline";
@@ -74,9 +74,21 @@ export function EntryContent({
         />
       )}
       {entry.segments && (
-        <CeremonyScript start={entry.time} segments={entry.segments} role={role} />
+        <CeremonyScript
+          start={entry.time}
+          segments={entry.segments}
+          role={role}
+          compact
+        />
       )}
-      {entry.menu && <MenuCard stations={entry.menu} />}
+      {entry.see && (
+        <CardLinks
+          links={entry.see}
+          role={role}
+          align={placement === "left" ? "end" : placement === "center" ? "center" : "start"}
+          className="mt-4"
+        />
+      )}
     </>
   );
 }

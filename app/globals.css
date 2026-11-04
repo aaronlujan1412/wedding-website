@@ -413,6 +413,15 @@ body:has(#me) {
     display: none;
   }
 
+  /* A helper page prints the same way, a sheet per card. */
+  body:has(#helpers) {
+    background: #fff;
+  }
+  body:has(#helpers) nav,
+  body:has(#helpers) footer {
+    display: none;
+  }
+
   /* A figure on the first-dance sheet is a line you open. Paper has nothing to
      open with, so a printed sheet carries every one of them unfolded. */
   details.figure > *:not(summary) {

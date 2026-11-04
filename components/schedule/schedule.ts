@@ -1,6 +1,6 @@
+import type { CardLink } from "@/components/helpers/cards";
 import type { Role, Side } from "./roles";
 import { CEREMONY_START, type Segment } from "./ceremony";
-import type { Station } from "./menu";
 
 /** A calendar date, `YYYY-MM-DD`. */
 export type Day = "2026-11-30" | "2026-12-01";
@@ -54,9 +54,13 @@ export type RoleEntry = Timed & {
   who?: string[];
   body?: string;
   lines?: Line[];
-  /** A run of show whose clock times are worked out from its durations. */
+  /** A run of show whose clock times are worked out from its durations.
+      The schedule draws only each part's time and name; the script itself
+      is the ceremony card. */
   segments?: Segment[];
-  menu?: Station[];
+  /** The helper cards that carry this moment's lists — its shot list, the
+      buffet — drawn as links for the roles that have the card. */
+  see?: CardLink[];
 };
 
 export const guestStops: GuestStop[] = [

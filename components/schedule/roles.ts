@@ -17,7 +17,7 @@ export const ROLES = [
     id: "officiant",
     label: "Officiant",
     intro:
-      "For Adrian. The whole ceremony is here, minute by minute, with ideas for each part.",
+      "For Adrian. The ceremony minute by minute, with the full script and ideas for each part on your helper page.",
   },
   {
     id: "family",

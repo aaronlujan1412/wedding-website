@@ -17,6 +17,7 @@ function prepLabel(prep: Prep) {
 /**
  * The buffet as a recipe card: one station per block, the crock pot routine
  * said once at the top, and each dish down to what's different about it.
+ * It's the body of the buffet helper card, which carries the heading.
  */
 export function MenuCard({ stations }: { stations: Station[] }) {
   const dishes = stations.flatMap((s) => s.dishes);
@@ -26,8 +27,7 @@ export function MenuCard({ stations }: { stations: Station[] }) {
 
   return (
     <div className="mt-5 rounded-lg border border-border bg-card p-5 break-inside-avoid md:p-7">
-      <h4 className="font-garamond text-2xl text-foreground">The buffet</h4>
-      <p className="mt-1 font-garamond text-lg text-foreground/90">
+      <p className="font-garamond text-xl text-foreground">
         {crockPotCount(stations)} crock pots
         {ovenDishes.length > 0 && <>, and the oven for the {joinNames(ovenDishes)}</>}
         .
