@@ -1,8 +1,5 @@
-import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import { cardsFor } from "@/components/helpers/cards";
-import { canSeeFaces, loadFaces } from "@/components/helpers/faces";
-import { HelperView } from "@/components/helpers/HelperView";
+import { notFound, redirect } from "next/navigation";
+import { cardsFor, helpersHref } from "@/components/helpers/cards";
 import { ROLES, roleById } from "@/components/schedule/roles";
 
 /** Only roles with a card have a page; anything else is a 404. */
@@ -14,22 +11,8 @@ export function generateStaticParams() {
   }));
 }
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ role: string }>;
-}): Promise<Metadata> {
-  const { role } = await params;
-  const label = roleById(role)?.label;
-  return { title: `${label} helper page | Savea and Aaron's Wedding` };
-}
-
-/**
- * A role's lists and notes. Its schedule is `/schedule/<role>`.
- *
- * A page with who's who reads the cookies, so it renders per request; the
- * faces are fetched only after the code checks out, never to be hidden later.
- */
+/** `/helpers/<role>` is the link the schedule gives out; it opens the
+    role's first tab. */
 export default async function RoleHelperPage({
   params,
 }: {
@@ -37,10 +20,8 @@ export default async function RoleHelperPage({
 }) {
   const { role } = await params;
   const info = roleById(role);
-  if (!info) notFound();
+  const first = info && cardsFor(info.id)[0];
+  if (!info || !first) notFound();
 
-  const hasFaces = cardsFor(info.id).some((card) => card.id === "faces");
-  const faces = hasFaces && (await canSeeFaces()) ? await loadFaces() : null;
-
-  return <HelperView role={info.id} faces={faces} />;
+  redirect(helpersHref(info.id, { card: first.id }));
 }

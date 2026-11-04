@@ -7,41 +7,34 @@ import { MenuCard } from "@/components/schedule/MenuCard";
 import { menu } from "@/components/schedule/menu";
 import { roleById, scheduleHref, type Role } from "@/components/schedule/roles";
 import { visibleLines } from "@/components/schedule/timeline";
-import { CardLinks } from "./CardLinks";
-import { cardsFor, type Card } from "./cards";
+import type { Card } from "./cards";
 import { FaceAlbum } from "./FaceAlbum";
 import type { FaceIndex } from "./faces";
+import { HelperTabBar, HelperTabs } from "./HelperTabs";
 import { cleanUpList, lodgeSetup, packingList } from "./lists";
 import { ShotList } from "./ShotList";
 import { UnlockFaces } from "./UnlockFaces";
 
 /**
- * A role's helper page: every card tagged with the role, in the order the
- * day needs them. The schedule is when; this is how. It's a server
- * component, so the lists on it never ship to the schedule's browser bundle.
- *
- * `faces` is who's who, loaded only once the page has checked for the
- * helpers' code. Null draws the code form in its place.
+ * A role's helper page around whichever card is open: the heading and the
+ * tabs, which stay put while the card under them changes. The schedule is
+ * when; this is how. All of it renders on the server, so the lists never
+ * ship to the schedule's browser bundle.
  */
-export function HelperView({
-  role,
-  faces,
-}: {
-  role: Role;
-  faces: FaceIndex | null;
-}) {
-  const cards = cardsFor(role);
-
+export function HelperShell({ role, children }: { role: Role; children: ReactNode }) {
   return (
-    <main className="mx-auto min-h-screen max-w-3xl px-6 pt-40 pb-24 print:max-w-none print:px-0 print:pt-0 print:pb-0">
-      <header className="mb-14 text-center md:mb-20 print:mb-8">
+    <main
+      id="helpers"
+      className="mx-auto min-h-screen max-w-3xl px-6 pt-32 pb-24 max-md:pb-0 md:pt-40 print:max-w-none print:px-0 print:pt-0 print:pb-0"
+    >
+      <header className="mb-10 text-center md:mb-12 print:mb-6">
         <p className="font-raleway text-xs uppercase tracking-[0.3em] text-primary">
           Helpers
         </p>
-        <h1 className="mt-3 font-corinthia text-7xl text-pop md:text-8xl">
+        <h1 className="mt-2 font-corinthia text-6xl text-pop md:text-7xl">
           {roleById(role)?.label}
         </h1>
-        <p className="mx-auto mt-4 max-w-xl font-garamond text-xl italic text-muted-foreground md:text-2xl">
+        <p className="mx-auto mt-2 max-w-xl font-garamond text-lg italic text-muted-foreground md:text-xl print:hidden">
           The lists and notes behind{" "}
           <Link
             href={scheduleHref(role)}
@@ -51,24 +44,10 @@ export function HelperView({
           </Link>
           .
         </p>
-
-        {cards.length > 1 && (
-          <CardLinks
-            links={cards.map((card) => ({ card: card.id }))}
-            role={role}
-            align="center"
-            className="mt-10 print:hidden"
-          />
-        )}
       </header>
 
-      <div id="helpers" className="space-y-20">
-        {cards.map((card) => (
-          <CardSection key={card.id} card={card}>
-            <CardBody card={card} role={role} faces={faces} />
-          </CardSection>
-        ))}
-      </div>
+      <HelperTabs role={role} />
+      {children}
 
       <p className="mt-24 text-center font-garamond text-lg text-muted-foreground print:hidden">
         Helping out more than one way?{" "}
@@ -79,20 +58,28 @@ export function HelperView({
           Every helper’s page
         </Link>
       </p>
+
+      <HelperTabBar role={role} />
     </main>
   );
 }
 
-/** A card's heading and anchor. Printed, each card starts its own sheet, so
-    the buffet can be handed to whoever's in the kitchen. */
-function CardSection({ card, children }: { card: Card; children: ReactNode }) {
+/**
+ * One card, as its tab. `faces` is who's who, loaded only once the page has
+ * checked for the helpers' code; null draws the code form in its place.
+ */
+export function HelperCard({
+  card,
+  role,
+  faces,
+}: {
+  card: Card;
+  role: Role;
+  faces: FaceIndex | null;
+}) {
   const Icon = card.icon;
   return (
-    <section
-      id={card.id}
-      aria-labelledby={`${card.id}-title`}
-      className="scroll-mt-24 print:break-before-page print:first:break-before-auto"
-    >
+    <section aria-labelledby={`${card.id}-title`}>
       <h2
         id={`${card.id}-title`}
         className="flex items-center gap-3 border-b border-border pb-3 font-garamond text-3xl text-foreground md:text-4xl"
@@ -100,7 +87,7 @@ function CardSection({ card, children }: { card: Card; children: ReactNode }) {
         <Icon aria-hidden="true" className="size-6 shrink-0 text-pop2" strokeWidth={1.5} />
         {card.title}
       </h2>
-      {children}
+      <CardBody card={card} role={role} faces={faces} />
     </section>
   );
 }

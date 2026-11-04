@@ -14,7 +14,10 @@ import { joinNames } from "@/components/schedule/timeline";
  * The helper pages, a card at a time. The schedule says when; a card says
  * how — the shot list, the buffet, what goes in which box — so a role's
  * schedule can stay a schedule. Like an entry, a card is tagged with the
- * roles that need it, and `/helpers/<role>` is the cards tagged with it.
+ * roles that need it. Each card is its own tab, `/helpers/<role>/<card>`,
+ * so what you came for is the page rather than somewhere down it.
+ *
+ * `short` names the tab on a phone, where five full titles don't fit.
  *
  * This is only the index: what each card is called and who it's for. The
  * schedule links to cards, and it's a client component, so what's ON each
@@ -24,18 +27,21 @@ export const CARDS = [
   {
     id: "packing",
     title: "The packing list",
+    short: "Packing",
     icon: Package,
     roles: ["setup-crew"],
   },
   {
     id: "lodge-setup",
     title: "Setting up the lodge",
+    short: "Lodge",
     icon: Warehouse,
     roles: ["setup-crew"],
   },
   {
     id: "food",
     title: "The buffet",
+    short: "Buffet",
     icon: CookingPot,
     roles: ["coordinator", "setup-crew"],
   },
@@ -43,24 +49,28 @@ export const CARDS = [
     // The one card behind a code: photos of family and friends, named.
     id: "faces",
     title: "Who’s who",
+    short: "Who’s who",
     icon: Users,
     roles: ["photographers", "coordinator"],
   },
   {
     id: "shots",
     title: "The shot list",
+    short: "Shots",
     icon: Camera,
     roles: ["photographers", "coordinator"],
   },
   {
     id: "ceremony",
     title: "The ceremony script",
+    short: "Ceremony",
     icon: ScrollText,
     roles: ["officiant", "coordinator", "wedding-party", "family", "photographers"],
   },
   {
     id: "clean-up",
     title: "The clean-up list",
+    short: "Clean-up",
     icon: Sparkles,
     roles: ["coordinator", "setup-crew", "wedding-party", "family"],
   },
@@ -92,12 +102,15 @@ export function describeCards(cards: readonly Card[]) {
 /** A link from the schedule to a card, or to one part of it. */
 export type CardLink = { card: CardId; section?: string };
 
-/** The id a card, or a part of one, is anchored at on its page. */
+/** The id a part of a card is anchored at on its tab. */
 export function cardAnchor({ card, section }: CardLink) {
   return section ? `${card}-${section}` : card;
 }
 
-/** `/helpers/<role>`, or a card on it. */
+/** `/helpers/<role>` (which opens the first tab), a card's tab, or a part
+    of one. */
 export function helpersHref(role: Role, link?: CardLink) {
-  return link ? `/helpers/${role}#${cardAnchor(link)}` : `/helpers/${role}`;
+  if (!link) return `/helpers/${role}`;
+  const tab = `/helpers/${role}/${link.card}`;
+  return link.section ? `${tab}#${cardAnchor(link)}` : tab;
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatTime } from "@/components/schedule/clock";
+import { formatClock, formatTime } from "@/components/schedule/clock";
 import { Lines } from "@/components/schedule/Lines";
 import type { Role } from "@/components/schedule/roles";
 import { visibleLines } from "@/components/schedule/timeline";
@@ -17,7 +17,22 @@ import { shotList } from "./shots";
  */
 export function ShotList({ role, faces }: { role: Role; faces: FaceIndex | null }) {
   return (
-    <div className="mt-8 space-y-12">
+    <div className="mt-6 space-y-12">
+      {/* The stretches by their times, the way the day is read: at 3:15 the
+          3:15 shots are a tap away instead of four sections down. */}
+      <nav aria-label="Jump to a time" className="-mx-2.5 flex flex-wrap gap-1 print:hidden">
+        {shotList.map((section) => (
+          <a
+            key={section.id}
+            href={`#${cardAnchor({ card: "shots", section: section.id })}`}
+            className="rounded-full px-2.5 py-1 font-raleway text-sm lining-nums tabular-nums text-primary underline decoration-primary/30 underline-offset-4 transition-colors hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:py-2"
+          >
+            {formatClock(section.time)}
+            <span className="sr-only">, {section.title}</span>
+          </a>
+        ))}
+      </nav>
+
       {!faces && (
         <p className="font-garamond text-lg leading-relaxed text-muted-foreground print:hidden">
           Enter the code under{" "}
