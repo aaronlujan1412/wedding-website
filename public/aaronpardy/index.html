@@ -1,0 +1,1351 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Aaronpardy</title>
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Bowlby+One+SC&family=Libre+Caslon+Text:wght@400;700&display=swap">
+<style id="css">
+/* Layout: a TV game-show stage. One blue board, a scoreboard rail under it; chaos arrives as tilted pink stickers stamped over the clue. Single dark look on purpose. */
+:root{
+  --stage:#060a26; --stage-2:#0c1342; --board:#1424b4; --board-hi:#1f36d8; --board-lo:#0a1476;
+  --line:#2c379a; --ink:#f5f3ff; --muted:#aab2e8; --shadow:#02041a;
+  --gold:#ffcf3f; --gold-ink:#1d1500;
+  --chaos:#ff3e86; --chaos-ink:#fff4ad;
+  --good:#3fe08f; --good-ink:#04281a; --bad:#ff6767; --bad-ink:#2d0505;
+  --f-value:"Anton","Impact","Arial Narrow Bold",sans-serif;
+  --f-clue:"Libre Caslon Text",Georgia,"Times New Roman",serif;
+  --f-loud:"Bowlby One SC","Arial Black",Impact,sans-serif;
+  --f-ui:"Barlow","Segoe UI",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--stage);background-image:radial-gradient(120% 60% at 50% -12%,var(--stage-2),var(--stage) 62%);background-attachment:fixed;color:var(--ink);font-family:var(--f-ui);font-size:16px;line-height:1.45;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--stage)}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px;display:flex;flex-direction:column;gap:22px}
+.narrow{max-width:760px}
+
+/* type */
+.logo{font-family:var(--f-loud);font-weight:400;margin:0;line-height:.86;font-size:clamp(52px,13vw,128px);color:var(--gold);letter-spacing:-.01em;text-shadow:3px 3px 0 var(--board),6px 6px 0 var(--shadow);text-wrap:balance}
+.logo span{color:var(--ink)}
+.logo.small{font-size:clamp(36px,7vw,64px)}
+.eyebrow,.kicker{margin:0;font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--chaos)}
+.tag{margin:0;font-size:clamp(17px,2.2vw,21px);color:var(--muted);max-width:52ch}
+h2{margin:0;font-family:var(--f-value);font-weight:400;font-size:24px;letter-spacing:.03em;text-transform:uppercase}
+p{margin:0}
+.muted{color:var(--muted)}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:10px 18px;border-radius:6px;border:2px solid var(--line);background:var(--stage-2);color:var(--ink);font-weight:600;cursor:pointer;text-align:center;line-height:1.15}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--gold);border-color:var(--gold);color:var(--gold-ink);font-weight:700}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.chaos{background:var(--chaos);border-color:var(--chaos);color:var(--chaos-ink);font-weight:700}
+.btn.ghost{background:transparent}
+.btn.big{font-size:19px;padding:14px 26px;min-height:54px}
+.btn.mini{min-height:36px;padding:6px 10px;font-size:14px}
+.btn.armed{background:var(--bad);border-color:var(--bad);color:var(--bad-ink)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:4px 0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:14px}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* panels */
+.panel{background:var(--stage-2);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.marquee{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+.how ol{margin:0;padding-left:22px;display:flex;flex-direction:column;gap:8px;max-width:68ch}
+.notice{border-radius:8px;padding:12px 14px;font-weight:600}
+.notice.warn{background:transparent;border:1.5px solid var(--chaos);color:var(--chaos-ink)}
+.notice.ok{background:transparent;border:1.5px solid var(--good);color:var(--good)}
+
+/* form controls */
+label,.label{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=number],textarea,select{font:16px var(--f-ui);background:var(--stage);color:var(--ink);border:1.5px solid var(--line);border-radius:6px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px;line-height:1.4}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);outline:none}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.player-row{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr) auto;gap:8px;align-items:end}
+.x{min-width:44px;padding:0}
+
+/* laws */
+.laws{margin:0;padding:0;list-style:none;counter-reset:law;display:flex;flex-direction:column;gap:14px}
+.laws li{counter-increment:law;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:baseline}
+.laws li::before{content:"LAW " counter(law);font-family:var(--f-value);color:var(--gold);font-size:18px;letter-spacing:.04em;white-space:nowrap}
+.laws strong{display:block;font-size:19px}
+.powers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.power-card{border:2px dashed var(--chaos);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:6px}
+.power-card .who{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.power-card .pn{font-family:var(--f-loud);color:var(--chaos);font-size:20px;line-height:1.05}
+
+/* board */
+.topbar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between}
+.topbar .mid{display:flex;flex-wrap:wrap;gap:4px 16px;align-items:baseline}
+.picking{font-size:17px}
+.picking strong{color:var(--gold)}
+.slipcount{font-size:14px;color:var(--muted)}
+.slipcount b{color:var(--chaos);font-variant-numeric:tabular-nums}
+.tb-right{display:flex;flex-wrap:wrap;gap:6px}
+.board-wrap{overflow-x:auto}
+.board{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:clamp(3px,.6vw,8px);background:var(--shadow);padding:clamp(4px,.8vw,10px);border-radius:8px;box-shadow:0 18px 50px var(--shadow);min-width:300px}
+.cat{background:var(--board);display:grid;place-items:center;text-align:center;padding:8px 4px;min-height:clamp(50px,9vw,96px);font-family:var(--f-value);text-transform:uppercase;font-size:clamp(11px,1.9vw,22px);line-height:1.05;letter-spacing:.02em;text-wrap:balance;text-shadow:2px 2px 0 var(--shadow);border-bottom:3px solid var(--shadow)}
+.tile{background:var(--board);border:0;aspect-ratio:16/10;display:grid;place-items:center;font-family:var(--f-value);color:var(--gold);font-size:clamp(20px,5vw,58px);text-shadow:2px 2px 0 var(--shadow),3px 3px 0 var(--shadow);cursor:pointer;padding:0;transition:background .12s}
+.tile:hover{background:var(--board-hi)}
+.tile.used,.tile.empty{background:var(--board-lo);color:var(--line);cursor:default;text-shadow:none}
+.tile.empty{font-size:clamp(14px,2vw,20px)}
+
+.scores{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px}
+.pc{background:var(--board-lo);border:2px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pc.picking-now{border-color:var(--gold)}
+.pc-top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.pc-name{background:none;border:0;padding:0;font-weight:700;font-size:18px;cursor:pointer;text-align:left;min-width:0;overflow-wrap:anywhere}
+.pc.picking-now .pc-name{color:var(--gold)}
+.role{font-size:11px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);text-align:right}
+.pc-score{font-family:var(--f-value);font-size:clamp(30px,4vw,42px);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+.pc-score.neg{color:var(--bad)}
+.pc-row{display:flex;flex-wrap:wrap;gap:6px}
+.pc-row .btn{flex:1 1 auto}
+.power-chip{border-style:dashed;border-color:var(--chaos);color:var(--chaos-ink)}
+.power-chip.used{text-decoration:line-through;opacity:.5;border-color:var(--line)}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:50;background:var(--board);background-image:radial-gradient(90% 70% at 50% 40%,var(--board-hi),var(--board) 70%);display:flex;overflow-y:auto;padding-top:calc(18px + env(safe-area-inset-top,0px));padding-bottom:calc(18px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.overlay.wheel-ov{z-index:60;background:var(--stage);background-image:none}
+.overlay.msg-ov{z-index:70;background:var(--stage);background-image:radial-gradient(80% 60% at 50% 30%,var(--stage-2),var(--stage))}
+.ov-inner{margin:auto;width:100%;max-width:980px;display:flex;flex-direction:column;align-items:center;text-align:center;gap:22px}
+.ov-meta{font-family:var(--f-value);font-size:clamp(16px,2.4vw,24px);letter-spacing:.06em;text-transform:uppercase;color:var(--chaos-ink)}
+.ov-meta .x2{color:var(--chaos);margin-left:8px}
+.clue-text{font-family:var(--f-clue);font-weight:700;text-transform:uppercase;font-size:clamp(24px,4.6vw,54px);line-height:1.22;text-shadow:3px 3px 0 var(--shadow);max-width:28ch;text-wrap:balance;overflow-wrap:anywhere}
+.clue-small{font-family:var(--f-clue);font-weight:700;text-transform:uppercase;font-size:clamp(15px,1.8vw,19px);color:var(--muted);max-width:60ch;text-wrap:balance}
+.hint{font-size:17px;color:var(--chaos-ink)}
+.ans-label{font-weight:700;font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.answer{font-family:var(--f-clue);font-weight:700;color:var(--gold);font-size:clamp(24px,4vw,46px);line-height:1.2;text-shadow:3px 3px 0 var(--shadow);max-width:30ch;text-wrap:balance;overflow-wrap:anywhere}
+.answer.blank{color:var(--muted);font-style:italic;font-size:20px;text-shadow:none;font-weight:400}
+.clue-text.mc{font-size:clamp(22px,3.6vw,42px);max-width:32ch}
+.opts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;width:100%;max-width:900px;text-align:left}
+.opt{display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;align-items:center;background:var(--board-lo);border:2px solid var(--shadow);border-radius:10px;padding:12px 16px;min-width:0;transition:opacity .25s}
+.opt .l{font-family:var(--f-value);font-size:clamp(26px,3.4vw,38px);color:var(--gold);line-height:1;text-shadow:2px 2px 0 var(--shadow);min-width:1ch;text-align:center}
+.opt .t{font-size:clamp(17px,2.1vw,23px);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+.opt.correct{background:var(--gold);border-color:var(--ink);color:var(--gold-ink);box-shadow:6px 6px 0 var(--shadow)}
+.opt.correct .l{color:var(--gold-ink);text-shadow:none}
+.opts.revealed .opt:not(.correct){opacity:.35}
+.ans-letter{font-family:var(--f-value);font-weight:400;color:var(--gold);font-size:1.7em;letter-spacing:0;margin-left:6px;vertical-align:-.15em}
+.why{font-family:var(--f-clue);font-style:italic;font-size:clamp(19px,2.4vw,26px);line-height:1.45;max-width:44ch}
+.why::before{content:"\201C"}
+.why::after{content:"\201D"}
+.board.tall .tile{aspect-ratio:2/1}
+.vid{width:100%;max-width:560px;max-height:52vh;border-radius:10px;background:var(--shadow);border:3px solid var(--gold)}
+.vid-missing{font-size:14px;color:var(--muted)}
+.score-box{display:flex;flex-direction:column;gap:12px;align-items:center;background:var(--board-lo);border:2px solid var(--shadow);border-radius:12px;padding:16px;width:100%;max-width:720px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.chip{border:2px solid var(--line);background:var(--stage);color:var(--ink);border-radius:999px;padding:10px 16px;font-weight:700;font-size:17px;cursor:pointer;min-height:44px}
+.chip .pts{font-family:var(--f-value);font-weight:400;margin-left:8px;color:var(--gold);letter-spacing:.02em}
+.chip.right{background:var(--good);border-color:var(--good);color:var(--good-ink)}
+.chip.right .pts{color:var(--good-ink)}
+.chip.wrong{background:var(--bad);border-color:var(--bad);color:var(--bad-ink)}
+.chip.wrong .pts{color:var(--bad-ink)}
+.chip.pick{background:var(--chaos);border-color:var(--chaos);color:var(--chaos-ink)}
+.wager-row{display:flex;gap:10px;align-items:end;justify-content:center;flex-wrap:wrap}
+.wager-row .field{width:180px}
+.wager-row input{font-family:var(--f-value);font-size:28px;text-align:center}
+
+/* chaos sticker */
+.sticker{background:var(--chaos);color:var(--chaos-ink);font-family:var(--f-loud);font-size:clamp(34px,7.5vw,78px);line-height:.95;padding:18px 28px 22px;border:5px solid var(--chaos-ink);box-shadow:8px 8px 0 var(--shadow);transform:rotate(-3deg);max-width:100%;overflow-wrap:anywhere;animation:stamp .5s cubic-bezier(.2,1.5,.4,1) both}
+.sticker.dd{background:var(--gold);color:var(--gold-ink);border-color:var(--ink);transform:rotate(2deg);animation-name:stamp2}
+@keyframes stamp{0%{transform:scale(2.4) rotate(-14deg);opacity:0}100%{transform:scale(1) rotate(-3deg);opacity:1}}
+@keyframes stamp2{0%{transform:scale(2.4) rotate(12deg);opacity:0}100%{transform:scale(1) rotate(2deg);opacity:1}}
+.sticker.spy{background:var(--shadow);color:var(--chaos);border-color:var(--chaos);transform:rotate(-2deg)}
+.chaos-rule{font-size:clamp(18px,2.5vw,25px);line-height:1.4;max-width:40ch;font-weight:500}
+.wish-list{display:flex;flex-direction:column;gap:6px;max-width:44ch;text-align:left;font-size:17px}
+.check-row{display:flex;gap:12px;align-items:flex-start;font-size:16px;font-weight:400;letter-spacing:0;text-transform:none;color:var(--ink);cursor:pointer;padding-top:6px;border-top:1px solid var(--line)}
+.check-row input{width:22px;height:22px;flex:none;margin:2px 0 0;accent-color:var(--gold)}
+.done-note{font-weight:700;color:var(--good)}
+
+/* wheel */
+.wheel-box{position:relative;width:min(84vw,420px);aspect-ratio:1;max-width:100%}
+.wheel-box canvas{width:100%;height:100%;display:block}
+.pointer{position:absolute;left:50%;top:-6px;transform:translateX(-50%);width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;border-top:34px solid var(--ink);filter:drop-shadow(2px 3px 0 var(--shadow))}
+.wheel-result{font-family:var(--f-loud);font-size:clamp(26px,5vw,44px);color:var(--chaos);line-height:1}
+
+/* final */
+.final{background:var(--board);background-image:radial-gradient(90% 80% at 50% 30%,var(--board-hi),var(--board) 70%);border-radius:14px;padding:clamp(18px,4vw,40px) clamp(16px,3vw,32px);display:flex;flex-direction:column;align-items:center;text-align:center;gap:20px;box-shadow:0 18px 50px var(--shadow)}
+.final-cat{font-family:var(--f-value);font-size:clamp(24px,4vw,40px);text-transform:uppercase;letter-spacing:.04em}
+.final-cat span{color:var(--gold)}
+.wagers{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;width:100%;max-width:760px}
+.timer{width:100%;max-width:560px;height:10px;background:var(--board-lo);border-radius:999px;overflow:hidden}
+.timer i{display:block;height:100%;background:var(--gold);transform-origin:left;animation:drain 30s linear forwards}
+@keyframes drain{from{transform:scaleX(1)}to{transform:scaleX(0)}}
+.fres{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;width:100%;max-width:760px}
+.fres .pc{text-align:left}
+
+/* winner */
+.winner{display:flex;flex-direction:column;align-items:center;text-align:center;gap:16px;padding-top:18px}
+.winner .wname{font-family:var(--f-loud);font-size:clamp(46px,11vw,110px);line-height:.9;color:var(--gold);text-shadow:4px 4px 0 var(--board),8px 8px 0 var(--shadow);overflow-wrap:anywhere}
+.standings{width:100%;max-width:560px;border-collapse:collapse;font-size:18px}
+.standings td{padding:10px 8px;border-bottom:1px solid var(--line)}
+.standings td:last-child{text-align:right;font-family:var(--f-value);font-size:24px;font-variant-numeric:tabular-nums}
+.standings td.neg{color:var(--bad)}
+.prize{border:2px dashed var(--gold);border-radius:10px;padding:14px 18px;max-width:560px;width:100%}
+.msg-text{font-family:var(--f-clue);font-size:clamp(19px,2.6vw,26px);line-height:1.55;white-space:pre-wrap;max-width:44ch;text-align:left}
+
+/* setup */
+.savebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--stage);border-bottom:1px solid var(--line);padding-block:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.savebar .status{font-size:14px;color:var(--muted)}
+.savebar .status b{color:var(--chaos-ink)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:12px}
+.cat-block{gap:4px}
+.clue-edit{display:grid;grid-template-columns:100px minmax(0,1fr);gap:10px 14px;padding-block:14px;border-top:1px solid var(--line)}
+.clue-edit .val{font-family:var(--f-value);font-size:26px;color:var(--gold);line-height:1;padding-top:6px}
+.val-box{display:flex;flex-direction:column;gap:5px;min-width:0}
+select.worth{font-family:var(--f-value);font-size:24px;letter-spacing:.02em;color:var(--gold);padding:6px 8px;cursor:pointer}
+.values-row{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+.values-row input{font-family:var(--f-value);font-size:20px;color:var(--gold);text-align:center;padding:8px 4px}
+.prize-text{white-space:pre-wrap}
+.count{font-size:13px;color:var(--muted);text-align:right}
+.clue-edit.no-val{grid-template-columns:minmax(0,1fr)}
+.type-toggle{display:flex;flex-wrap:wrap;gap:6px}
+.seg{display:inline-flex;align-items:center;gap:8px;min-height:36px;border:1.5px solid var(--line);border-radius:999px;padding:6px 14px;cursor:pointer;font-size:14px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--muted)}
+.seg input{margin:0;accent-color:var(--gold)}
+.seg:has(input:checked){border-color:var(--gold);color:var(--ink)}
+.opt-set{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;min-width:0}
+.opt-set legend{padding:0;margin-bottom:6px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.opt-edit{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start}
+.opt-edit input[type=radio]{width:22px;height:22px;margin:12px 0 0;accent-color:var(--gold);cursor:pointer}
+.opt-edit textarea{min-height:46px}
+.edit-actions{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}
+.bm-select{width:auto;flex:1 1 220px}
+.add-row{padding-top:12px;border-top:1px solid var(--line)}
+.link.danger{color:var(--bad)}
+.small{font-size:14px}
+.badge.from{border:1.5px solid var(--line);color:var(--muted)}
+.clue-fields{display:flex;flex-direction:column;gap:10px;min-width:0}
+.badges{display:flex;gap:6px;flex-wrap:wrap}
+.badge{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px}
+.badge.check{background:var(--gold);color:var(--gold-ink)}
+.badge.blank{border:1.5px solid var(--chaos);color:var(--chaos-ink)}
+.vrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.vrow video{width:180px;max-width:100%;border-radius:6px;background:var(--shadow)}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.copybox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:200px}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;background:var(--ink);color:var(--stage);font-weight:700;padding:12px 18px;border-radius:8px;box-shadow:0 8px 24px var(--shadow);max-width:min(560px,calc(100vw - 32px));text-align:center}
+#confetti{position:fixed;inset:0;pointer-events:none;z-index:80;width:100%;height:100%}
+
+@media (max-width:640px){
+  .opts{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:560px){
+  .player-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}
+  .clue-edit{grid-template-columns:minmax(0,1fr)}
+  .clue-edit .val{padding-top:0}
+  .val-box{flex-direction:row;align-items:center;gap:10px}
+  .val-box select.worth{width:auto;min-width:110px}
+  .values-row{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .laws li{grid-template-columns:minmax(0,1fr)}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script id="game-data" type="application/json">{"rev":"rq0qzf209abqwr3","groom":"Aaron","bride":"Savea","prize":"The groom will personally promise to give the winner some kind of favor at sometime maybe who really knows? I swear that I will promise you ","categories":[{"name":"What Would He Do?","clues":[{"q":"The bride sends him to Costco for “a few things.” He comes home with:","a":"","why":"Listen. Here's the thing. I saw the thing. I needed the thing. Probably for groceries even! Who can fault me?","mc":true,"opts":["Exactly what was on the list","The list, plus 40 pounds of something to preserve","The list, plus a tool that wasn't on it","Nothing. He ate a rotisserie chicken in the parking lot and forgot why he came"],"correct":2,"video":null,"pre":false},{"q":"The washing machine dies the day before the wedding. He:","a":"","why":"I'm probably also repeating, \"I can fix it, I can fix it, I know I can fix it. One last try, I promise.\" while Savea has already ordered new clothes to get here before we leave. It's what I do when I'm stressed. Not that I'm stressed about marrying you Savea. Everything else is the part that's stressing me.","mc":true,"opts":["Calls a repair guy","Buys a new one","Has it in pieces on the kitchen floor by 9pm, fixed by midnight","Declares dishes a social construct and switches to paper plates"],"correct":2,"video":null,"pre":false},{"q":"A stranger's car breaks down on the shoulder. He:","a":"","why":"I want to be the person that hands them a granola bar and a pep talk, but that would require me to be prepared enough to have a granola bar on hand. There might be one that I left in the car though...hold on *starts rummaging through the car and forgets to call the tow truck*","mc":true,"opts":["Keeps driving","Pulls over and diagnoses it by sound","Can't fix it, so hands them a granola bar and a pep talk","Calls them a tow and waits with them"],"correct":3,"video":null,"pre":false},{"q":"He finds $100 on the sidewalk. It goes to:","a":"","why":"Depends on how I'm feeling, but I usually leave that stuff alone. Like I said, bad juju.","mc":true,"opts":["A tool he “needed anyway”","The honeymoon fund","His wallet under the category, \"Girl Math Cash\"","Nowhere. He leaves it alone. Bad juju and someone else probably needs it more"],"correct":3,"video":null,"pre":false},{"q":"A YouTube video says “anyone can do this in an afternoon.” He:","a":"","why":"They have to know that I didn't NEED the video to fix it. I CHOSE to watch the video, but I really know better than them.","mc":true,"opts":["Does it in an afternoon","Does it in three weekends because he opened it up and realized that there were three other things wrong with it","Buys three new tools to do it but then it gets forgotten while waiting for the tools to arrive, and it gets done next week","Does it, then narrates a better version of the video out loud for whatever poor sucker is around him at the time"],"correct":3,"video":null,"pre":false},{"q":"Zombie apocalypse, day one. He:","a":"","why":"This is my chance. The government cameras are down. We're moving out of here. By the time the cameras come back online and start recording our every move again it will take them days to find me again! DAYS I TELL YOU!","mc":true,"opts":["Fortifies the house with the stack of lumber he promised would be useful one day","Heads for the mountains with a bow he made himself, but trips on a root day 2 and breaks his ankle","Tries to have Claude build a spreadsheet of the food stores before he remembers that Claude is likely down because...well...zombies","Tries to befriend the zombies and talks to them like he does a dog"],"correct":1,"video":null,"pre":false}]},{"name":"Would He Rather","clues":[{"q":"A free Saturday with zero obligations. He spends it:","a":"","why":"Here's the issue. The answer is all three. In the morning I'm in the garage until Savea wakes up. Then I'm gaming for ten hours straight with her while tinkering with the home server at the same time. Savea is also hitting me because I keep causing lag spikes at intense moments in the game.","mc":true,"opts":["Tinkering with his home server","In the garage, making something out of wood","Gaming for ten straight hours","All of the above"],"correct":3,"video":null,"pre":false},{"q":"He gets one superpower. He picks:","a":"","why":"I mean. This one should be easy. If I could never need to sleep again and never feel fatigue again I'd be overwhelmed with relief and joy.","mc":true,"opts":["Talking to animals","Never needing sleep","Instantly mastering any craft","Teleportation"],"correct":1,"video":null,"pre":false},{"q":"He has to fight one of these. He picks:","a":"","why":"","mc":true,"opts":["One horse-sized duck","A hundred duck-sized horses","Neither. He tries to tame all of them, and now they live in the backyard","Neither. He builds a fence, sells tickets, and lets them fight each other"],"correct":2,"video":null,"pre":true},{"q":"He's cursed forever. He'd rather:","a":"","why":"","mc":true,"opts":["Never start a new project again","Never finish a project again. So, no change","Lose whatever tool he needs, every single time he needs it","Get every project approved by the bride first"],"correct":1,"video":null,"pre":true},{"q":"He has to give one up forever. He gives up:","a":"","why":"None of these. I give up none of these. I think I'd die. There is no good answer. At least with anime and manga I do those primarily alone. With the others I'd lose time with Savea. Ain't no way she's giving up Fortnite.","mc":true,"opts":["Video games","Anime and manga","Hiking","Power tools"],"correct":1,"video":null,"pre":false},{"q":"He finally gets to see a penguin in person. He'd rather:","a":"","why":"","mc":true,"opts":["Press his face against the glass at an aquarium in Tokyo on the honeymoon","Ride a boat to Antarctica for two weeks and be seasick the whole way, to see them in the wild","Hold one for ten seconds, knowing full well it's going to bite him","Never see one. The dream is better than the reality"],"correct":2,"video":null,"pre":true}]},{"name":"If He Were A…","clues":[{"q":"If he were a kitchen appliance, he'd be a:","a":"","why":"Everyone kind of forgets I'm there until they're like, \"Oh yeah, Aaron exists too. I should reach out to him. I forgot how much I love that guy.\" but I'm also your favorite kitchen appliance.","mc":true,"opts":["Slow cooker: takes forever, worth it","Vacuum sealer: keeps everything forever","Stand mixer: rarely used, deeply loved","Smoke detector: goes off for no reason"],"correct":2,"video":null,"pre":false},{"q":"If he were a penguin, he'd be the one who:","a":"","why":"Hehehe...I'm absolutely looking for the perfect pebble, but you're a fool if you think it's not coming from a neighbor's nest. I think both deserve points.","mc":true,"opts":["Builds the best nest on the beach","Gives his mate the perfect pebble","Waddles off alone to explore","Steals rocks from the neighbors' nests"],"correct":1,"video":null,"pre":false},{"q":"He's most likely to get kicked out of:","a":"","why":"Does this even need further explaining? The others are good too, but come on.","mc":true,"opts":["Home Depot, for walking around the aisles saying, \"My father is king here. That makes me prince!\" while carrying a pipe like a scepter","A museum, for touching things that have a \"Do Not Touch\" sign","An all-you-can-eat buffet","A book store, for sitting there and just reading the books as opposed to, you know, buying anything"],"correct":1,"video":null,"pre":false},{"q":"If he were an anime character, he'd be:","a":"","why":"This is easily my favorite trope in anime and what I feel like I'd end up as. I trip and suddenly, oops, I spawned a slime army. I drop a plate and BAM suddenly I killed the hero of the story. Drawing with my kid? More like accidental summoning circle for Bahamut, Lord of Anguish and Despair.","mc":true,"opts":["The quiet blacksmith who forges the hero's sword","The overpowered protagonist who has no idea","The comic-relief best friend","The final boss who just wanted a quiet farm life"],"correct":3,"video":null,"pre":false},{"q":"His villain origin story starts when someone:","a":"","why":"\"You don't even think to call me 'Godfather.' You come into my house on the day I am to be married and you tell me you hurt my precious boy. You're lucky I don't take your finger with the same chisel. Get outta here! Scram! You better scramble like eggs before you get folded like an omelet!","mc":true,"opts":["Throws away something that could've been fixed","Spoils an anime he hasn't finished","Uses his good chisel as a screwdriver","Hands him a dull kitchen knife"],"correct":2,"video":null,"pre":false},{"q":"","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false}]},{"name":"Factory Settings","clues":[{"q":"When it comes to instructions, he:","a":"","why":"Listen man. I've got better stuff to do. 7/10 times I can figure it out as I'm going.","mc":true,"opts":["Never reads them. Why would I? I know what I'm doing","Tries to read them but gets bored and starts working on it instead and then something goes wrong and then has to go back and actually read them this time, but instead gets bored and the cycle repeats...","Reads every word first because I have no idea what I'm doing","Mumbles to himself the whole time about how the people writing these have no idea what they're talking about and that he's wasting his time reading them"],"correct":1,"video":null,"pre":false},{"q":"When he gets sick, he:","a":"","why":"I don't wanna sit down. I wanna do stuff. I got stuff to do. Places to be, people to not see. My brain don't got time for sick.","mc":true,"opts":["Pretends he's fine and keeps working","Becomes a giant baby","Researches his symptoms for two hours","Makes soup from scratch"],"correct":0,"video":null,"pre":false},{"q":"His teenage bedroom was:","a":"","why":"It's like my house. It's not a pigsty by any means, but there tends to be a fair amount of clutter. But if you ask me where something is? I know where that is 9 times out of 10.","mc":true,"opts":["Spotless, as mother would attest to","A disaster, but he knew where everything was","Basically a workshop","Wall-to-wall posters"],"correct":1,"video":null,"pre":false},{"q":"As a kid, he was most likely in trouble for:","a":"","why":"The mouth on this kid...I swear. I did all those other things, but I rarely got in trouble for them because either A) My parents are cool and don't worry about little things or B) I did a good job of doing it when everyone was busy so I wouldn't get noticed. Perks of being a middle child.","mc":true,"opts":["Taking apart something that wasn't his","Staying up gaming","Wandering off outside","Talking back"],"correct":3,"video":null,"pre":false},{"q":"His signature move in an argument:","a":"","why":"Honestly I see all of these being correct. I think I do the breakdown more often than not, but I've done (and do) all of these things.","mc":true,"opts":["A not-so-calm, logical breakdown with numbered points that will have your head spinning","Walks away, comes back with a solution that he's sure will work because he just read a Reddit thread that said that it worked for them and it has like 10,000 upvotes, so it can't possibly be wrong","Pulls up a source because he swears he heard it that one time and knows that it's right","Sloooooowly realizes that he was wrong in the middle of the argument and either gaslights you into thinking that he was on the right side the whole time or starts playing up jokes to make you forget what the argument was about in the first place"],"correct":0,"video":null,"pre":false},{"q":"","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false}]},{"name":"Happily Ever After?","clues":[{"q":"On the honeymoon, he will absolutely:","a":"","why":"Again. I see all of these being possible. But I think the knife one is the most realistic.","mc":true,"opts":["Insist that they need these three knives because he's definitely going to fillet fish in the future and having it would totally save them money in the long run","Sit down in a manga shop and read a full series because, \"Manga are short and take like no time at all to read\"","Cry at a Shiba Inu café. Is it from allergies? Is it from adorableness? Is it from the fact that he married the best woman in the world? Who really knows?","Suggest a detour so that they can summit Mt. Fuji at least once despite it being winter and the conditions are absolutely miserable"],"correct":0,"video":null,"pre":false},{"q":"On the wedding day, he's most likely to:","a":"","why":"\"I can fix it. Hold on. I think I found the problem. Why do I hear our ceremony music? Uh oh. Shoot I gotta go. Don't touch it!! I'll fix it later I promise! Don't mess with it!\"","mc":true,"opts":["Cry before she reaches the aisle","Still be fixing a slow cooker ten minutes before the ceremony","Blank on a step of the first dance","Spend twenty minutes talking to the DJ about the sound system"],"correct":1,"video":null,"pre":false},{"q":"In this marriage, he'll be the one who:","a":"","why":"","mc":true,"opts":["Remembers every anniversary","Fixes everything but never puts the tools away","Does the cooking","Takes way too many pictures of the dog"],"correct":2,"video":null,"pre":false},{"q":"Their first fight as a married couple will be about:","a":"","why":"It's not my fault that Savea keeps insisting that she's not allowed to touch it. SAVEA. YOU OWN THE HOUSE. TURN UP THE HEAT IF YOU'RE COLD.","mc":true,"opts":["A project that's been “almost done” for six months","The thermostat","A tool he bought “for the house”","Whose turn it is to pick the anime"],"correct":1,"video":null,"pre":false},{"q":"In five years, his newest hobby will be:","a":"","why":"All of these are good options. All of these are entirely too real. I think that the reason I choose ducks is because Savea will buy the ducks and that will then force me into the hobby. That's not to say I won't enjoy it, oh I'll enjoy it alright. It's just that it'll be a needed hobby or the ducks will die.","mc":true,"opts":["Blacksmithing","Beekeeping","Ducks","Finishing his game engine and making a real game"],"correct":2,"video":null,"pre":false},{"q":"","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false}]}],"bench":[{"q":"A genie offers to finish one part of the house renovation overnight. He picks:","a":"","why":"","mc":true,"opts":["The kitchen, so the slow cookers finally have a proper home","The garage workshop. Priorities","The network wiring, so the home server gets the closet it deserves","Nothing. If magic finishes it, it doesn't count"],"correct":3,"video":null,"pre":true,"from":"Would He Rather"},{"q":"He can eat one dish from the wedding buffet for the rest of his life. He picks:","a":"","why":"","mc":true,"opts":["Pulled pork","Zuppa Toscana","Spaghetti with meat sauce","Chili verde"],"correct":0,"video":null,"pre":true,"from":"Would He Rather"},{"q":"A free trip anywhere except Japan. He picks:","a":"","why":"","mc":true,"opts":["Antarctica, to finally see penguins","The Scottish Highlands, to hike","A cabin with no wifi","No trip. He'd rather stay home and work on the house"],"correct":2,"video":null,"pre":false,"from":"Would He Rather"},{"q":"As a little kid, the groom swore he'd grow up to be this.","a":"A doctor. Duh.","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Baby Groom"},{"q":"The groom's go-to excuse for getting out of chores.","a":"I don't wanna. I don't need an excuse.","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Baby Groom"},{"q":"The most questionable haircut or fashion era of the groom's life.","a":"I mean. The highlights come to mind. I think it's more likely my crappy bangs around third grade though.","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Baby Groom"},{"q":"The worst thing the groom ever broke as a kid, and whether he ever confessed.","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Baby Groom"},{"q":"The groom's favorite animal. He has never seen one in person.","a":"Penguin :(","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"The Nerd Files"},{"q":"When he plays Fortnite with the bride, this is the only mode they play.","a":"Zero Build","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"The Nerd Files"},{"q":"The groom's favorite FromSoftware game.","a":"Bloodborne","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"The Nerd Files"},{"q":"They won a ticket lottery to visit this museum on the honeymoon.","a":"The Nintendo Museum (in Uji, near Kyoto)","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"The Nerd Files"},{"q":"The wedding bands are carved from the wood of this tree, the one they got engaged under.","a":"Granny's apple tree","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"Handmade Husband"},{"q":"The groom has made a rope by scratch out of one of these two materials.","a":"Yucca or dogbane (either one counts)","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Handmade Husband"},{"q":"The place they went on their first date.","a":"Rave!","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Love, Actually"},{"q":"The first one to say \"I love you,\" and where it happened.","a":"Savea. In Aaron's bed.","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Love, Actually"},{"q":"What went through the groom's head the first time he saw the bride.","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Love, Actually"},{"q":"The thing the bride does that makes the groom fall for her all over again.","a":"","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":false,"from":"Love, Actually"},{"q":"The song for the first dance.","a":"\"Touching Heaven\" by JOHNNYSWIM","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"Wedding Intel"},{"q":"The wedding buffet runs on this many slow cookers.","a":"Six","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"Wedding Intel"},{"q":"On the honeymoon, the groom wants to spend a whole day making this with his own hands.","a":"His own kitchen knife (forging it himself)","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"Wedding Intel"},{"q":"Name all six dishes on the slow-cooker buffet. (Host: four or more counts.)","a":"Spaghetti with meat sauce, mac and cheese, lasagna, pulled pork, chili verde, Zuppa Toscana","why":"","mc":false,"opts":["","","",""],"correct":0,"video":null,"pre":true,"from":"Wedding Intel"}],"final":{"category":"The Vows","q":"The groom finishes this sentence: \"I knew I was going to marry her when...\"","a":""},"message":{"text":"","video":null},"updated":"2026-11-13T00:39:59.009Z","values":[100,200,300,400,500,600]}</script>
+<!-- Stand-in for the claude.ai runtime: between the data and the game script. See HANDOFF.md. -->
+<script src="../games/shim.js" data-game="aaronpardy" data-api="../api/" data-content="live"></script>
+<script id="main">
+(() => {
+'use strict';
+
+/* ---------- page source pieces (used to save the game back into this page) ---------- */
+const SKELETON_OPEN = '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>';
+const PAGE_HEAD = '<title>Aaronpardy</title><meta name="claude:viewport-fit-sides" content="cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Barlow:wght@400;500;600;700&family=Bowlby+One+SC&family=Libre+Caslon+Text:wght@400;700&display=swap">';
+const BODY_SHELL = '<div id="app"></div>';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const fmt = n => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const rid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const reduced = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const mkStore = kind => ({
+  get(k) { try { const v = window[kind].getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { window[kind].setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { window[kind].removeItem(k); } catch (e) {} }
+});
+const ls = mkStore('localStorage'), ss = mkStore('sessionStorage');
+const GKEY = 'aaronpardy-game-v1', DKEY = 'aaronpardy-draft-v1', RKEY = 'aaronpardy-roster-v1', RESCUE = 'aaronpardy-rescue-v1';
+const DEFAULT_VALUES = [100, 200, 300, 400, 500, 600];
+const ROWS = DEFAULT_VALUES.length;
+const PRIZE_MAX = 1000;
+const LETTERS = 'ABCD';
+const videoSrc = id => (typeof id === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(id)) ? (window.GAME_BLOB_BASE || '/_blob/') + id : '';
+
+/* ---------- game data ---------- */
+/* A clue is multiple choice (mc: four answers, `correct` is the index of the real one) or write-in (a). */
+function blankClue() { return { q: '', a: '', why: '', mc: true, opts: ['', '', '', ''], correct: 0, video: null, pre: false }; }
+function normClue(s) {
+  s = s && typeof s === 'object' ? s : {};
+  const opts = [0, 1, 2, 3].map(k => String((s.opts || [])[k] || ''));
+  const c = Math.floor(+s.correct);
+  return {
+    q: String(s.q || ''), a: String(s.a || ''), why: String(s.why || ''),
+    mc: s.mc != null ? !!s.mc : opts.filter(o => o.trim()).length >= 2,
+    opts, correct: c >= 0 && c <= 3 ? c : 0, video: s.video || null, pre: !!s.pre
+  };
+}
+function hasContent(cl) { return !!(cl.q.trim() || cl.a.trim() || cl.why.trim() || cl.opts.some(o => o.trim()) || cl.video); }
+function clueBlank(cl) {
+  if (!cl.q.trim()) return false;
+  if (cl.mc) return cl.opts.filter(o => o.trim()).length < 2 || !(cl.opts[cl.correct] || '').trim();
+  return !cl.a.trim();
+}
+/* Point values for the six rows, top to bottom. Editable in setup. */
+function normValues(v) { return DEFAULT_VALUES.map((def, i) => { const n = Math.round(+(Array.isArray(v) ? v[i] : NaN)); return n > 0 && n <= 100000 ? n : def; }); }
+function normalize(d) {
+  d = d && typeof d === 'object' ? d : {};
+  const out = { rev: d.rev || 'r0', groom: d.groom || 'Aaron', bride: d.bride || 'Savea', prize: d.prize == null ? '' : String(d.prize), values: normValues(d.values), categories: [], bench: [], final: { category: '', q: '', a: '' }, message: { text: '', video: null }, updated: d.updated || '' };
+  for (let c = 0; c < 5; c++) {
+    const sc = (d.categories || [])[c] || {};
+    const cat = { name: sc.name || '', clues: [] };
+    for (let r = 0; r < ROWS; r++) cat.clues.push(normClue((sc.clues || [])[r]));
+    out.categories.push(cat);
+  }
+  out.bench = (Array.isArray(d.bench) ? d.bench : []).map(b => Object.assign(normClue(b), { from: String((b && b.from) || '') }));
+  Object.assign(out.final, d.final || {});
+  Object.assign(out.message, d.message || {});
+  return out;
+}
+let DATA = normalize(JSON.parse(document.getElementById('game-data').textContent || '{}'));
+const VALUES = DATA.values;
+
+/* Only questions on the board count; the bench is storage. */
+function blanks(d) {
+  let n = 0;
+  d.categories.forEach(c => c.clues.forEach(cl => { if (clueBlank(cl)) n++; }));
+  if (!d.final.q.trim() || !d.final.a.trim()) n++;
+  if (!d.message.text.trim() && !d.message.video) n++;
+  return n;
+}
+function checks(d) { let n = 0; d.categories.forEach(c => c.clues.forEach(cl => { if (cl.pre && cl.q.trim()) n++; })); return n; }
+
+/* ---------- roles, powers, chaos ---------- */
+const ROLES = { bride: 'Bride', mom: 'Mother of the Groom', sister: 'Sister of the Groom', guest: 'Guest' };
+const POWERS = {
+  bride: { name: 'Bride Veto', text: 'Once per game, declare any answer correct or overturn any ruling, even the judge’s. No appeals.' },
+  mom: { name: 'I Made Him', text: 'Once per game, after a reveal, declare the groom wrong and give the "real" answer. If the bride believes you, you get the points and his answer is officially wrong.' },
+  sister: { name: 'Sibling Dirt', text: 'Once per game, after a reveal, tell an embarrassing true story about the groom that fits the clue. If the bride laughs, take 200 points.' },
+  guest: { name: 'Plus One', text: 'Once per game, before a reveal, double your points on that clue.' }
+};
+const CHAOS = {
+  dd: { name: 'Daily Double', rule: 'Only {picker} plays this one. Wager up to {max} points before you see the clue. Right answer wins the wager. Wrong answer loses it.' },
+  swap: { name: 'Score Swap', rule: 'Before the clue, {picker} may swap scores with any player. Choose wisely. Or cruelly.' },
+  impression: { name: 'In Character', rule: 'Everyone says their answer out loud in their best impression of the groom. {bride} picks the best one for 100 extra points. She may pick herself.' },
+  mom: { name: 'Mother Knows Best', rule: '{mom} answers out loud first. If she’s right, she gets double. If she’s wrong, everyone else gets a shot at normal points.', needs: 'mom' },
+  tax: { name: 'Bridal Tax', rule: 'Everyone except {bride} pays 100 points to {bride}. Then play the clue normally.', needs: 'bride' },
+  steal: { name: 'Highway Robbery', rule: 'This clue pays out of the leader’s score instead of the bank. Every right answer takes its points straight from {leader}.' },
+  lightning: { name: 'Lightning Round', rule: 'No napkins. Slap the table, then answer out loud. Right answers get double. Wrong answers lose the clue value.' },
+  hotseat: { name: 'Hot Seat', rule: 'Only last place answers: {last}. It’s worth triple. The audience may not help. The audience will help anyway.' },
+  wheel: { name: 'Wheel of Fate', rule: '{picker} spins the wheel before the clue. The wheel is never wrong.' },
+  phone: { name: 'Phone a Groom', rule: 'Call the groom on speaker. He gets 20 seconds to hint at his own answer without saying it. If he doesn’t pick up, {picker} gets the points for emotional damages.' },
+  decides: { name: 'The Bride Decides', rule: '{bride} picks who answers this one. If she picks herself, it’s worth half. Power has a price.', needs: 'bride' },
+  random: { name: 'Mystery Points', rule: 'Nobody knows what this clue is worth. Not even the board. The value shows up after the answer, and it might be negative. Getting it right could cost you.' },
+  genie: { name: 'You Found a Genie', rule: '{picker} gets one wish. Every wish has a catch.' },
+  wrong: { name: 'Wrong Answers Only', rule: 'Before the real answer, everyone says the dumbest wrong answer they can think of. {bride} picks her favorite for 200 points. Then play the clue normally.' },
+  goose: { name: 'Goose Curse', rule: '{picker} turns one player into a goose. Until the goose’s next pick, they can only honk. Answers must be honked or acted out. Every real word costs 50.' }
+};
+const BONUS = { impression: { label: 'Best impression', pts: 100 }, wrong: { label: 'Dumbest wrong answer', pts: 200 } };
+const MYSTERY = [-300, -100, 50, 69, 111, 250, 404, 500, 777, 1000];
+const WISHES = {
+  rich: { name: 'Riches', text: 'You get 400. The bride gets 400 too. The genie works for her.' },
+  revenge: { name: 'Revenge', text: 'Pick someone to lose 300. You lose 100 for being petty.' },
+  fair: { name: 'Fairness', text: 'Everyone’s score becomes the average. Communism.' }
+};
+const SPY_MISSIONS = [
+  'Say the word “penguin” out loud five times tonight without anyone catching on.',
+  'Get someone else to say the groom’s real name twice.',
+  'Get the bride to do an impression of the groom.',
+  'Convince someone to change an answer after they’ve written it down.',
+  'Compliment the same person’s hair three separate times.',
+  'Get someone to pass you something from across the table three times.'
+];
+const sgn = n => (n < 0 ? '−' : '+') + fmt(Math.abs(n));
+const WHEEL = [
+  { label: '+300', text: '{spinner} gets 300 points. The wheel likes you.', fx: (g, s) => ({ [s]: 300 }) },
+  { label: 'LEADER −200', text: 'The leader, {leader}, loses 200 points. Heavy is the head.', fx: (g, s, l) => ({ [l]: -200 }) },
+  { label: 'ALL +100', text: 'Group hug. Everyone gets 100 points.', fx: g => Object.fromEntries(g.players.map((_, i) => [i, 100])) },
+  { label: 'BANKRUPT ½', text: '{spinner} loses half their points. At zero or below, nothing happens and everyone laughs.', fx: (g, s) => ({ [s]: g.players[s].score > 0 ? -Math.floor(g.players[s].score / 2) : 0 }) },
+  { label: 'BRIDE +200', text: '{bride} gets 200 points. Just because.', fx: (g, s) => { const b = g.players.findIndex(p => p.role === 'bride'); return { [b >= 0 ? b : s]: 200 }; } },
+  { label: 'TOAST', text: '{spinner} gives a 30-second toast to the couple. If the bride approves, 200 points.', manual: 200 },
+  { label: 'PIRATE', text: '{spinner} talks like a pirate until their next turn. Every slip costs 50. The host keeps count.' },
+  { label: 'SWAP', text: '{spinner} may swap scores with any player.', swap: true }
+];
+
+/* ---------- state ---------- */
+const app = document.getElementById('app');
+let G = ls.get(GKEY);
+if (G && (!Array.isArray(G.players) || !G.players.length || G.v !== 1 || G.rev !== DATA.rev)) G = null;
+let openSlots = new Set();
+let roster = ls.get(RKEY) || defaultRoster();
+let spyOn = false;
+function phaseView() {
+  if (!G) return 'lobby';
+  if (G.phase === 'board') return G.deal != null ? 'spy-deal' : 'board';
+  if (G.phase === 'spyvote') return 'spy-vote';
+  if (G.phase === 'final') return 'final';
+  if (G.phase === 'done') return 'winner';
+  return 'lobby';
+}
+let view = (G && G.phase !== 'done') ? phaseView() : 'lobby';
+let lawsBack = 'lobby';
+let msgOpen = false;
+let draft = null;
+let dirty = false;
+let armed = null;
+let copyText = null;
+const cap = { artifact: null, assets: null, downloads: null, readOnly: false, checked: false };
+
+function defaultRoster() { return [{ name: DATA.bride || 'Savea', role: 'bride' }, { name: 'Mom', role: 'mom' }, { name: 'Sister', role: 'sister' }]; }
+function save() { if (G) ls.set(GKEY, G); }
+function name(i) { return (G && G.players[i]) ? G.players[i].name : 'Someone'; }
+function roleIdx(role) { return G ? G.players.findIndex(p => p.role === role) : -1; }
+function leaderIdx() { let b = 0; G.players.forEach((p, i) => { if (p.score > G.players[b].score) b = i; }); return b; }
+function lastIdxs() { const m = Math.min(...G.players.map(p => p.score)); return G.players.map((p, i) => p.score === m ? i : -1).filter(i => i >= 0); }
+function listNames(ix) { const n = ix.map(name); return n.length < 2 ? (n[0] || '') : n.slice(0, -1).join(', ') + ' and ' + n[n.length - 1]; }
+function tileKeys() { const k = []; DATA.categories.forEach((c, ci) => c.clues.forEach((cl, ri) => { if (cl.q.trim()) k.push(ci + '-' + ri); })); return k; }
+function clueAt(key) { const [c, r] = key.split('-').map(Number); return { c, r, cat: DATA.categories[c], clue: DATA.categories[c].clues[r], value: VALUES[r] }; }
+function boardDone() { return tileKeys().every(k => G.used[k]); }
+function fill(t, extra) {
+  const o = G && G.open;
+  const map = Object.assign({
+    picker: G ? name(G.picker) : '', bride: (G && roleIdx('bride') >= 0) ? name(roleIdx('bride')) : DATA.bride,
+    mom: (G && roleIdx('mom') >= 0) ? name(roleIdx('mom')) : 'Mom', groom: DATA.groom,
+    leader: o && o.leader != null ? name(o.leader) : (G ? name(leaderIdx()) : ''),
+    last: o && o.last ? listNames(o.last) : '', max: o ? fmt(o.max || 0) : ''
+  }, extra || {});
+  return esc(t).replace(/\{(\w+)\}/g, (m, k) => map[k] != null ? '<strong>' + esc(map[k]) + '</strong>' : m);
+}
+
+/* ---------- capabilities ---------- */
+function initCaps() {
+  if (cap.checked) return;
+  if (!(window.claude && typeof window.claude.use === 'function')) return;
+  cap.checked = true;
+  const set = (k, v) => { cap[k] = v; if (view === 'setup') render(); };
+  window.claude.use('artifact').then(a => set('artifact', a)).catch(() => {});
+  window.claude.use('assets').then(a => set('assets', a)).catch(() => {});
+  window.claude.use('downloads').then(a => set('downloads', a)).catch(() => {});
+}
+initCaps();
+if (!cap.checked) { window.addEventListener('load', initCaps); setTimeout(initCaps, 1500); }
+
+/* rescue a save that lost a race (the page reloaded before we kept the edits) */
+(() => {
+  const r = ss.get(RESCUE);
+  if (!r) return;
+  ss.del(RESCUE);
+  if (r.rev !== DATA.rev && r.data) { ls.set(DKEY, { base: DATA.rev, data: r.data }); setTimeout(() => toast('Your setup edits were kept as a draft. Open Groom setup to save them again.'), 600); }
+  else if (r.rev === DATA.rev) { ls.del(DKEY); setTimeout(() => toast('Saved. The game is updated.'), 400); }
+})();
+
+/* ---------- toast ---------- */
+let toastEl = null, toastT = null;
+function toast(msg) {
+  if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite'); document.body.appendChild(toastEl); }
+  toastEl.textContent = msg; toastEl.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 3800);
+}
+
+/* ---------- game flow ---------- */
+function newGame() {
+  const players = roster.filter(p => p.name.trim()).map(p => ({ name: p.name.trim().slice(0, 30), role: ROLES[p.role] ? p.role : 'guest', score: 0, power: false }));
+  if (players.length < 2) { toast('Add at least two contestants.'); return false; }
+  const keys = shuffle(tileKeys());
+  const chaos = {};
+  const ddPool = keys.filter(k => +k.split('-')[1] >= 2);
+  const dds = (ddPool.length >= 2 ? ddPool : keys).slice(0, 2);
+  dds.forEach(k => { chaos[k] = 'dd'; });
+  const roles = new Set(players.map(p => p.role));
+  const pool = shuffle(Object.keys(CHAOS).filter(k => k !== 'dd' && (!CHAOS[k].needs || roles.has(CHAOS[k].needs))));
+  const rest = keys.filter(k => !chaos[k]);
+  rest.slice(0, Math.min(5, pool.length)).forEach((k, i) => { chaos[k] = pool[i]; });
+  const b = players.findIndex(p => p.role === 'bride');
+  G = { v: 1, rev: DATA.rev, players, used: {}, chaos, picker: b >= 0 ? b : 0, slips: 0, open: null, wheel: null, final: null, undo: null, phase: 'board', spy: null, deal: null, dealShow: false, tiePick: null };
+  if (spyOn && players.length >= 3) {
+    G.spy = { idx: Math.floor(Math.random() * players.length), mission: SPY_MISSIONS[Math.floor(Math.random() * SPY_MISSIONS.length)], step: 'accuse', accused: null, mission_done: null, resolved: false };
+    G.deal = 0;
+  }
+  save();
+  return true;
+}
+function startSpyVote() { G.phase = 'spyvote'; G.open = null; G.wheel = null; save(); view = 'spy-vote'; render(); window.scrollTo(0, 0); }
+
+function openTile(key) {
+  if (!G || G.used[key] || G.open) return;
+  const ck = G.chaos[key] || null;
+  const { value, clue } = clueAt(key);
+  G.open = {
+    /* multiple-choice answers get a fresh random order every time the tile opens */
+    order: clue.mc ? shuffle(clue.opts.map((t, k) => t.trim() ? k : -1).filter(k => k >= 0)) : null,
+    key, stage: ck ? 'chaos' : 'clue', chaos: ck, marks: {}, bonus: null, done: {},
+    picker: G.picker, leader: leaderIdx(), last: lastIdxs(),
+    max: Math.max(G.players[G.picker].score, 400), wager: value,
+    rand: ck === 'random' ? MYSTERY[Math.floor(Math.random() * MYSTERY.length)] : null,
+    atOpen: G.players.map(p => p.score)
+  };
+  save(); render(); focusOverlay();
+}
+function multFor(o, i) {
+  const p = G.players[i];
+  if (o.chaos === 'lightning') return 2;
+  if (o.chaos === 'hotseat') return 3;
+  if (o.chaos === 'mom') return p.role === 'mom' ? 2 : 1;
+  if (o.chaos === 'decides') return p.role === 'bride' ? 0.5 : 1;
+  return 1;
+}
+function eligible(o) {
+  if (o.chaos === 'hotseat') return o.last;
+  return G.players.map((_, i) => i);
+}
+function pointsFor(o, i) { return o.chaos === 'random' ? o.rand : Math.round(clueAt(o.key).value * multFor(o, i)); }
+
+function finishClue(deltas) {
+  const o = G.open;
+  deltas.forEach((d, i) => { G.players[i].score += d; });
+  G.used[o.key] = true;
+  const net = G.players.map((p, i) => p.score - o.atOpen[i]);
+  G.undo = { key: o.key, net, picker: o.picker };
+  G.picker = (o.picker + 1) % G.players.length;
+  G.open = null;
+  save(); render();
+  const gains = net.map((d, i) => d ? name(i) + ' ' + (d > 0 ? '+' : '') + fmt(d) : null).filter(Boolean);
+  toast(gains.length ? gains.join(' · ') : 'Nobody scored. The groom is a mystery.');
+  if (boardDone()) setTimeout(() => toast('Board cleared. Time for Final ' + DATA.groom + 'pardy.'), 2600);
+}
+function scoreOpen(nobody) {
+  const o = G.open, n = G.players.length, deltas = new Array(n).fill(0);
+  if (!nobody) {
+    Object.keys(o.marks).forEach(k => {
+      const i = +k, m = o.marks[k], pts = pointsFor(o, i);
+      if (m === 'right') {
+        deltas[i] += pts;
+        if (o.chaos === 'steal' && i !== o.leader) deltas[o.leader] -= pts;
+      } else if (m === 'wrong') {
+        deltas[i] -= pts;
+      }
+    });
+  }
+  if (o.bonus != null && BONUS[o.chaos]) deltas[o.bonus] += BONUS[o.chaos].pts;
+  finishClue(deltas);
+}
+function undoLast() {
+  if (!G || !G.undo) return;
+  const u = G.undo;
+  u.net.forEach((d, i) => { if (G.players[i]) G.players[i].score -= d; });
+  delete G.used[u.key];
+  G.picker = u.picker;
+  G.undo = null;
+  save(); render();
+  toast('Undone. That tile is back on the board.');
+}
+function putBack() {
+  const o = G.open;
+  G.players.forEach((p, i) => { p.score = o.atOpen[i]; });
+  G.open = null; G.wheel = null;
+  save(); render();
+}
+function startFinal() {
+  G.phase = 'final';
+  G.final = { step: 'wager', wagers: G.players.map(() => ''), marks: {} };
+  G.open = null; G.wheel = null;
+  save(); view = 'final'; render(); window.scrollTo(0, 0);
+}
+function finalMax(i) { return Math.max(0, G.players[i].score); }
+
+/* ---------- rendering ---------- */
+function render() {
+  let html = '';
+  if (view === 'lobby') html = viewLobby();
+  else if (view === 'laws') html = viewLaws();
+  else if (view === 'board') html = viewBoard();
+  else if (view === 'final') html = viewFinal();
+  else if (view === 'winner') html = viewWinner();
+  else if (view === 'gate') html = viewGate();
+  else if (view === 'setup') html = viewSetup();
+  else if (view === 'spy-deal') html = viewSpyDeal();
+  else if (view === 'spy-vote') html = viewSpyVote();
+  if ((view === 'board') && G && G.open) html += viewClue();
+  if (G && G.wheel && (view === 'board')) html += viewWheel();
+  if (msgOpen) html += viewMessage();
+  app.innerHTML = html;
+  afterRender();
+}
+function afterRender() {
+  $$('video', app).forEach(v => v.addEventListener('error', () => {
+    const note = document.createElement('p'); note.className = 'vid-missing';
+    note.textContent = 'This video can’t play here. The written answer still counts.';
+    v.replaceWith(note);
+  }, { once: true }));
+  const cv = $('#wheel', app);
+  if (cv && G && G.wheel) drawWheel(cv, G.wheel.angle || 0);
+  if (view === 'setup') $$('textarea[data-grow]', app).forEach(grow);
+  document.body.style.overflow = (G && G.open && view === 'board') || msgOpen || (G && G.wheel && view === 'board') ? 'hidden' : '';
+}
+/* text boxes in setup grow to fit what's typed */
+function grow(el) { el.style.height = 'auto'; el.style.height = (el.scrollHeight + 4) + 'px'; }
+function focusOverlay() { const b = $('.overlay:last-of-type .btn.primary', app) || $('.overlay:last-of-type button', app); if (b) b.focus({ preventScroll: true }); }
+
+function logo(small) { return '<h1 class="logo' + (small ? ' small' : '') + '">' + esc(DATA.groom.toUpperCase()) + '<span>PARDY!</span></h1>'; }
+
+function viewLobby() {
+  const b = blanks(DATA);
+  const inProgress = G && G.phase !== 'done';
+  const rows = roster.map((p, i) => `
+    <div class="player-row">
+      <div class="field"><label for="pname-${i}">Contestant ${i + 1}</label><input type="text" id="pname-${i}" data-roster="${i}" data-k="name" value="${esc(p.name)}" maxlength="30" autocomplete="off"></div>
+      <div class="field"><label for="prole-${i}">Role</label><select id="prole-${i}" data-roster="${i}" data-k="role">${Object.keys(ROLES).map(r => `<option value="${r}"${p.role === r ? ' selected' : ''}>${ROLES[r]}</option>`).join('')}</select></div>
+      <button class="btn ghost x" data-act="roster-del" data-i="${i}" aria-label="Remove ${esc(p.name || 'contestant')}"${roster.length <= 2 ? ' disabled' : ''}>×</button>
+    </div>`).join('');
+  return `<main class="wrap narrow">
+    <header class="marquee">
+      <p class="eyebrow">Bachelorette chaos edition</p>
+      ${logo()}
+      <p class="tag">Who knows the groom best? He wrote every answer. He is not here to defend them.</p>
+    </header>
+    ${b ? `<p class="notice warn">${b} answer${b === 1 ? ' is' : 's are'} still blank. The groom needs to finish setup before game night.</p>` : `<p class="notice ok">Every answer is in. Ready to play.</p>`}
+    <section class="panel" aria-labelledby="h-c">
+      <h2 id="h-c">Contestants</h2>
+      ${rows}
+      <div class="actions"><button class="btn ghost" data-act="roster-add"${roster.length >= 6 ? ' disabled' : ''}>Add a contestant</button></div>    </section>
+    <section class="panel how" aria-labelledby="h-h">
+      <h2 id="h-h">How to run it</h2>
+      <ol>
+        <li>Put this on a screen everyone can see. Whoever taps is the host, and the host can play too.</li>
+        <li>The picker chooses a tile. Everyone secretly writes down a letter, or an answer for write-in questions. No peeking.</li>
+        <li>Tap reveal to show the groom’s answer, then tap everyone who got it right. The board does the math.</li>
+        <li>Some tiles hide chaos. Read the card out loud and do what it says.</li>
+        <li>Disputes and ties go to the groom. Call him. His phone is on.</li>
+      </ol>
+    </section>
+    <div class="actions">
+      ${inProgress ? `<button class="btn primary big" data-act="resume">Resume the game</button>` : ''}
+      ${G && G.phase === 'done' ? `<button class="btn ghost" data-act="resume">See the last results</button>` : ''}
+      <button class="btn ${inProgress ? '' : 'primary big'}" data-act="to-laws">${inProgress ? 'Start a new game' : 'Read the laws'}</button>
+    </div>
+    <footer class="actions"><button class="link" data-act="gate">Groom setup</button></footer>
+  </main>`;
+}
+
+function lawsList() {
+  return `<ol class="laws">
+    <li><div><strong>Answer in the form of a question.</strong><span class="muted">Even multiple choice. “What is B?” Forgetting costs 50 points, unless the host is feeling generous.</span></div></li>
+    <li><div><strong>His name is forbidden.</strong><span class="muted">Tonight he is only “the groom.” Saying “${esc(DATA.groom)}” costs 25 points every time. The scoreboard keeps count.</span></div></li>
+    <li><div><strong>The groom is the judge.</strong><span class="muted">His phone is on all night. Any dispute or tie, call him, and his ruling is final. If he doesn’t pick up, the bride rules.</span></div></li>
+    <li><div><strong>Bribes are legal.</strong><span class="muted">Snacks, compliments, and favors are all accepted, including bribes texted to the judge. The host must announce every bribe out loud.</span></div></li>
+    <li><div><strong>The groom’s answer is the official answer.</strong><span class="muted">Even when it’s wrong. “Close enough” is the judge’s call.</span></div></li>
+    <li><div><strong>Negative scores are a valid lifestyle.</strong><span class="muted">Nobody gets eliminated. Nobody gets mercy.</span></div></li>
+    <li><div><strong>The host may spin the Wheel of Fate at any time.</strong><span class="muted">For any reason, or no reason.</span></div></li>
+  </ol>`;
+}
+function powerCards(players) {
+  const seen = players.map(p => p.role);
+  return `<div class="powers">${players.map((p, i) => `<div class="power-card"><span class="who">${esc(p.name || 'Contestant ' + (i + 1))} · ${ROLES[p.role] || 'Guest'}</span><span class="pn">${POWERS[p.role] ? POWERS[p.role].name : POWERS.guest.name}</span><span>${esc((POWERS[p.role] || POWERS.guest).text)}</span></div>`).join('')}</div>`;
+}
+function viewLaws() {
+  const players = (G && lawsBack === 'board') ? G.players : roster.filter(p => p.name.trim());
+  return `<main class="wrap narrow">
+    <header class="marquee"><p class="eyebrow">Read these out loud</p><h1 class="logo small">THE LAWS</h1></header>
+    <section class="panel">${lawsList()}</section>
+    <section class="panel" aria-labelledby="h-p"><h2 id="h-p">Power cards</h2><p class="muted">Each contestant gets one. Use it once, then tap it on the scoreboard to cross it off.</p>${powerCards(players)}</section>
+    ${((G && lawsBack === 'board') ? !!G.spy : (spyOn && players.length >= 3)) ? `<section class="panel" aria-labelledby="h-s"><h2 id="h-s">There’s a spy among us</h2><p>One contestant has a secret sabotage mission. Before the final round, everyone votes on who it is. Catch the spy and they lose 300. Miss, and the spy gets 300, plus 300 more if they pulled off their mission.</p></section>` : ''}
+    <div class="actions">
+      ${lawsBack === 'board' ? `<button class="btn primary big" data-act="to-board">Back to the board</button>` : `<button class="btn primary big" data-act="start">Start the game</button><button class="btn ghost" data-act="to-lobby">Back</button>`}
+    </div>
+  </main>`;
+}
+
+function viewSpyDeal() {
+  const i = G.deal, p = G.players[i], last = i === G.players.length - 1;
+  let body;
+  if (!G.dealShow) {
+    body = `<p class="kicker">Secret roles · ${i + 1} of ${G.players.length}</p>
+      <h1 class="logo small">PASS IT TO<br><span>${esc(p.name.toUpperCase())}</span></h1>
+      <p class="chaos-rule">Everyone else, look away. ${esc(p.name)}, tap when nobody can see the screen.</p>
+      <div class="actions"><button class="btn primary big" data-act="deal-show">I’m ${esc(p.name)}. Show my card.</button></div>`;
+  } else {
+    const spy = i === G.spy.idx;
+    body = `<p class="kicker">Only ${esc(p.name)} should see this</p>
+      <div class="sticker ${spy ? 'spy' : 'dd'}">${spy ? 'YOU ARE THE SPY' : 'NOT THE SPY'}</div>
+      ${spy ? `<p class="label">Your secret mission</p><p class="chaos-rule">${esc(G.spy.mission)}</p><p class="muted">Before the final round, everyone votes on who the spy is. Don’t get caught.</p>`
+            : `<p class="chaos-rule">Someone at this table is the spy, with a secret sabotage mission. Watch for weird behavior. You’ll vote before the final round.</p>`}
+      <div class="actions"><button class="btn primary big" data-act="deal-next">${last ? 'Hide it and start the game' : 'Hide it and pass to ' + esc(G.players[i + 1].name)}</button></div>`;
+  }
+  return `<main class="wrap narrow"><section class="final">${body}</section></main>`;
+}
+function viewSpyVote() {
+  const s = G.spy, spy = s.idx;
+  let body;
+  if (s.step === 'accuse') {
+    body = `<p class="kicker">Before the final round</p><h1 class="logo small">WHO’S THE<br><span>SPY?</span></h1>
+      <p class="chaos-rule">Talk it out. Make accusations. Then vote. Majority wins, and the bride breaks ties.</p>
+      <div class="chips">${G.players.map((p, i) => `<button class="chip${s.accused === i ? ' pick' : ''}" data-act="accuse" data-i="${i}">${esc(p.name)}</button>`).join('')}</div>
+      <div class="actions"><button class="btn primary big" data-act="spy-reveal"${s.accused == null ? ' disabled' : ''}>Reveal the spy</button></div>`;
+  } else {
+    const caught = s.accused === spy;
+    body = `<p class="kicker">${caught ? 'Caught' : 'Got away with it'}</p>
+      <div class="sticker spy">${esc(name(spy).toUpperCase())}</div>
+      <p class="chaos-rule">${caught ? `${esc(name(spy))} was the spy, and you caught them. They lose 300.` : `${esc(name(spy))} was the spy all along. You accused ${esc(name(s.accused))}. The spy takes 300.`}</p>
+      <p class="label">The secret mission was</p><p class="chaos-rule">${esc(s.mission)}</p>
+      <p>Did ${esc(name(spy))} pull it off? (+300)</p>
+      <div class="chips"><button class="chip${s.mission_done === true ? ' right' : ''}" data-act="mission" data-r="1">Yes</button><button class="chip${s.mission_done === false ? ' wrong' : ''}" data-act="mission" data-r="0">No</button></div>
+      <div class="actions"><button class="btn primary big" data-act="spy-done"${s.mission_done == null ? ' disabled' : ''}>On to the final round</button></div>`;
+  }
+  return `<main class="wrap narrow"><section class="final">${body}</section>${scoreboard()}</main>`;
+}
+
+function viewBoard() {
+  const cats =DATA.categories.map(c => `<div class="cat" role="columnheader">${esc(c.name || 'Category')}</div>`).join('');
+  let tiles = '';
+  let rows = 1;
+  DATA.categories.forEach(c => c.clues.forEach((cl, ri) => { if (cl.q.trim()) rows = Math.max(rows, ri + 1); }));
+  for (let r = 0; r < rows; r++) for (let c = 0; c < 5; c++) {
+    const k = c + '-' + r, cl = DATA.categories[c].clues[r];
+    if (!cl.q.trim()) { tiles += `<div class="tile empty" aria-hidden="true"></div>`; continue; }
+    const used = G.used[k];
+    tiles += `<button class="tile${used ? ' used' : ''}" data-act="tile" data-k="${k}"${used ? ' disabled' : ''} aria-label="${esc(DATA.categories[c].name)} for ${VALUES[r]}${used ? ', played' : ''}">${used ? '' : VALUES[r]}</button>`;
+  }
+  const done = boardDone();
+  return `<main class="wrap">
+    <div class="topbar">
+      <button class="btn ghost mini" data-act="to-lobby">Menu</button>
+      <div class="mid"><p class="picking">Picking: <strong>${esc(name(G.picker))}</strong></p><p class="slipcount">Forbidden name said: <b>${G.slips || 0}</b></p></div>
+      <div class="tb-right">
+        ${G.undo ? '<button class="btn ghost mini" data-act="undo">Undo last clue</button>' : ''}
+        <button class="btn ghost mini" data-act="laws">Laws</button>
+        <button class="btn chaos mini" data-act="wheel-open">Wheel of Fate</button>
+      </div>
+    </div>
+    <div class="board-wrap"><div class="board${rows > 5 ? ' tall' : ''}" role="grid" aria-label="Game board">${cats}${tiles}</div></div>
+    ${scoreboard()}
+    <div class="actions">
+      ${done ? `<button class="btn primary big" data-act="final">Final ${esc(DATA.groom)}pardy</button>` : `<button class="btn ghost mini${armed === 'final' ? ' armed' : ''}" data-act="final-skip">${armed === 'final' ? 'Tap again to skip to the final' : 'Skip to the final round'}</button>`}
+    </div>
+  </main>`;
+}
+function scoreboard() {
+  return `<section class="scores" aria-label="Scores">${G.players.map((p, i) => `
+    <div class="pc${i === G.picker ? ' picking-now' : ''}">
+      <div class="pc-top"><button class="pc-name" data-act="set-picker" data-i="${i}" title="Give ${esc(p.name)} the pick">${esc(p.name)}</button><span class="role">${ROLES[p.role] || 'Guest'}</span></div>
+      <div class="pc-score${p.score < 0 ? ' neg' : ''}" aria-live="polite">${fmt(p.score)}</div>
+      <div class="pc-row"><button class="btn mini" data-act="adj" data-i="${i}" data-d="-100">−100</button><button class="btn mini" data-act="adj" data-i="${i}" data-d="-50">−50</button><button class="btn mini" data-act="adj" data-i="${i}" data-d="50">+50</button><button class="btn mini" data-act="adj" data-i="${i}" data-d="100">+100</button></div>
+      <div class="pc-row"><button class="btn mini ghost" data-act="slip" data-i="${i}">Said his name −25</button><button class="btn mini ghost power-chip${p.power ? ' used' : ''}" data-act="power" data-i="${i}" aria-pressed="${p.power ? 'true' : 'false'}">${esc((POWERS[p.role] || POWERS.guest).name)}</button></div>
+    </div>`).join('')}</section>`;
+}
+
+function viewClue() {
+  const o = G.open, { cat, clue, value } = clueAt(o.key), ck = o.chaos ? CHAOS[o.chaos] : null;
+  const isDD = o.chaos === 'dd';
+  const metaExtra = isDD ? `<span class="x2">Daily Double · wager ${fmt(o.wager)}</span>` :
+    o.chaos === 'lightning' ? '<span class="x2">×2</span>' : o.chaos === 'hotseat' ? '<span class="x2">×3 hot seat</span>' :
+    o.chaos === 'mom' ? '<span class="x2">mom ×2</span>' : o.chaos === 'steal' ? '<span class="x2">paid by the leader</span>' : '';
+  const shown = o.chaos === 'random' ? (o.stage === 'answer' ? 'worth ' + fmt(o.rand) : '???') : value;
+  const meta = `<p class="ov-meta">${esc(cat.name)} · ${shown}${metaExtra}</p>`;
+  const mc = !!(clue.mc && o.order && o.order.length);
+  const optList = rev => `<div class="opts${rev ? ' revealed' : ''}" role="list">${o.order.map((k, pos) => `<div class="opt${rev && k === clue.correct ? ' correct' : ''}" role="listitem"><span class="l">${LETTERS[pos]}</span><span class="t">${esc(clue.opts[k])}</span></div>`).join('')}</div>`;
+  let body = '';
+  if (o.stage === 'chaos') {
+    let action = '';
+    if (o.chaos === 'swap') {
+      action = o.done.swap ? `<p class="done-note">${esc(o.done.swap)}</p>` :
+        `<div class="chips">${G.players.map((p, i) => i === o.picker ? '' : `<button class="chip" data-act="swap" data-i="${i}">Swap with ${esc(p.name)} <span class="pts">${fmt(p.score)}</span></button>`).join('')}<button class="chip" data-act="swap-skip">No swap</button></div>`;
+    } else if (o.chaos === 'tax') {
+      action = o.done.tax ? `<p class="done-note">Tax collected.</p>` : `<button class="btn chaos big" data-act="tax">Collect the bridal tax</button>`;
+    } else if (o.chaos === 'wheel') {
+      action = o.done.wheel ? `<p class="done-note">The wheel has spoken.</p>` : `<button class="btn chaos big" data-act="wheel-open">Spin the wheel</button>`;
+    } else if (o.chaos === 'genie') {
+      if (o.done.genie) action = `<p class="done-note">${esc(o.done.genie)}</p>`;
+      else if (o.revenge) action = `<p class="label">Who loses 300?</p><div class="chips">${G.players.map((p, i) => i === o.picker ? '' : `<button class="chip" data-act="genie-target" data-i="${i}">${esc(p.name)} <span class="pts">${fmt(p.score)}</span></button>`).join('')}</div>`;
+      else action = `<div class="chips">${Object.keys(WISHES).map(k => `<button class="chip" data-act="genie" data-w="${k}">${WISHES[k].name}</button>`).join('')}</div>
+        <div class="wish-list">${Object.keys(WISHES).map(k => `<p><strong>${WISHES[k].name}.</strong> ${esc(WISHES[k].text)}</p>`).join('')}</div>`;
+    } else if (o.chaos === 'goose') {
+      action = o.done.goose ? `<p class="done-note">${esc(o.done.goose)}</p>` :
+        `<div class="chips">${G.players.map((p, i) => i === o.picker ? '' : `<button class="chip" data-act="goose" data-i="${i}">${esc(p.name)}</button>`).join('')}</div>`;
+    } else if (isDD) {
+      action = `<div class="wager-row"><div class="field"><label for="dd-wager">${esc(name(o.picker))}’s wager</label><input type="number" id="dd-wager" inputmode="numeric" min="0" max="${o.max}" step="50" value="${o.wager}"></div></div>`;
+    }
+    const blocked = (o.chaos === 'wheel' && !o.done.wheel) || (o.chaos === 'genie' && !o.done.genie) || (o.chaos === 'goose' && !o.done.goose);
+    body = `<p class="kicker">${isDD ? 'Hidden tile' : 'Chaos tile'}</p>
+      <div class="sticker${isDD ? ' dd' : ''}">${esc(ck.name.toUpperCase())}</div>
+      <p class="chaos-rule">${fill(ck.rule)}</p>
+      ${action}
+      <div class="actions"><button class="btn primary big" data-act="to-clue"${blocked ? ' disabled' : ''}>Show the clue</button></div>
+      <button class="link" data-act="put-back">Put this tile back</button>`;
+  } else if (o.stage === 'clue') {
+    const hint = isDD ? `Only ${esc(name(o.picker))} answers.` : o.chaos === 'lightning' ? (mc ? 'Slap the table, then shout a letter!' : 'Slap the table to answer!') :
+      o.chaos === 'hotseat' ? `Only ${esc(listNames(o.last))} answers.` : o.chaos === 'mom' ? `${esc(name(roleIdx('mom')))} answers first.` :
+      o.chaos === 'phone' ? 'Call the groom now. Twenty seconds on the clock.' :
+      mc ? 'Everyone secretly write down a letter. “What is B?” counts as a question.' : 'Everyone write your answer down. Phrase it as a question.';
+    body = `${meta}<p class="clue-text${mc ? ' mc' : ''}">${esc(clue.q)}</p>${mc ? optList(false) : ''}<p class="hint">${hint}</p>
+      <div class="actions"><button class="btn primary big" data-act="reveal">Reveal the groom’s answer</button></div>
+      ${o.chaos ? '' : '<button class="link" data-act="put-back">Put this tile back</button>'}`;
+  } else {
+    const noAns = `<p class="answer blank">The groom never answered this one. Call him.</p>`;
+    let ans;
+    if (mc) {
+      const pos = o.order.indexOf(clue.correct);
+      ans = pos >= 0 ? `<p class="ans-label">The groom says <b class="ans-letter">${LETTERS[pos]}</b></p>${optList(true)}` : `${optList(false)}${noAns}`;
+    } else {
+      ans = `<p class="ans-label">The groom says</p>` + (clue.a.trim() ? `<p class="answer">${esc(clue.a)}</p>` : noAns);
+    }
+    if (clue.why.trim()) ans += `<p class="why">${esc(clue.why)}</p>`;
+    const vid = videoSrc(clue.video) ? `<video class="vid" src="${videoSrc(clue.video)}" controls playsinline preload="metadata"></video>` : '';
+    let scoring;
+    if (isDD) {
+      scoring = `<div class="score-box"><p>Did <strong>${esc(name(o.picker))}</strong> get it right?</p>
+        <div class="chips"><button class="chip right" data-act="dd" data-r="1">Right <span class="pts">+${fmt(o.wager)}</span></button><button class="chip wrong" data-act="dd" data-r="0">Wrong <span class="pts">−${fmt(o.wager)}</span></button></div></div>`;
+    } else {
+      const el = eligible(o), tri = o.chaos === 'lightning';
+      const chips = el.map(i => {
+        const m = o.marks[i], pts = pointsFor(o, i);
+        return `<button class="chip${m ? ' ' + m : ''}" data-act="mark" data-i="${i}" aria-pressed="${m ? 'true' : 'false'}">${esc(name(i))} <span class="pts">${m === 'wrong' ? '−' + fmt(Math.abs(pts)) : sgn(pts)}</span></button>`;
+      }).join('');
+      const bonus = BONUS[o.chaos] ? `<p class="label">${BONUS[o.chaos].label} (+${BONUS[o.chaos].pts})</p><div class="chips">${G.players.map((p, i) => `<button class="chip${o.bonus === i ? ' pick' : ''}" data-act="bonus" data-i="${i}">${esc(p.name)}</button>`).join('')}</div>` : '';
+      const anyMark = Object.keys(o.marks).length > 0 || o.bonus != null;
+      scoring = `<div class="score-box"><p>${tri ? 'Tap once for right, twice for wrong.' : 'Tap everyone who got it right.'}</p><div class="chips">${chips}</div>${bonus}
+        <div class="actions"><button class="btn primary big" data-act="score"${anyMark ? '' : ' disabled'}>Score it</button><button class="btn ghost" data-act="nobody">Nobody got it</button></div></div>`;
+    }
+    body = `${meta}<p class="clue-small">${esc(clue.q)}</p>${ans}${vid}${scoring}`;
+  }
+  return `<div class="overlay" role="dialog" aria-modal="true" aria-label="Clue"><div class="ov-inner">${body}</div></div>`;
+}
+
+function viewWheel() {
+  const w = G.wheel, res = w.idx != null ? WHEEL[w.idx] : null;
+  let after = '';
+  if (res) {
+    const extra = { spinner: name(w.spinner), leader: name(leaderIdx()) };
+    after = `<p class="wheel-result">${esc(res.label)}</p><p class="chaos-rule">${fill(res.text, extra)}</p>`;
+    if (res.fx && !w.applied) after += `<button class="btn chaos big" data-act="wheel-apply">Apply it</button>`;
+    else if (res.manual && !w.applied) after += `<div class="actions"><button class="btn chaos" data-act="wheel-apply">The room approves (+${res.manual})</button></div>`;
+    else if (res.swap && !w.applied) after += `<div class="chips">${G.players.map((p, i) => i === w.spinner ? '' : `<button class="chip" data-act="wheel-swap" data-i="${i}">Swap with ${esc(p.name)} <span class="pts">${fmt(p.score)}</span></button>`).join('')}</div>`;
+    if (w.applied) after += `<p class="done-note">${esc(w.applied)}</p>`;
+    after += `<div class="actions"><button class="btn primary big" data-act="wheel-close">Done</button></div>`;
+  } else {
+    after = `<div class="chips">${G.players.map((p, i) => `<button class="chip${i === w.spinner ? ' pick' : ''}" data-act="wheel-who" data-i="${i}">${esc(p.name)}</button>`).join('')}</div>
+      <div class="actions"><button class="btn chaos big" data-act="wheel-spin"${w.spinning ? ' disabled' : ''}>${w.spinning ? 'Spinning…' : 'Spin'}</button>${w.spinning ? '' : '<button class="btn ghost" data-act="wheel-close">Never mind</button>'}</div>`;
+  }
+  return `<div class="overlay wheel-ov" role="dialog" aria-modal="true" aria-label="Wheel of Fate"><div class="ov-inner">
+    <p class="kicker">Spinner: ${esc(name(w.spinner))}</p><h2 class="logo small">WHEEL OF FATE</h2>
+    <div class="wheel-box"><canvas id="wheel" width="840" height="840" aria-label="${res ? 'The wheel landed on ' + esc(res.label) : 'The Wheel of Fate'}"></canvas><span class="pointer" aria-hidden="true"></span></div>
+    ${after}
+  </div></div>`;
+}
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function drawWheel(cv, angle) {
+  const ctx = cv.getContext('2d'), W = cv.width, R = W / 2 - 12, cx = W / 2, cy = W / 2, seg = Math.PI * 2 / WHEEL.length;
+  const fills = [cssVar('--board-hi'), cssVar('--chaos'), cssVar('--board'), cssVar('--gold')];
+  const inks = [cssVar('--ink'), cssVar('--chaos-ink'), cssVar('--ink'), cssVar('--gold-ink')];
+  ctx.clearRect(0, 0, W, W);
+  ctx.beginPath(); ctx.arc(cx, cy, R + 10, 0, Math.PI * 2); ctx.fillStyle = cssVar('--shadow'); ctx.fill();
+  WHEEL.forEach((s, i) => {
+    const a0 = angle + i * seg;
+    ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, R, a0, a0 + seg); ctx.closePath();
+    ctx.fillStyle = fills[i % 4]; ctx.fill();
+    ctx.lineWidth = 4; ctx.strokeStyle = cssVar('--shadow'); ctx.stroke();
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(a0 + seg / 2);
+    ctx.fillStyle = inks[i % 4]; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    ctx.font = '40px Anton, Impact, sans-serif';
+    ctx.fillText(s.label, R - 26, 0);
+    ctx.restore();
+  });
+  ctx.beginPath(); ctx.arc(cx, cy, 46, 0, Math.PI * 2); ctx.fillStyle = cssVar('--gold'); ctx.fill();
+  ctx.lineWidth = 6; ctx.strokeStyle = cssVar('--shadow'); ctx.stroke();
+}
+function spinWheel() {
+  const w = G.wheel; if (!w || w.spinning || w.idx != null) return;
+  const idx = Math.floor(Math.random() * WHEEL.length), seg = Math.PI * 2 / WHEEL.length;
+  const jitter = (Math.random() - 0.5) * seg * 0.7;
+  const base = -Math.PI / 2 - (idx + 0.5) * seg + jitter;
+  const from = w.angle || 0;
+  let to = base; while (to < from + Math.PI * 2 * 5) to += Math.PI * 2;
+  const finish = () => { w.spinning = false; w.idx = idx; w.angle = to % (Math.PI * 2); save(); render(); focusOverlay(); };
+  if (reduced()) { w.angle = to; finish(); return; }
+  w.spinning = true; render();
+  const cv = $('#wheel', app), t0 = performance.now(), dur = 3800;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - t, 4);
+    const a = from + (to - from) * e;
+    if (cv && cv.isConnected) drawWheel(cv, a);
+    if (t < 1) requestAnimationFrame(step); else finish();
+  };
+  requestAnimationFrame(step);
+}
+
+function viewFinal() {
+  const f = G.final, F = DATA.final;
+  let body = '';
+  if (f.step === 'wager') {
+    body = `<p class="final-cat">Category: <span>${esc(F.category || 'Final')}</span></p>
+      <p class="chaos-rule">Everyone secretly writes a wager. You can bet anything from zero up to your score. Hand them to the host, who types them in.</p>
+      <div class="wagers">${G.players.map((p, i) => `<div class="field"><label for="fw-${i}">${esc(p.name)} (max ${fmt(finalMax(i))})</label><input type="number" id="fw-${i}" data-fw="${i}" inputmode="numeric" min="0" max="${finalMax(i)}" step="50" value="${esc(f.wagers[i])}"></div>`).join('')}</div>
+      <div class="actions"><button class="btn primary big" data-act="f-lock">Lock the wagers and show the clue</button><button class="btn ghost" data-act="f-back">Back to the board</button></div>`;
+  } else if (f.step === 'question') {
+    body = `<p class="final-cat">Category: <span>${esc(F.category || 'Final')}</span></p>
+      <p class="clue-text">${esc(F.q || 'The groom forgot to write the final clue.')}</p>
+      <div class="timer" aria-hidden="true"><i></i></div><p class="hint">Thirty seconds. Write it down.</p>
+      <div class="actions"><button class="btn primary big" data-act="f-reveal">Reveal the groom’s answer</button></div>`;
+  } else {
+    const ans = F.a.trim() ? `<p class="answer">${esc(F.a)}</p>` : `<p class="answer blank">The groom never answered this one. The host decides what counts.</p>`;
+    body = `<p class="clue-small">${esc(F.q)}</p><p class="ans-label">The groom says</p>${ans}
+      <div class="fres">${G.players.map((p, i) => { const w = +f.wagers[i] || 0, m = f.marks[i]; return `<div class="pc"><div class="pc-top"><strong>${esc(p.name)}</strong><span class="role">wagered ${fmt(w)}</span></div><div class="chips"><button class="chip${m === 'right' ? ' right' : ''}" data-act="f-mark" data-i="${i}" data-m="right">Right</button><button class="chip${m === 'wrong' ? ' wrong' : ''}" data-act="f-mark" data-i="${i}" data-m="wrong">Wrong</button></div></div>`; }).join('')}</div>
+      <div class="actions"><button class="btn primary big" data-act="f-done"${G.players.every((_, i) => f.marks[i]) ? '' : ' disabled'}>Final scores</button></div>`;
+  }
+  return `<main class="wrap"><section class="final"><p class="kicker">The last clue</p><h1 class="logo small">FINAL ${esc(DATA.groom.toUpperCase())}<span>PARDY!</span></h1>${body}</section>${f.step === 'wager' ? scoreboard() : ''}</main>`;
+}
+
+function topIdxs() {
+  const top = Math.max(...G.players.map(p => p.score));
+  return G.players.map((p, i) => p.score === top ? i : -1).filter(i => i >= 0);
+}
+function viewWinner() {
+  const t = topIdxs(), order = G.players.map((p, i) => i).sort((a, b) => G.players[b].score - G.players[a].score);
+  const tied = t.length > 1, picked = tied && G.tiePick != null && t.includes(G.tiePick);
+  const waiting = tied && !picked;
+  const head = waiting
+    ? `<p class="kicker">It’s a tie</p><p class="wname">${esc(listNames(t))}</p>
+       <p class="tag">Call the groom. He breaks the tie. No answer? The bride decides.</p>
+       <div class="chips">${t.map(i => `<button class="chip" data-act="tie-pick" data-i="${i}">${esc(name(i))} wins</button>`).join('')}</div>`
+    : `<p class="kicker">Your champion</p><p class="wname">${esc(name(picked ? G.tiePick : t[0]))}</p>
+       <p class="tag">knows the groom best.${picked ? ' The tie was broken by the judge.' : ''}</p>`;
+  return `<main class="wrap narrow"><section class="winner">
+    ${head}
+    <table class="standings"><tbody>${order.map(i => `<tr><td>${esc(G.players[i].name)}</td><td class="${G.players[i].score < 0 ? 'neg' : ''}">${fmt(G.players[i].score)}</td></tr>`).join('')}</tbody></table>
+    ${!waiting && DATA.prize.trim() ? `<div class="prize"><p class="label">The prize</p><p class="prize-text">${esc(DATA.prize)}</p></div>` : ''}
+    ${waiting ? '' : `<div class="actions"><button class="btn primary big" data-act="msg">A message from the groom</button></div>`}
+    <div class="actions"><button class="btn ghost" data-act="again">Play again</button><button class="btn ghost" data-act="to-lobby">Menu</button></div>
+  </section></main>`;
+}
+function viewMessage() {
+  const m = DATA.message, v = videoSrc(m.video);
+  return `<div class="overlay msg-ov" role="dialog" aria-modal="true" aria-label="A message from the groom"><div class="ov-inner">
+    <p class="kicker">For ${esc(DATA.bride)}</p><h2 class="logo small">FROM THE GROOM</h2>
+    ${v ? `<video class="vid" src="${v}" controls playsinline preload="metadata"></video>` : ''}
+    ${m.text.trim() ? `<p class="msg-text">${esc(m.text)}</p>` : (v ? '' : '<p class="answer blank">The groom hasn’t written his message yet.</p>')}
+    <div class="actions"><button class="btn primary" data-act="msg-close">Close</button></div>
+  </div></div>`;
+}
+
+/* ---------- setup (the groom's editor) ---------- */
+function viewGate() {
+  return `<main class="wrap narrow"><header class="marquee"><p class="eyebrow">Spoiler warning</p><h1 class="logo small">GROOM ONLY</h1></header>
+    <section class="panel"><p class="chaos-rule" style="text-align:left">The next screen shows every answer in the game. If you’re not the groom, close your eyes and tap Back.</p>
+    <div class="actions"><button class="btn primary big" data-act="setup">I’m the groom. Show me.</button><button class="btn ghost" data-act="to-lobby">Back</button></div></section></main>`;
+}
+function openSetup() {
+  const d = ls.get(DKEY);
+  draft = (d && d.base === DATA.rev && d.data) ? normalize(d.data) : clone(DATA);
+  dirty = !!(d && d.base === DATA.rev);
+  copyText = null;
+  view = 'setup'; render(); window.scrollTo(0, 0);
+}
+let draftT = null;
+function persistDraft() { dirty = true; clearTimeout(draftT); draftT = setTimeout(() => ls.set(DKEY, { base: DATA.rev, data: draft }), 400); updateStatus(); }
+function updateStatus() { const s = $('#setup-status', app); if (s) s.innerHTML = statusText(); }
+function statusText() {
+  const b = blanks(draft), c = checks(draft);
+  const parts = [];
+  parts.push(b ? `<b>${b} blank</b>` : 'No blanks');
+  if (c) parts.push(`<b>${c} to double-check</b>`);
+  parts.push(dirty ? 'unsaved changes' : 'saved');
+  return parts.join(' · ');
+}
+function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = val; }
+function getPath(obj, path) { return path.split('.').reduce((o, k) => o == null ? o : o[k], obj); }
+function videoField(path, label) {
+  const id = getPath(draft, path), src = videoSrc(id);
+  if (src) return `<div class="vrow"><video src="${src}" controls playsinline preload="metadata"></video><button class="btn mini ghost" data-act="vremove" data-path="${path}">Remove video</button></div>`;
+  if (!cap.assets) return '';
+  return `<div class="vrow"><span class="btn mini ghost file-btn">${esc(label)}<input type="file" accept="video/mp4,video/webm,video/quicktime" data-vpath="${path}" aria-label="${esc(label)}"></span><span>Optional. Under 20 MB, so keep it short.</span></div>`;
+}
+/* One question's editor. `base` is its path in the draft (a board slot or a bench entry); `idKey` keeps element ids stable. */
+function clueEditor(cl, base, idKey, value, extra) {
+  const w = extra.worth;
+  return `<div class="clue-edit${w ? '' : ' no-val'}" id="ce-${idKey}">
+    ${w ? `<div class="val-box"><label for="wv-${idKey}">Worth</label><select id="wv-${idKey}" class="worth" data-worth="${idKey}">${w.values.map((v, r) => `<option value="${r}"${r === w.ri ? ' selected' : ''}>${v}</option>`).join('')}</select></div>` : ''}
+    <div class="clue-fields">
+      <div class="badges">${cl.pre ? '<span class="badge check">Pre-filled · check it</span>' : ''}${clueBlank(cl) ? '<span class="badge blank">Needs your answer</span>' : ''}${extra.from ? `<span class="badge from">From ${esc(extra.from)}</span>` : ''}</div>
+      <div class="type-toggle" role="radiogroup" aria-label="Question type">
+        <label class="seg"><input type="radio" name="type-${idKey}" data-mc="${base}" value="1"${cl.mc ? ' checked' : ''}>Multiple choice</label>
+        <label class="seg"><input type="radio" name="type-${idKey}" data-mc="${base}" value="0"${cl.mc ? '' : ' checked'}>Write-in</label>
+      </div>
+      <div class="field"><label for="q-${idKey}">Question (read out loud)</label><textarea id="q-${idKey}" data-path="${base}.q" rows="2" data-grow>${esc(cl.q)}</textarea></div>
+      ${cl.mc ? `<fieldset class="opt-set"><legend>Answers · tap the circle next to the real one</legend>
+        ${[0, 1, 2, 3].map(k => `<div class="opt-edit"><input type="radio" name="correct-${idKey}" data-correct="${base}" value="${k}"${cl.correct === k ? ' checked' : ''} aria-label="Answer ${k + 1} is the real one"><textarea id="o-${idKey}-${k}" class="opt-input" data-path="${base}.opts.${k}" rows="1" data-grow placeholder="Answer ${k + 1}" aria-label="Answer ${k + 1}">${esc(cl.opts[k])}</textarea></div>`).join('')}
+        <p class="muted small">The order gets shuffled every time the tile opens.</p></fieldset>`
+      : `<div class="field"><label for="a-${idKey}">Your answer</label><textarea id="a-${idKey}" data-path="${base}.a" rows="2" data-grow>${esc(cl.a)}</textarea></div>`}
+      <div class="field"><label for="w-${idKey}">Your reasoning (optional, shown under your answer)</label><textarea id="w-${idKey}" data-path="${base}.why" rows="3" data-grow placeholder="This is where the laughs are.">${esc(cl.why)}</textarea></div>
+      ${videoField(base + '.video', 'Add a video answer')}
+      <div class="edit-actions">${extra.actions}</div>
+    </div>
+  </div>`;
+}
+function openBoardSlots(d) {
+  const out = [];
+  d.categories.forEach((c, ci) => { const ri = c.clues.findIndex(cl => !hasContent(cl)); if (ri >= 0) out.push({ ci, ri }); });
+  return out;
+}
+function viewSetup() {
+  const d = draft;
+  const canSave = !!cap.artifact && !cap.readOnly;
+  const cats = d.categories.map((c, ci) => {
+    const nextEmpty = c.clues.findIndex((cl, ri) => !hasContent(cl) && !openSlots.has(ci + '-' + ri));
+    const slots = c.clues.map((cl, ri) => {
+      const key = ci + '-' + ri;
+      if (!hasContent(cl) && !openSlots.has(key)) return '';
+      const rm = armed === 'rm-' + key;
+      return clueEditor(cl, `categories.${ci}.clues.${ri}`, key, null, { worth: { ri, values: d.values }, actions:
+        `<button class="link" data-act="to-bench" data-k="${key}">Move to the bench</button>
+         <button class="link${rm ? ' danger' : ''}" data-act="slot-remove" data-k="${key}">${rm ? 'Tap again to delete it' : 'Delete'}</button>` });
+    }).join('');
+    return `
+    <section class="panel cat-block" aria-label="Category ${ci + 1}">
+      <div class="field"><label for="cat-${ci}">Category ${ci + 1}</label><input type="text" id="cat-${ci}" data-path="categories.${ci}.name" value="${esc(c.name)}" maxlength="40"></div>
+      ${slots}
+      ${nextEmpty >= 0 ? `<div class="add-row"><button class="btn ghost mini" data-act="slot-add" data-k="${ci}-${nextEmpty}">Add a question worth ${d.values[nextEmpty]}</button></div>` : ''}
+    </section>`;
+  }).join('');
+  const open = openBoardSlots(d);
+  const bench = d.bench.length ? d.bench.map((cl, bi) => {
+    const rm = armed === 'rmb-' + bi;
+    const move = open.length
+      ? `<label class="sr-only" for="bm-${bi}">Where to put it</label><select id="bm-${bi}" class="bm-select">${open.map(x => `<option value="${x.ci}-${x.ri}">${esc(d.categories[x.ci].name || 'Category ' + (x.ci + 1))} · ${d.values[x.ri]}</option>`).join('')}</select><button class="btn mini" data-act="bench-move" data-b="${bi}">Move to the board</button>`
+      : `<span class="muted small">The board is full. Move a question to the bench to make room.</span>`;
+    return clueEditor(cl, `bench.${bi}`, 'b' + bi, null, { from: cl.from, actions:
+      `${move}<button class="link${rm ? ' danger' : ''}" data-act="bench-remove" data-b="${bi}">${rm ? 'Tap again to delete it' : 'Delete'}</button>` });
+  }).join('') : `<p class="muted">Empty. Use “Move to the bench” on any board question to park it here.</p>`;
+  return `<main class="wrap narrow">
+    <div class="savebar">
+      <p class="status" id="setup-status">${statusText()}</p>
+      <div class="actions">
+        <button class="btn ghost mini" data-act="to-lobby">Close</button>
+        <button class="btn primary" data-act="save"${canSave ? '' : ' disabled'}>Save to the game</button>
+      </div>
+    </div>
+    <header class="marquee"><p class="eyebrow">Groom setup</p><h1 class="logo small">YOUR ANSWERS</h1>
+      <p class="tag">For multiple choice, write four answers and tap the circle next to the real one. Your reasoning shows up right under your answer on the reveal. Each category holds up to six questions. To change what a question is worth, pick a new number in its Worth menu; whatever was worth that swaps into its old spot. Empty spots don’t show on the board.</p></header>
+    ${canSave ? '' : `<p class="notice warn">${cap.readOnly ? 'This device can view the game but can’t save it. Only the groom’s key link saves changes.' : 'Saving works when the groom opens this page from his key link. Your typing is kept on this device in the meantime.'}</p>`}
+    <section class="panel" aria-label="Names and prize">
+      <div class="grid2">
+        <div class="field"><label for="s-groom">Groom’s name (the forbidden word)</label><input type="text" id="s-groom" data-path="groom" value="${esc(d.groom)}" maxlength="24"></div>
+        <div class="field"><label for="s-bride">Bride’s name</label><input type="text" id="s-bride" data-path="bride" value="${esc(d.bride)}" maxlength="24"></div>
+      </div>
+      <div class="field"><label for="s-prize">The prize</label><textarea id="s-prize" data-path="prize" rows="4" data-grow maxlength="${PRIZE_MAX}">${esc(d.prize)}</textarea><p class="count" id="prize-count">${fmt(d.prize.length)} / ${fmt(PRIZE_MAX)}</p></div>
+    </section>
+    <section class="panel" aria-labelledby="h-vals">
+      <h2 id="h-vals">Point values</h2>
+      <p class="muted">What each row of the board is worth, top to bottom. Changes every category at once. To move a single question, use its Worth menu instead.</p>
+      <div class="values-row">${d.values.map((v, r) => `<div class="field"><label for="pv-${r}">Row ${r + 1}</label><input type="number" id="pv-${r}" data-val="${r}" inputmode="numeric" min="1" max="100000" step="50" value="${v}"></div>`).join('')}</div>
+      <div class="actions"><button class="btn ghost mini" data-act="values-reset"${d.values.every((v, r) => v === DEFAULT_VALUES[r]) ? ' disabled' : ''}>Back to 100–600</button></div>
+    </section>
+    ${cats}
+    <section class="panel" aria-labelledby="h-bench">
+      <h2 id="h-bench">The bench</h2>
+      <p class="muted">Questions that aren’t on the board. They won’t come up in the game until you move them back.</p>
+      ${bench}
+    </section>
+    <section class="panel" aria-label="Final round">
+      <h2>Final ${esc(d.groom)}pardy</h2>
+      <div class="field"><label for="f-cat">Category</label><input type="text" id="f-cat" data-path="final.category" value="${esc(d.final.category)}" maxlength="40"></div>
+      <div class="field"><label for="f-q">Clue</label><textarea id="f-q" data-path="final.q" rows="2" data-grow>${esc(d.final.q)}</textarea></div>
+      <div class="field"><label for="f-a">Your answer</label><textarea id="f-a" data-path="final.a" rows="3" data-grow>${esc(d.final.a)}</textarea></div>
+    </section>
+    <section class="panel" aria-label="Message from the groom">
+      <h2>Your message to ${esc(d.bride)}</h2>
+      <p class="muted">Shown after the final scores. Write it, film it, or both.</p>
+      <div class="field"><label for="m-text">Message</label><textarea id="m-text" data-path="message.text" rows="6" data-grow>${esc(d.message.text)}</textarea></div>
+      ${videoField('message.video', 'Add a video message')}
+    </section>
+    <section class="panel" aria-label="Backup">
+      <h2>Backups</h2>
+      <p class="muted">If saving isn’t working, copy your setup and paste it to Claude, or download a copy of the whole game that runs on its own. Videos only play in the online version.</p>
+      <div class="actions"><button class="btn ghost" data-act="copy">Copy my setup</button><button class="btn ghost" data-act="download"${cap.downloads ? '' : ' disabled'}>Download a copy of the game</button></div>
+      ${copyText != null ? `<textarea class="copybox" id="copybox" readonly aria-label="Your setup">${esc(copyText)}</textarea>` : ''}
+    </section>
+  </main>`;
+}
+function buildHtml(d) {
+  const css = document.getElementById('css').textContent;
+  const js = document.getElementById('main').textContent;
+  const json = JSON.stringify(d).replace(/</g, '\\u003c');
+  return SKELETON_OPEN + PAGE_HEAD + '<style id="css">' + css + '</style>' + BODY_SHELL +
+    '<script id="game-data" type="application/json">' + json + '<\/script><script id="main">' + js + '<\/script></body></html>';
+}
+async function doSave() {
+  if (!cap.artifact || cap.readOnly) return;
+  const d = clone(draft);
+  d.rev = 'r' + rid(); d.updated = new Date().toISOString();
+  ss.set(RESCUE, { rev: d.rev, data: d });
+  const btn = $('[data-act="save"]', app); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const attempt = async (retry) => {
+    try { await cap.artifact.publish(buildHtml(d)); toast('Saved. Reloading the game…'); }
+    catch (e) {
+      const code = e && e.code;
+      if (code === 'conflict') { toast('A newer version was saved first. Reloading; your edits are kept as a draft.'); return; }
+      ss.del(RESCUE);
+      if (code === 'upstream_error' && !retry) { await new Promise(r => setTimeout(r, 900 + Math.random() * 800)); return attempt(true); }
+      if (['not_writer', 'not_granted', 'consent_required', 'capability_disabled', 'capability_removed', 'not_declared'].includes(code)) { cap.readOnly = true; render(); toast('This device can’t save the game. Use Copy my setup instead.'); return; }
+      if (code === 'too_large') toast('The game is too big to save. Remove a video and try again.');
+      else if (code === 'rate_limited') toast('Saving too often. Wait a minute, then save again.');
+      else toast('Saving failed. Your edits are still here; try again in a moment.');
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Save to the game'; }
+    }
+  };
+  await attempt(false);
+}
+async function uploadVideo(input) {
+  const f = input.files && input.files[0], path = input.dataset.vpath;
+  if (!f || !cap.assets) return;
+  if (f.size > 20 * 1024 * 1024) { toast('That clip is over 20 MB. Record a shorter one, or at 720p.'); input.value = ''; return; }
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const type = ext === 'webm' ? 'video/webm' : 'video/mp4';
+  const holder = input.closest('.vrow'); if (holder) holder.innerHTML = '<span>Uploading…</span>';
+  try {
+    const r = await cap.assets.upload(f, { type });
+    setPath(draft, path, r.id); persistDraft(); render(); toast('Video added. Save to the game to keep it.');
+  } catch (e) {
+    const code = e && e.code;
+    toast(code === 'too_large' ? 'That clip is too big. Keep it under 20 MB.' : code === 'unsupported_type' ? 'That file type won’t work. Use an MP4 or WebM video.' : code === 'quota_or_state' ? 'The game is out of video storage. Remove a video first.' : 'Upload failed. Try again in a moment.');
+    render();
+  }
+}
+
+/* ---------- confetti ---------- */
+function confetti() {
+  if (reduced()) return;
+  const cv = document.createElement('canvas'); cv.id = 'confetti'; document.body.appendChild(cv);
+  const ctx = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1);
+  const resize = () => { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; };
+  resize();
+  const cols = [cssVar('--gold'), cssVar('--chaos'), cssVar('--ink'), cssVar('--board-hi')];
+  const bits = Array.from({ length: 160 }, () => ({ x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.6, vx: (Math.random() - 0.5) * 3 * dpr, vy: (2 + Math.random() * 4) * dpr, r: Math.random() * Math.PI, vr: (Math.random() - 0.5) * 0.3, w: (6 + Math.random() * 8) * dpr, h: (8 + Math.random() * 10) * dpr, c: cols[Math.floor(Math.random() * cols.length)] }));
+  const t0 = performance.now();
+  const step = now => {
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    bits.forEach(b => { b.x += b.vx; b.y += b.vy; b.r += b.vr; ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.fillStyle = b.c; ctx.fillRect(-b.w / 2, -b.h / 2, b.w, b.h); ctx.restore(); });
+    if (now - t0 < 4200) requestAnimationFrame(step); else cv.remove();
+  };
+  requestAnimationFrame(step);
+}
+
+/* ---------- events ---------- */
+app.addEventListener('click', e => {
+  const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+  const act = t.dataset.act, i = t.dataset.i != null ? +t.dataset.i : null;
+  const wasArmed = armed;
+  if (!['final-skip', 'to-laws', 'slot-remove', 'bench-remove'].includes(act)) armed = null;
+  const o = G && G.open;
+  switch (act) {
+    case 'roster-add': roster.push({ name: '', role: 'guest' }); ls.set(RKEY, roster); render(); { const el = $('#pname-' + (roster.length - 1)); if (el) el.focus(); } break;
+    case 'roster-del': if (roster.length > 2) { roster.splice(i, 1); ls.set(RKEY, roster); render(); } break;
+    case 'resume': view = phaseView(); render(); window.scrollTo(0, 0); break;
+    case 'to-laws':
+      if (G && G.phase !== 'done' && armed !== 'new') { armed = 'new'; t.classList.add('armed'); t.textContent = 'Tap again to wipe the current game'; return; }
+      armed = null; lawsBack = 'lobby'; view = 'laws'; render(); window.scrollTo(0, 0); break;
+    case 'to-lobby': if (view === 'setup' && draft) { ls.set(DKEY, { base: DATA.rev, data: draft }); } msgOpen = false; view = 'lobby'; render(); window.scrollTo(0, 0); break;
+    case 'start': if (newGame()) { view = phaseView(); render(); window.scrollTo(0, 0); } break;
+    /* spy */
+    case 'deal-show': G.dealShow = true; save(); render(); break;
+    case 'deal-next': G.dealShow = false; G.deal = G.deal + 1 < G.players.length ? G.deal + 1 : null; save(); view = phaseView(); render(); window.scrollTo(0, 0); break;
+    case 'accuse': G.spy.accused = i; save(); render(); break;
+    case 'spy-reveal': G.spy.step = 'reveal'; save(); render(); window.scrollTo(0, 0); break;
+    case 'mission': G.spy.mission_done = t.dataset.r === '1'; save(); render(); break;
+    case 'spy-done': {
+      const s = G.spy, caught = s.accused === s.idx;
+      const d = (caught ? -300 : 300) + (s.mission_done ? 300 : 0);
+      G.players[s.idx].score += d; s.resolved = true;
+      toast(name(s.idx) + ' ' + sgn(d) + '.');
+      startFinal(); break;
+    }
+    case 'laws': lawsBack = 'board'; view = 'laws'; render(); window.scrollTo(0, 0); break;
+    case 'to-board': view = 'board'; render(); window.scrollTo(0, 0); break;
+    case 'tile': openTile(t.dataset.k); break;
+    case 'set-picker': G.picker = i; save(); render(); break;
+    case 'adj': G.players[i].score += +t.dataset.d; save(); render(); break;
+    case 'slip': G.players[i].score -= 25; G.slips = (G.slips || 0) + 1; save(); render(); toast(name(i) + ' said the forbidden name. −25.'); break;
+    case 'power': G.players[i].power = !G.players[i].power; save(); render(); if (G.players[i].power) toast(name(i) + ' used ' + (POWERS[G.players[i].role] || POWERS.guest).name + '.'); break;
+    case 'undo': undoLast(); break;
+    case 'final-skip': if (armed !== 'final') { armed = 'final'; render(); return; } armed = null; (G.spy && !G.spy.resolved) ? startSpyVote() : startFinal(); break;
+    case 'final': (G.spy && !G.spy.resolved) ? startSpyVote() : startFinal(); break;
+    /* clue overlay */
+    case 'put-back': putBack(); break;
+    case 'swap': { const p = G.players[o.picker], q = G.players[i]; [p.score, q.score] = [q.score, p.score]; o.done.swap = name(o.picker) + ' swapped scores with ' + name(i) + '.'; save(); render(); break; }
+    case 'swap-skip': o.done.swap = name(o.picker) + ' kept their score. Mercy.'; save(); render(); break;
+    case 'tax': { const b = roleIdx('bride'); let pot = 0; G.players.forEach((p, k) => { if (k !== b) { p.score -= 100; pot += 100; } }); G.players[b].score += pot; o.done.tax = true; save(); render(); toast(name(b) + ' collected ' + fmt(pot) + '.'); break; }
+    case 'to-clue':
+      if (o.chaos === 'dd') { const el = $('#dd-wager', app); let w = Math.round(+(el && el.value) || 0); w = Math.max(0, Math.min(o.max, w)); o.wager = w; }
+      o.stage = 'clue'; save(); render(); focusOverlay(); break;
+    case 'reveal': o.stage = 'answer'; save(); render(); focusOverlay(); break;
+    case 'mark': { const cur = o.marks[i]; const tri = o.chaos === 'lightning'; if (!cur) o.marks[i] = 'right'; else if (cur === 'right' && tri) o.marks[i] = 'wrong'; else delete o.marks[i]; save(); render(); break; }
+    case 'bonus': o.bonus = o.bonus === i ? null : i; save(); render(); break;
+    case 'genie': {
+      const w = t.dataset.w, me = o.picker;
+      if (w === 'revenge') { o.revenge = true; save(); render(); break; }
+      if (w === 'rich') { const b = roleIdx('bride'); G.players[me].score += 400; if (b >= 0) G.players[b].score += 400; o.done.genie = name(me) + ' +400' + (b >= 0 ? ', and ' + name(b) + ' +400.' : '.'); }
+      if (w === 'fair') { const avg = Math.round(G.players.reduce((a, p) => a + p.score, 0) / G.players.length / 50) * 50; G.players.forEach(p => { p.score = avg; }); o.done.genie = 'Everyone now has ' + fmt(avg) + '. Perfectly balanced.'; }
+      save(); render(); break;
+    }
+    case 'genie-target': G.players[i].score -= 300; G.players[o.picker].score -= 100; o.revenge = false; o.done.genie = name(i) + ' −300, ' + name(o.picker) + ' −100. Worth it.'; save(); render(); break;
+    case 'goose': o.done.goose = name(i) + ' is now a goose. HONK.'; save(); render(); break;
+    case 'score': scoreOpen(false); break;
+    case 'nobody': scoreOpen(true); break;
+    case 'dd': { const d = new Array(G.players.length).fill(0); d[o.picker] = t.dataset.r === '1' ? o.wager : -o.wager; finishClue(d); break; }
+    /* wheel */
+    case 'wheel-open': G.wheel = { spinner: o ? o.picker : G.picker, idx: null, angle: 0, applied: null, spinning: false }; save(); render(); focusOverlay(); break;
+    case 'wheel-who': if (G.wheel.idx == null) { G.wheel.spinner = i; save(); render(); } break;
+    case 'wheel-spin': spinWheel(); break;
+    case 'wheel-apply': {
+      const w = G.wheel, res = WHEEL[w.idx];
+      if (res.fx) { const fx = res.fx(G, w.spinner, leaderIdx()); Object.keys(fx).forEach(k => { G.players[+k].score += fx[k]; }); w.applied = Object.keys(fx).map(k => name(+k) + ' ' + (fx[k] >= 0 ? '+' : '') + fmt(fx[k])).join(', '); }
+      else if (res.manual) { G.players[w.spinner].score += res.manual; w.applied = name(w.spinner) + ' +' + res.manual; }
+      save(); render(); break;
+    }
+    case 'wheel-swap': { const w = G.wheel, p = G.players[w.spinner], q = G.players[i]; [p.score, q.score] = [q.score, p.score]; w.applied = name(w.spinner) + ' swapped scores with ' + name(i) + '.'; save(); render(); break; }
+    case 'wheel-close': if (G.wheel && G.wheel.spinning) return; G.wheel = null; if (o && o.chaos === 'wheel') o.done.wheel = true; save(); render(); focusOverlay(); break;
+    /* final */
+    case 'f-back': G.phase = 'board'; G.final = null; save(); view = 'board'; render(); break;
+    case 'f-lock': G.final.wagers = G.players.map((p, k) => { const el = $('#fw-' + k, app); const v = Math.round(+(el && el.value) || 0); return Math.max(0, Math.min(finalMax(k), v)); }); G.final.step = 'question'; save(); render(); window.scrollTo(0, 0); break;
+    case 'f-reveal': G.final.step = 'reveal'; save(); render(); break;
+    case 'f-mark': G.final.marks[i] = t.dataset.m; save(); render(); break;
+    case 'f-done': G.players.forEach((p, k) => { const w = +G.final.wagers[k] || 0; p.score += G.final.marks[k] === 'right' ? w : -w; }); G.phase = 'done'; G.tiePick = null; save(); view = 'winner'; render(); window.scrollTo(0, 0); if (topIdxs().length === 1) confetti(); break;
+    case 'tie-pick': G.tiePick = i; save(); render(); confetti(); break;
+    case 'msg': msgOpen = true; render(); focusOverlay(); break;
+    case 'msg-close': msgOpen = false; render(); break;
+    case 'again': if (newGame()) { view = phaseView(); render(); window.scrollTo(0, 0); } break;
+    /* setup */
+    case 'gate': view = 'gate'; render(); window.scrollTo(0, 0); break;
+    case 'setup': openSetup(); break;
+    case 'save': doSave(); break;
+    case 'values-reset': draft.values = DEFAULT_VALUES.slice(); persistDraft(); render(); toast('Point values are back to 100–600.'); break;
+    case 'vremove': setPath(draft, t.dataset.path, null); persistDraft(); render(); break;
+    case 'slot-add': {
+      const key = t.dataset.k; openSlots.add(key); render();
+      const q = $('#q-' + key, app); if (q) q.focus();
+      break;
+    }
+    case 'slot-remove': {
+      const key = t.dataset.k;
+      if (wasArmed !== 'rm-' + key) { armed = 'rm-' + key; render(); return; }
+      armed = null;
+      const [ci, ri] = key.split('-').map(Number);
+      draft.categories[ci].clues[ri] = blankClue(); openSlots.delete(key);
+      persistDraft(); render(); toast('Deleted.');
+      break;
+    }
+    case 'to-bench': {
+      const key = t.dataset.k, [ci, ri] = key.split('-').map(Number);
+      draft.bench.unshift(Object.assign(clone(draft.categories[ci].clues[ri]), { from: draft.categories[ci].name }));
+      draft.categories[ci].clues[ri] = blankClue(); openSlots.delete(key);
+      persistDraft(); render(); toast('Moved to the bench.');
+      break;
+    }
+    case 'bench-move': {
+      const bi = +t.dataset.b, sel = $('#bm-' + bi, app);
+      if (!sel || !sel.value) return;
+      const [ci, ri] = sel.value.split('-').map(Number);
+      const item = clone(draft.bench[bi]); delete item.from;
+      draft.categories[ci].clues[ri] = normClue(item);
+      draft.bench.splice(bi, 1);
+      persistDraft(); render(); toast('Moved to ' + (draft.categories[ci].name || 'the board') + ' for ' + draft.values[ri] + '.');
+      break;
+    }
+    case 'bench-remove': {
+      const bi = +t.dataset.b;
+      if (wasArmed !== 'rmb-' + bi) { armed = 'rmb-' + bi; render(); return; }
+      armed = null; draft.bench.splice(bi, 1); persistDraft(); render(); toast('Deleted.');
+      break;
+    }
+    case 'copy': {
+      const text = JSON.stringify(draft, null, 2);
+      const done = () => toast('Setup copied.');
+      const fallback = () => { copyText = text; render(); const b = $('#copybox', app); if (b) { b.focus(); b.select(); } toast('Copy the text in the box below.'); };
+      try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
+      break;
+    }
+    case 'download':
+      if (!cap.downloads) return;
+      cap.downloads.save({ filename: (draft.groom || 'groom').toLowerCase().replace(/[^a-z0-9]+/g, '') + 'pardy.html', data: buildHtml(draft) })
+        .then(() => toast('Downloaded.'), err => { if (err && err.code !== 'declined') toast('Download isn’t available here.'); });
+      break;
+  }
+});
+app.addEventListener('input', e => {
+  const t = e.target;
+  if (t.dataset.roster != null) { roster[+t.dataset.roster][t.dataset.k] = t.value; ls.set(RKEY, roster); return; }
+  if (t.dataset.fw != null && G && G.final) { G.final.wagers[+t.dataset.fw] = t.value; save(); return; }
+  if (t.dataset.grow != null) grow(t);
+  if (t.id === 's-prize') { const c = $('#prize-count', app); if (c) c.textContent = fmt(t.value.length) + ' / ' + fmt(PRIZE_MAX); }
+  if (t.dataset.path && draft) {
+    setPath(draft, t.dataset.path, t.value);
+    const m = t.dataset.path.match(/^(categories\.\d\.clues\.\d|bench\.\d+)\.(q|a|why|opts\.\d)$/);
+    if (m) clearPre(getPath(draft, m[1]), t);
+    persistDraft();
+  }
+});
+/* Any edit to a pre-filled question means the groom has checked it. */
+function clearPre(cl, el) {
+  if (!cl || !cl.pre) return;
+  cl.pre = false;
+  const box = el.closest('.clue-fields'), b = box && $('.badge.check', box);
+  if (b) b.remove();
+}
+app.addEventListener('change', e => {
+  const t = e.target;
+  if (t.id === 'spy-on') { spyOn = t.checked; ls.set('aaronpardy-spy-v1', spyOn); return; }
+  if (t.dataset.roster != null) { roster[+t.dataset.roster][t.dataset.k] = t.value; ls.set(RKEY, roster); return; }
+  if (t.dataset.mc && draft) { const cl = getPath(draft, t.dataset.mc); cl.mc = t.value === '1'; cl.pre = false; persistDraft(); render(); return; }
+  if (t.dataset.correct && draft) { const cl = getPath(draft, t.dataset.correct); cl.correct = +t.value; clearPre(cl, t); persistDraft(); return; }
+  if (t.dataset.vpath) uploadVideo(t);
+  if (t.dataset.val != null && draft) {
+    const r = +t.dataset.val, n = Math.round(+t.value);
+    if (n > 0 && n <= 100000) { draft.values[r] = n; persistDraft(); }
+    /* redraw after focus has moved on (Tab to the next row), then put focus back where it went */
+    setTimeout(() => { const id = document.activeElement && document.activeElement.id; render(); const el = id && document.getElementById(id); if (el) el.focus({ preventScroll: true }); }, 0);
+    return;
+  }
+  if (t.dataset.worth && draft) moveWorth(t.dataset.worth, +t.value);
+});
+/* Change one question's worth: it trades places with whatever sits at that value in the same category. */
+function moveWorth(key, to) {
+  const [ci, ri] = key.split('-').map(Number);
+  if (to === ri || !(to >= 0 && to < ROWS)) return;
+  const clues = draft.categories[ci].clues, other = clues[to];
+  clues[to] = clues[ri]; clues[ri] = other;
+  const dest = ci + '-' + to;
+  openSlots.delete(key); openSlots.delete(dest);
+  armed = null;
+  persistDraft(); render();
+  const v = draft.values;
+  toast(hasContent(other) ? `Now worth ${v[to]}. The old ${v[to]} question is worth ${v[ri]} now.` : `Now worth ${v[to]}.`);
+  const box = $('#ce-' + dest, app), sel = $('#wv-' + dest, app);
+  if (box) box.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+  if (sel) sel.focus({ preventScroll: true });
+}
+/* Answer options are one line on the board, so Enter doesn't add a line break there. */
+app.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.classList && e.target.classList.contains('opt-input')) e.preventDefault(); });
+
+render();
+})();
+</script>
+</body>
+</html>

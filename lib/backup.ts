@@ -33,6 +33,10 @@ export const BACKUP_TABLES = [
   // database dump doesn't reach. Restoring these into an environment whose
   // bucket was never populated gives you links to nothing.
   "trip_papers",
+  // The party games' saved edits (and the live run, which is small). Videos and
+  // photos are in the `party-game-assets` bucket, not here.
+  "party_game_state",
+  "party_game_content_history",
 ] as const;
 
 // Deliberately absent: trip_route_proposals and trip_stay_proposals. They are

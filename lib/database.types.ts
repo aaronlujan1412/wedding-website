@@ -1173,6 +1173,62 @@ export type Database = {
         }
         Relationships: []
       }
+      party_game_content_history: {
+        Row: {
+          content: Json
+          game: string
+          id: number
+          saved_at: string
+        }
+        Insert: {
+          content: Json
+          game: string
+          id?: never
+          saved_at?: string
+        }
+        Update: {
+          content?: Json
+          game?: string
+          id?: never
+          saved_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "party_game_content_history_game_fkey"
+            columns: ["game"]
+            isOneToOne: false
+            referencedRelation: "party_game_state"
+            referencedColumns: ["game"]
+          },
+        ]
+      }
+      party_game_state: {
+        Row: {
+          content: Json | null
+          content_stamp: number
+          docs: Json
+          game: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          content?: Json | null
+          content_stamp?: number
+          docs?: Json
+          game: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          content?: Json | null
+          content_stamp?: number
+          docs?: Json
+          game?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
       seating_tables: {
         Row: {
           capacity: number | null
@@ -2290,6 +2346,23 @@ export type Database = {
         Returns: unknown
       }
       meal_tags_sane: { Args: { p_tags: string[] }; Returns: boolean }
+      party_game_delete_doc: {
+        Args: { p_game: string; p_path: string }
+        Returns: number
+      }
+      party_game_put_doc: {
+        Args: {
+          p_data: Json
+          p_game: string
+          p_max_docs: number
+          p_path: string
+        }
+        Returns: number
+      }
+      party_game_save_content: {
+        Args: { p_content: Json; p_game: string; p_keep: number }
+        Returns: number
+      }
       replace_trip_route_proposals: {
         Args: { p_routes: Json; p_source: string; p_trip: string }
         Returns: number

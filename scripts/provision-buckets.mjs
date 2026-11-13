@@ -27,6 +27,23 @@ const BUCKETS = [
   { name: "trip-papers", public: false },
   // Who's who on the helper pages. Signed URLs only, after the helpers' code.
   { name: "helper-faces", public: false },
+  // Aaronpardy videos and Bride Quest proof photos (lib/party-games.ts). Public
+  // by id, since an <img> can't send a key; the browser uploads straight here on
+  // a signed URL, so the bucket is what holds the size and the types.
+  {
+    name: "party-game-assets",
+    public: true,
+    fileSizeLimit: "25MB",
+    allowedMimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+      "video/mp4",
+      "video/webm",
+      "video/quicktime",
+    ],
+  },
 ];
 
 console.log(`Provisioning buckets on ${process.env.NEXT_PUBLIC_SUPABASE_URL}`);
@@ -41,6 +58,8 @@ for (const bucket of BUCKETS) {
   }
   const { error } = await db.storage.createBucket(bucket.name, {
     public: bucket.public,
+    fileSizeLimit: bucket.fileSizeLimit,
+    allowedMimeTypes: bucket.allowedMimeTypes,
   });
   console.log(
     `  ${bucket.name.padEnd(24)} ${error ? `FAILED: ${error.message}` : "created"}`,

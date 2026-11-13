@@ -1,0 +1,1179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Bride Quest</title>
+<style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap">
+<style id="css">
+/* Layout: a JRPG menu on a snowy night. Double-bordered blue windows stack in one phone-width column; gold is XP and progress, cranberry is new, hidden or dangerous, pine is done. Single dark look on purpose. */
+:root{
+  --night:#0a0f24; --night-2:#18215a; --scrim:rgba(4,7,22,.86); --snow:rgba(255,255,255,.55);
+  --win-top:#2c47bd; --win-bot:#101d68; --win-edge:#eef2ff; --win-line:#06103f; --hover:rgba(255,255,255,.09);
+  --ink:#f5f7ff; --muted:#b8c2ef; --dim:#7d89c2;
+  --gold:#ffd35c; --gold-hi:#ffe9a3; --gold-ink:#2b1e00;
+  --holly:#ff4f6d; --holly-ink:#fff5f7;
+  --pine:#46d993; --pine-ink:#042a1b;
+  --rare:#86d8ff; --common:#c9d2f5;
+  --chest:#b5642f; --chest-lo:#6d3418;
+  --f-pixel:"DotGothic16","Courier New",monospace;
+  --f-body:"M PLUS Rounded 1c","Trebuchet MS",system-ui,sans-serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--night);background-image:radial-gradient(120% 70% at 50% -10%,var(--night-2),var(--night) 62%);background-attachment:fixed;color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--night)}
+body::after{content:"";position:fixed;left:0;right:0;top:-220px;bottom:0;pointer-events:none;z-index:0;background-image:radial-gradient(2px 2px at 24px 30px,var(--snow) 50%,transparent 52%),radial-gradient(2px 2px at 90px 130px,var(--snow) 50%,transparent 52%),radial-gradient(3px 3px at 160px 70px,var(--snow) 50%,transparent 52%),radial-gradient(2px 2px at 210px 170px,var(--snow) 50%,transparent 52%),radial-gradient(2px 2px at 50px 190px,var(--snow) 50%,transparent 52%);background-size:240px 220px;animation:snow 22s linear infinite;opacity:.7}
+@keyframes snow{from{transform:translateY(0)}to{transform:translateY(220px)}}
+#app{position:relative;z-index:1}
+button{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+p{margin:0}
+h1,h2,h3{margin:0;font-weight:400}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+
+.wrap{max-width:600px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 56px;display:flex;flex-direction:column;gap:16px}
+.wrap.wide{max-width:760px}
+
+/* windows */
+.win{background:linear-gradient(180deg,var(--win-top),var(--win-bot));border:2px solid var(--win-edge);border-radius:10px;box-shadow:inset 0 0 0 2px var(--win-line),0 5px 0 var(--win-line);padding:14px 16px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.win-title{font-family:var(--f-pixel);font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:0}
+.note{border:2px dashed var(--holly);border-radius:8px;padding:10px 12px;color:var(--holly-ink);font-weight:700;font-size:15px}
+
+/* buttons */
+.btn{font-family:var(--f-pixel);font-size:17px;letter-spacing:.03em;min-height:48px;padding:10px 18px;border-radius:8px;border:2px solid var(--win-edge);background:var(--win-line);color:var(--ink);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-align:center;line-height:1.2;text-decoration:none}
+.btn:hover{background:var(--win-bot)}
+.btn.gold{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.btn.gold:hover{background:var(--gold-hi)}
+.btn.holly{background:var(--holly);border-color:var(--holly);color:var(--holly-ink)}
+.btn.ghost{background:transparent}
+.btn.small{min-height:38px;font-size:14px;padding:6px 12px}
+.btn.big{min-height:56px;font-size:19px}
+.btn.block{width:100%}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.link{background:none;border:0;padding:6px 0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:14px;align-self:flex-start}
+.link.danger{color:var(--holly)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.file-btn{position:relative;overflow:hidden}
+.file-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+
+/* status window */
+.hero{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.hero-id{display:flex;flex-direction:column;gap:2px;min-width:0}
+.hero-name{background:none;border:0;padding:0;text-align:left;font-family:var(--f-pixel);font-size:34px;line-height:1.05;cursor:pointer;overflow-wrap:anywhere}
+.hero-title{font-weight:700;color:var(--gold)}
+.lv{font-family:var(--f-pixel);text-align:right;line-height:1;white-space:nowrap}
+.lv span{font-size:16px;color:var(--muted);margin-right:2px}
+.lv b{font-weight:400;font-size:52px;color:var(--gold);text-shadow:3px 3px 0 var(--win-line)}
+.xpbar,.hpbar{height:16px;border:2px solid var(--win-edge);border-radius:4px;background:var(--win-line);overflow:hidden}
+.xpbar i,.hpbar i{display:block;height:100%;transition:width .7s cubic-bezier(.2,.9,.3,1)}
+.xpbar i{background:repeating-linear-gradient(90deg,var(--gold) 0 10px,var(--gold-hi) 10px 12px)}
+.hpbar i{background:repeating-linear-gradient(90deg,var(--holly) 0 10px,var(--holly-ink) 10px 11px)}
+.xpline{display:flex;justify-content:space-between;gap:10px;font-family:var(--f-pixel);font-size:14px;color:var(--muted);font-variant-numeric:tabular-nums}
+.party{display:flex;flex-wrap:wrap;gap:8px}
+.pchip{display:flex;flex-direction:column;align-items:flex-start;gap:0;border:2px solid var(--muted);border-radius:8px;background:var(--win-line);padding:6px 12px;cursor:pointer;min-width:0;flex:1 1 140px;text-align:left}
+.pchip b{font-family:var(--f-pixel);font-weight:400;font-size:17px}
+.pchip span{font-size:13px;color:var(--muted)}
+.twist{display:flex;gap:10px;align-items:baseline;border-top:1px solid var(--muted);padding-top:10px;font-size:15px}
+.twist span{font-family:var(--f-pixel);color:var(--holly);font-size:13px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.live{font-family:var(--f-pixel);font-size:13px;color:var(--pine);letter-spacing:.06em}
+.live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pine);margin-right:8px;vertical-align:1px;animation:blink 1.6s steps(2) infinite}
+@keyframes blink{50%{opacity:.25}}
+.ownerbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;font-size:14px;color:var(--muted)}
+
+/* tabs */
+.tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.tab{font-family:var(--f-pixel);font-size:17px;min-height:46px;border:2px solid transparent;border-radius:8px;background:var(--win-line);cursor:pointer;color:var(--muted)}
+.tab[aria-selected="true"]{border-color:var(--gold);color:var(--gold)}
+.tab[aria-selected="true"]::before{content:"\25B6";font-size:12px;margin-right:6px}
+
+/* code entry */
+.code-row{display:flex;gap:8px}
+.code-row input{flex:1 1 auto;min-width:0;font-family:var(--f-pixel);font-size:20px;letter-spacing:.12em;text-transform:uppercase}
+
+/* quests */
+.chap{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.chap h2{font-family:var(--f-pixel);font-size:20px;line-height:1.2}
+.chap .time{font-family:var(--f-pixel);font-size:13px;color:var(--muted);white-space:nowrap}
+.qlist{display:flex;flex-direction:column;gap:2px;margin-inline:-8px}
+.qrow{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;width:100%;background:transparent;border:0;border-left:3px solid transparent;border-radius:6px;padding:9px 8px;text-align:left;cursor:pointer;color:var(--ink);min-height:52px}
+.qrow:hover,.qrow:focus-visible{background:var(--hover);border-left-color:var(--gold)}
+.qrow.locked{cursor:default;opacity:.55}
+.qrow.locked:hover{background:transparent;border-left-color:transparent}
+.gem{font-family:var(--f-pixel);font-size:18px;text-align:center;line-height:1}
+.t-main{color:var(--gold)} .t-common{color:var(--common)} .t-rare{color:var(--rare)} .t-legendary{color:var(--holly)} .t-hidden{color:var(--holly)} .t-done{color:var(--pine)}
+.qmain{display:flex;flex-direction:column;min-width:0}
+.qtitle{font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.qsub{font-size:13px;color:var(--muted)}
+.qxp{font-family:var(--f-pixel);color:var(--gold);font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.qrow.done .qtitle{color:var(--muted)}
+.qrow.done .qxp{color:var(--pine)}
+.newtag{display:inline-block;font-family:var(--f-pixel);font-size:11px;letter-spacing:.08em;background:var(--holly);color:var(--holly-ink);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:2px}
+
+/* overlays */
+.ov{position:fixed;inset:0;z-index:50;background:var(--scrim);display:flex;overflow-y:auto;padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.ov.pop-ov{z-index:70}
+.ov > .win{margin:auto;width:100%;max-width:560px}
+.sheet-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.x{background:var(--win-line);border:2px solid var(--win-edge);border-radius:8px;min-width:44px;min-height:44px;cursor:pointer;font-size:18px}
+.sheet-title{font-family:var(--f-pixel);font-size:28px;line-height:1.15;overflow-wrap:anywhere}
+.sheet-text{font-size:18px;line-height:1.55;white-space:pre-wrap}
+.done-note{font-weight:700;color:var(--pine)}
+.vid{width:100%;max-height:52vh;border-radius:8px;background:var(--win-line);border:2px solid var(--win-edge)}
+.vid-missing{font-size:14px;color:var(--muted)}
+.proof{display:flex;flex-direction:column;gap:8px;align-items:flex-start}
+.proof img{width:100%;max-height:46vh;object-fit:contain;border-radius:8px;border:2px solid var(--win-edge);background:var(--win-line)}
+
+/* level up and popups */
+.pop{text-align:center;align-items:center}
+.lvup-big{font-family:var(--f-pixel);font-size:clamp(40px,12vw,64px);line-height:1;color:var(--gold);text-shadow:3px 3px 0 var(--win-line),6px 6px 0 var(--holly);animation:pulse 1.2s ease-in-out infinite alternate}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.06)}}
+.lvup-line{font-size:19px}
+.lvup-line b{font-family:var(--f-pixel);font-weight:400;color:var(--gold)}
+.lvup-title{font-family:var(--f-pixel);font-size:24px}
+.chest-btn{display:flex;flex-direction:column;align-items:center;gap:6px;background:transparent;border:2px dashed var(--gold);border-radius:12px;padding:14px 22px;cursor:pointer;font-family:var(--f-pixel);color:var(--gold);font-size:17px;animation:wiggle 1.4s ease-in-out infinite}
+@keyframes wiggle{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-4deg)}90%{transform:rotate(4deg)}95%{transform:rotate(-2deg)}}
+.loot{width:100%;display:flex;flex-direction:column;gap:10px;text-align:left;border:2px solid var(--gold);border-radius:10px;padding:12px 14px;background:var(--win-line)}
+.loot h3{font-family:var(--f-pixel);font-size:22px;color:var(--gold)}
+.loot-text{white-space:pre-wrap;font-size:17px;line-height:1.6}
+.twistcard{width:100%;border:2px solid var(--holly);border-radius:10px;padding:10px 14px;text-align:left;display:flex;flex-direction:column;gap:4px}
+.twistcard p:last-child{font-size:18px;font-weight:700}
+.bang{font-family:var(--f-pixel);font-size:72px;line-height:1;color:var(--holly);text-shadow:4px 4px 0 var(--win-line);animation:pop .4s cubic-bezier(.2,1.6,.4,1) both}
+@keyframes pop{from{transform:scale(2.5);opacity:0}to{transform:scale(1);opacity:1}}
+.pop-head{font-family:var(--f-pixel);font-size:24px;line-height:1.2}
+.pop-head b{font-weight:400;color:var(--gold)}
+.msg{font-size:20px;line-height:1.55;white-space:pre-wrap;text-align:left;width:100%}
+
+/* party card */
+.card{text-align:center;align-items:center}
+.card .cls{font-family:var(--f-pixel);font-size:30px;color:var(--gold);line-height:1.1}
+.card .who{font-family:var(--f-pixel);font-size:22px}
+.card .ability{font-size:20px;line-height:1.5;max-width:30ch}
+
+/* santa */
+.santa{display:flex;flex-direction:column;gap:10px;align-items:stretch;border:2px solid var(--gold);border-radius:10px;padding:12px;background:var(--win-line);text-align:center}
+.santa .big{font-family:var(--f-pixel);font-size:26px;color:var(--gold);line-height:1.2}
+
+/* bingo */
+.bingo{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}
+.cell{min-height:86px;font-size:12.5px;line-height:1.25;padding:6px 4px;border:2px solid var(--win-edge);border-radius:6px;background:var(--win-line);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;text-align:center;overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto;min-width:0}
+.cell.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.cell.free{background:var(--pine);color:var(--pine-ink);border-color:var(--pine);cursor:default}
+
+/* boss */
+.boss{display:flex;flex-direction:column;gap:10px;border:2px solid var(--holly);border-radius:10px;padding:12px;background:var(--win-line)}
+.boss-name{font-family:var(--f-pixel);font-size:24px;color:var(--holly);line-height:1.15}
+.attacks{display:grid;grid-template-columns:minmax(0,1fr);gap:8px}
+.atk{display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n d" "t t";gap:2px 10px;text-align:left;border:2px solid var(--win-edge);border-radius:8px;background:var(--win-bot);padding:10px 12px;cursor:pointer;min-width:0}
+.atk:hover{border-color:var(--holly)}
+.atk[disabled]{opacity:.4;cursor:not-allowed}
+.atk-name{grid-area:n;font-family:var(--f-pixel);font-size:17px}
+.atk-dmg{grid-area:d;font-family:var(--f-pixel);color:var(--holly);font-size:15px;white-space:nowrap}
+.atk-text{grid-area:t;font-size:14px;color:var(--muted)}
+.blog{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.blog li:first-child{color:var(--gold);font-weight:700}
+
+/* log, loot, stats */
+.stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;text-align:center}
+.stats b{display:block;font-family:var(--f-pixel);font-weight:400;font-size:26px;color:var(--gold);font-variant-numeric:tabular-nums}
+.stats span{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
+.log{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.log li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:baseline;font-size:15px}
+.log .time{font-family:var(--f-pixel);font-size:13px;color:var(--muted);white-space:nowrap}
+.shots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.shots img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:2px solid var(--win-edge);display:block;max-width:100%}
+.foot{display:flex;justify-content:center}
+
+/* credits */
+.credits-ov{z-index:80;background:var(--night);overflow:hidden;padding:0}
+.credits{position:absolute;inset:0;overflow-y:auto;text-align:center}
+.roll{display:flex;flex-direction:column;align-items:center;gap:10px;padding:max(48px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) 140px max(16px,env(safe-area-inset-left,0px));animation:roll 48s linear forwards}
+.roll.static{animation:none}
+@keyframes roll{from{transform:translateY(55vh)}to{transform:translateY(-100%)}}
+.cr-big{font-family:var(--f-pixel);font-size:clamp(40px,11vw,72px);color:var(--gold);line-height:1;text-shadow:4px 4px 0 var(--holly)}
+.cr-sub{color:var(--muted);font-size:17px}
+.cr-h{font-family:var(--f-pixel);color:var(--holly);font-size:15px;letter-spacing:.14em;text-transform:uppercase;margin-top:26px}
+.cr-role{font-size:20px}
+.cr-role b{font-family:var(--f-pixel);font-weight:400;color:var(--gold)}
+.cr-line{font-size:17px}
+.credits .shots{width:100%;max-width:520px;margin-top:20px}
+.cr-close{position:fixed;right:max(12px,env(safe-area-inset-right,0px));top:calc(12px + env(safe-area-inset-top,0px));z-index:81}
+
+/* groom HQ */
+.hq-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:10px}
+.hq-title{font-family:var(--f-pixel);font-size:40px;color:var(--gold);line-height:1;text-shadow:3px 3px 0 var(--holly)}
+.hq-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding-block:6px;border-top:1px solid var(--win-line)}
+.hq-row:first-of-type{border-top:0}
+.hq-row > div{min-width:0}
+.tagok{font-family:var(--f-pixel);font-size:14px;color:var(--pine);white-space:nowrap}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-pixel);font-size:16px;min-height:42px;padding:6px 14px;border:2px solid var(--win-edge);border-radius:999px;background:var(--win-line);cursor:pointer}
+.chip.on{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.feed{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
+.feed li{display:grid;grid-template-columns:64px minmax(0,1fr);gap:12px;align-items:center}
+.feed img,.feed .nophoto{width:64px;height:64px;object-fit:cover;border-radius:6px;border:2px solid var(--win-edge);background:var(--win-line);display:grid;place-items:center;font-size:11px;color:var(--muted);text-align:center;line-height:1.2}
+
+/* forms and editor */
+.field > label,.label{font-size:12px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+input[type=text],input[type=number],input[type=url],textarea,select{font:16px var(--f-body);background:var(--win-line);color:var(--ink);border:2px solid var(--muted);border-radius:8px;padding:10px 12px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:70px;line-height:1.45;field-sizing:content;max-height:60vh}
+input:focus,textarea:focus,select:focus{border-color:var(--gold);outline:none}
+input[disabled]{opacity:.5}
+.field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ed-grid{display:grid;grid-template-columns:minmax(0,1fr) 110px;gap:10px;align-items:end}
+.ed-grid.three{grid-template-columns:repeat(auto-fit,minmax(min(100%,160px),1fr))}
+.ed-item{display:flex;flex-direction:column;gap:10px;padding-block:14px;border-top:1px solid var(--muted)}
+.ed-item:first-of-type{border-top:0}
+.check{display:flex;gap:10px;align-items:center;font-size:15px;font-weight:600;letter-spacing:0;text-transform:none;color:var(--ink);cursor:pointer;min-height:44px}
+.check input{width:22px;height:22px;accent-color:var(--gold);margin:0}
+.savebar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--night);border-bottom:2px solid var(--win-line);padding-block:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.savebar .status{font-size:14px;color:var(--muted)}
+.savebar .status b{color:var(--holly-ink)}
+.badge{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:3px 9px;border:2px solid var(--holly);color:var(--holly-ink)}
+.vrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:14px;color:var(--muted)}
+.vrow video{width:180px;max-width:100%;border-radius:6px;background:var(--win-line)}
+.copybox{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px;min-height:200px}
+.big-title{font-family:var(--f-pixel);font-size:clamp(36px,9vw,56px);color:var(--gold);line-height:1;text-shadow:3px 3px 0 var(--holly)}
+
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:95;background:var(--ink);color:var(--night);font-family:var(--f-pixel);font-size:16px;padding:12px 18px;border-radius:8px;box-shadow:0 6px 0 var(--win-line);max-width:min(520px,calc(100vw - 32px));text-align:center}
+.boot{min-height:60vh;display:grid;place-items:center;font-family:var(--f-pixel);font-size:20px;color:var(--muted)}
+
+@media (max-width:420px){
+  .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .ed-grid{grid-template-columns:minmax(0,1fr) 90px}
+  .cell{min-height:80px;font-size:11.5px;padding:5px 3px}
+  .bingo{gap:4px}
+  .ov{padding-left:max(8px,env(safe-area-inset-left,0px));padding-right:max(8px,env(safe-area-inset-right,0px))}
+  .ov > .win{padding:12px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app" lang="en"></div>
+<script id="quest-data" type="application/json">{"rev":"r0","bride":"Savea","groom":"Aaron","party":[{"name":"Savea","cls":"The Bride","tag":"Legendary class","ability":"Always right. Every quest she touches levels up the whole party."},{"name":"Mom","cls":"The Healer","tag":"Mother of the Groom","ability":"Knows where the bodies are buried. Also the baby photos."},{"name":"Sister","cls":"The Rogue","tag":"Sister of the Groom","ability":"Has dirt. Will use it."}],"chapters":[{"id":"call","name":"The Call to Adventure","time":"4:00 PM"},{"id":"workshop","name":"The Workshop","time":"4:15 PM"},{"id":"side","name":"Side Quests","time":"Anytime"},{"id":"dungeon","name":"The Dungeon","time":"6:45 PM"},{"id":"finale","name":"The Final Boss","time":"7:45 PM"},{"id":"hidden","name":"Hidden Quests","time":"When the groom says so"}],"quests":[{"id":"q_intro","ch":"call","tier":"main","type":"normal","title":"The Quest Begins","text":"The bride reads this out loud, in her most dramatic voice:\n\n“Tonight, three heroes gather. One bride. One healer. One rogue. Our mission: craft, laugh, and level up the bride before December 1. The groom is watching. He has powers. We do not fear him.”","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_armor","ch":"call","tier":"main","type":"normal","title":"Equip the Legendary Armor","text":"The bride equips her armor: sash, veil, tiara, or the fanciest dish towel in Mom’s kitchen. Full photoshoot. At least one heroic pose.","xp":100,"photo":true,"code":"","link":"","video":null},{"id":"q_classes","ch":"call","tier":"main","type":"normal","title":"Party Roll Call","text":"Each hero taps their name at the top of the screen and reads their class card out loud. Then each one announces the special move they’ll use tonight.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_prep","ch":"workshop","tier":"main","type":"normal","title":"Prep the Forge","text":"Lay out the wood slices, napkins, suncatcher panels and markers.\n\nNapkin trick: peel each napkin down to the thin printed top layer. That’s the only layer that goes on the wood.\n\nPro move: Mod Podge needs about 15 minutes between coats, so paint suncatchers while the ornaments dry.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_santa","ch":"workshop","tier":"main","type":"santa","title":"Secret Santa Forge","text":"Draw names below. Each hero secretly makes one ornament for the person they drew. No peeking at anyone else’s work. The reveal happens right before the Final Boss.","xp":200,"photo":false,"code":"","link":"","video":null},{"id":"q_portrait","ch":"workshop","tier":"rare","type":"normal","title":"Portrait of the Groom","text":"Everyone paints a suncatcher portrait of the groom. From memory. Ten minutes. The bride picks the most accurate. Text the groom a photo; he picks the most insulting.","xp":150,"photo":true,"code":"","link":"","video":null},{"id":"q_penguin","ch":"workshop","tier":"rare","type":"normal","title":"Penguin Protocol","text":"Make a penguin ornament or suncatcher. Gentoo penguins propose with a pebble, so yours should probably be holding one.","xp":150,"photo":true,"code":"","link":"","video":null},{"id":"q_ugly","ch":"workshop","tier":"common","type":"normal","title":"Ugliest Ornament Alive","text":"Ten minutes. Each hero makes the ugliest ornament they possibly can, on purpose. Text the groom a photo. He crowns the winner, and the winner hangs on the newlyweds’ tree. Every year.","xp":100,"photo":true,"code":"","link":"","video":null},{"id":"q_judge","ch":"workshop","tier":"rare","type":"normal","title":"The Judge’s Table","text":"Line up everything you’ve made so far and send the groom one photo. He calls in to award Best in Show, Most Festive, and Most Likely to Be Mistaken for a Potato.","xp":150,"photo":true,"code":"","link":"","video":null},{"id":"q_baby","ch":"side","tier":"common","type":"normal","title":"Baby Photo Ambush","text":"Mom shows the bride a baby photo of the groom she’s never seen. The bride has to guess how old he is in it, within one year.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_pun","ch":"side","tier":"common","type":"normal","title":"Pun-ishment","text":"Take turns telling Christmas puns. Anyone who groans has to tell the next one. Last hero standing without groaning wins.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_selfie","ch":"side","tier":"common","type":"normal","title":"Face of the Groom","text":"Everyone does their best impression of the groom’s concentrating face. Group selfie. Text it to him.","xp":50,"photo":true,"code":"","link":"","video":null},{"id":"q_forbidden","ch":"side","tier":"common","type":"normal","title":"The Forbidden Word","text":"The bride picks one forbidden word for the rest of the night (try “glue” or “wedding”). Anyone who says it does a lap around the kitchen table.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_cocoa","ch":"side","tier":"common","type":"normal","title":"Groom-Style Cocoa","text":"Make a mug of hot cocoa exactly how the groom would make it. The bride takes one sip and rules on accuracy.","xp":50,"photo":false,"code":"","link":"","video":null},{"id":"q_tp","ch":"side","tier":"rare","type":"normal","title":"Toilet Paper Couture","text":"Mom and the Rogue have five minutes to dress the bride in a wedding gown made of toilet paper. Runway walk required. Photo or it didn’t happen.","xp":200,"photo":true,"code":"","link":"","video":null},{"id":"q_recreate","ch":"side","tier":"rare","type":"normal","title":"Recreate the Photo","text":"Find an old family photo on Mom’s wall or phone. Recreate it as exactly as you can. Side-by-side photo.","xp":150,"photo":true,"code":"","link":"","video":null},{"id":"q_untold","ch":"side","tier":"rare","type":"normal","title":"Untold Tales","text":"Mom tells one story about the groom as a kid that the bride has never heard. The groom may not be consulted.","xp":150,"photo":false,"code":"","link":"","video":null},{"id":"q_sibling","ch":"side","tier":"rare","type":"normal","title":"Sibling Testimony","text":"The Rogue gives sworn testimony: the most embarrassing thing the groom did growing up. The bride may cross-examine.","xp":150,"photo":false,"code":"","link":"","video":null},{"id":"q_bingo","ch":"side","tier":"rare","type":"bingo","title":"Hallmark Movie Bingo","text":"Put a Hallmark Christmas movie on while you craft. Tap squares as they happen. Any line of four, across, down, or corner to corner, wins.","xp":200,"photo":false,"code":"","link":"","video":null},{"id":"q_sing","ch":"side","tier":"legendary","type":"normal","title":"Summon the Groom’s Voice","text":"Call the groom on speaker. He has to sing one line of “Touching Heaven” for the whole party. If he refuses, he owes the bride a kitchen slow dance before the wedding. Either way, you win.","xp":300,"photo":false,"code":"","link":"","video":null},{"id":"q_dungeon","ch":"dungeon","tier":"main","type":"normal","title":"Enter the Dungeon","text":"Open Aaronpardy on the laptop and play the whole board. The winner gets bragging rights. The party gets the XP either way.","xp":400,"photo":false,"code":"","link":"../aaronpardy/","video":null},{"id":"q_reveal","ch":"finale","tier":"main","type":"normal","title":"Secret Santa Reveal","text":"Before you face the boss: swap the secret ornaments. Each hero guesses who made theirs before the maker confesses.","xp":150,"photo":false,"code":"","link":"","video":null},{"id":"q_boss","ch":"finale","tier":"main","type":"boss","title":"The Final Boss","text":"The groom himself, in his final form. Every attack is a real challenge: do it, then tap it to land the hit. Watch out, he can heal.","xp":400,"photo":false,"code":"","link":"","video":null},{"id":"q_advice","ch":"finale","tier":"main","type":"normal","title":"Advice Ornaments","text":"Take three apple-wood slices from the Legendary Chest. Mom writes one piece of marriage advice on one. The Rogue writes one on another. The bride writes a wish for her first year of marriage on the third. They hang on the newlyweds’ tree every Christmas.","xp":200,"photo":true,"code":"","link":"","video":null},{"id":"q_borrowed","ch":"finale","tier":"main","type":"normal","title":"Something Borrowed","text":"Mom has one last item for the bride’s inventory: her Something Borrowed for December 1. Hand it over and tell the story behind it.","xp":200,"photo":false,"code":"","link":"","video":null},{"id":"h_penguin","ch":"hidden","tier":"common","type":"normal","title":"Penguin Hunt","text":"Find every penguin in Mom’s house. Ornaments, mugs, socks, all of it. Line them up for a group photo. Zero penguins? Make one out of napkins.","xp":150,"photo":true,"code":"PENGUIN","link":"","video":null},{"id":"h_speed","ch":"hidden","tier":"common","type":"normal","title":"Speed Round","text":"Sixty seconds. Each hero decorates one wood slice start to finish. Text the groom the results. He judges.","xp":150,"photo":false,"code":"TIMBER","link":"","video":null},{"id":"h_snowman","ch":"hidden","tier":"common","type":"normal","title":"Snowman Sculptor","text":"Three minutes. Build a snowman out of anything in the kitchen. No actual snow allowed.","xp":150,"photo":true,"code":"SNOWMAN","link":"","video":null},{"id":"h_carol","ch":"hidden","tier":"common","type":"normal","title":"Slow Cooker Carols","text":"Rewrite the first line of a Christmas carol so it’s about whatever’s in the slow cooker. Perform it for the room.","xp":150,"photo":false,"code":"CAROL","link":"","video":null},{"id":"h_dance","ch":"hidden","tier":"common","type":"normal","title":"Kitchen Dance Break","text":"Everyone stops crafting. One full song, kitchen dance party. Call the groom: he picks the song.","xp":150,"photo":false,"code":"DANCE","link":"","video":null}],"levels":[{"title":"Fiancée","xp":0,"loot":{"title":"","text":"","link":"","video":null,"hint":""}},{"title":"Bride-in-Training","xp":150,"loot":{"title":"A Message From Afar","text":"","link":"","video":null,"hint":"A 30-second voice memo or video from you: why you’re marrying her."}},{"title":"Sash Bearer","xp":450,"loot":{"title":"Behind the Scenes","text":"","link":"","video":null,"hint":"A video of you trying to decoupage an ornament. Badly."}},{"title":"Glitter Paladin","xp":850,"loot":{"title":"Treasure Map","text":"","link":"","video":null,"hint":"Hide a treat at Mom’s and write the clue here. Example: Check the freezer, behind the peas."}},{"title":"Mod Podge Sorceress","xp":1350,"loot":{"title":"Sealed Letter","text":"","link":"","video":null,"hint":"A short letter she reads out loud. Or: Ask Mom for the envelope with your name on it."}},{"title":"Dungeon Conqueror","xp":1950,"loot":{"title":"The Groom’s Stash","text":"","link":"","video":null,"hint":"Her favorite snack hidden at Mom’s, or a coupon: One night off from dishes."}},{"title":"Bride, Final Form","xp":2650,"loot":{"title":"Final Form","text":"","link":"","video":null,"hint":"The big one. A closing video for the end of the night."}}],"boss":{"name":"The Groom, Final Form","hp":1000,"attacks":[{"name":"Bride’s Critical Hit","dmg":300,"repeat":false,"text":"The bride names three things she loves about the groom, straight to his face, without laughing."},{"name":"Mom’s Ultimate","dmg":250,"repeat":false,"text":"Mom tells the most embarrassing story she has about him. Out loud. While he listens."},{"name":"Rogue Backstab","dmg":250,"repeat":false,"text":"The Rogue reveals one secret the groom hoped she’d forgotten."},{"name":"Straight-Face Siege","dmg":200,"repeat":false,"text":"All three stare at him in silence for 30 seconds. If he laughs, it lands."},{"name":"Pop Quiz","dmg":150,"repeat":true,"text":"Ask him anything about the bride. If he gets it wrong, it lands."},{"name":"Rock, Paper, Scissors","dmg":100,"repeat":true,"text":"Best of three against the groom. Win it to land the hit."}],"counters":["The groom counters with a dad joke. Nobody is hurt. Everyone is annoyed.","The groom starts explaining wood grain direction. The party is stunned.","The groom tries to Fix It Instead. It does not work.","The groom starts talking about penguins. It’s super effective… on himself.","The groom uses Puppy Eyes. The bride is immune.","The groom wanders off to check the slow cookers."],"loot":{"title":"The Legendary Chest","text":"Five slices of apple wood from Granny’s tree.\n\nThree are for the Advice Ornaments, which will hang on the newlyweds’ tree every Christmas. The other two are for Mom and the Rogue to keep, with the groom’s thanks for tonight.\n\nThe groom has the chest. Make him hand it over.","link":"","video":null,"hint":"Where the chest is, or how he hands it over."}},"twists":["Craft with your other hand for the next 3 minutes.","Pass your project to the left. Work on someone else’s for 60 seconds.","Oven mitts on until somebody laughs.","Only use colors the groom would hate.","Narrate everything you do like a nature documentary until the next quest is done.","Hide a tiny penguin in every project from now on.","Speak only in Christmas carol lyrics for 2 minutes.","The bride picks someone to craft with their eyes closed for 30 seconds."],"bingo":["FREE: Small-town guy who works with wood (like the groom)","Big-city girl comes home for Christmas","Christmas tree farm","Someone named Holly, Noel, or Nick","Almost-kiss gets interrupted","Flour on someone’s face","Ice skating","Old man who’s probably Santa","The town festival is in trouble","Matching plaid flannel","The ex shows up","He fixes it instead of replacing it (groom move)","Perfectly timed snowfall","Way too many marshmallows","“The true meaning of Christmas”","First kiss in the last 10 minutes"],"updated":""}</script>
+<!-- Stand-in for the claude.ai runtime: between the data and the game script. See HANDOFF.md. -->
+<script src="../games/shim.js" data-game="bride-quest" data-api="../api/" data-content="live"></script>
+<script id="main">
+(() => {
+'use strict';
+
+/* ---------- page source pieces (used to save the quest back into this page) ---------- */
+const SKELETON_OPEN = '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>';
+const PAGE_HEAD = '<title>Bride Quest</title><meta name="claude:viewport-fit-sides" content="cover"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=M+PLUS+Rounded+1c:wght@400;500;700;800&display=swap">';
+const BODY_SHELL = '<div id="app" lang="en"></div>';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const app = document.getElementById('app');
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const clone = o => JSON.parse(JSON.stringify(o));
+const fmt = n => (n < 0 ? '−' : '') + Math.abs(Math.round(n)).toLocaleString('en-US');
+const rid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36);
+const reduced = () => { try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const mkStore = kind => ({
+  get(k) { try { const v = window[kind].getItem(k); return v ? JSON.parse(v) : null; } catch (e) { return null; } },
+  set(k, v) { try { window[kind].setItem(k, JSON.stringify(v)); } catch (e) {} },
+  del(k) { try { window[kind].removeItem(k); } catch (e) {} }
+});
+const ls = mkStore('localStorage'), ss = mkStore('sessionStorage');
+const LKEY = 'bridequest-local-v1', DKEY = 'bridequest-draft-v1', RESCUE = 'bridequest-rescue-v1';
+const LVKEY = 'bridequest-seen-level-v1', PKEY = 'bridequest-seen-push-v1', RKEY = 'bridequest-reset-v1';
+const videoSrc = id => (typeof id === 'string' && /^[A-Za-z0-9_-]{8,64}$/.test(id)) ? (window.GAME_BLOB_BASE || '/_blob/') + id : '';
+const safeUrl = u => { const s = String(u || '').trim(); return /^(https:\/\/|\.{0,2}\/)[^\s"'<>]*$/i.test(s) && !/^\/\//.test(s) ? s : ''; };
+const clock = t => { try { return new Date(t).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } };
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- quest data ---------- */
+const TIERS = { main: 'Main quest', common: 'Common', rare: 'Rare', legendary: 'Legendary' };
+const TYPES = ['normal', 'santa', 'bingo', 'boss'];
+const CH_IDS = ['call', 'workshop', 'side', 'dungeon', 'finale', 'hidden'];
+const TYPE_NOTE = { santa: 'This quest has the Secret Santa name draw built in.', bingo: 'This quest shows the bingo card. Edit the squares further down.', boss: 'This quest runs the boss battle. Edit the boss further down.' };
+function normLoot(l) { l = l && typeof l === 'object' ? l : {}; return { title: String(l.title || ''), text: String(l.text || ''), link: String(l.link || ''), video: l.video || null, hint: String(l.hint || '') }; }
+function normQuest(q) {
+  q = q && typeof q === 'object' ? q : {};
+  const id = /^[A-Za-z0-9_-]{1,60}$/.test(q.id || '') ? q.id : 'q_' + rid();
+  return {
+    id, ch: CH_IDS.includes(q.ch) ? q.ch : 'side', tier: TIERS[q.tier] ? q.tier : 'common', type: TYPES.includes(q.type) ? q.type : 'normal',
+    title: String(q.title || ''), text: String(q.text || ''), xp: Math.max(0, Math.round(+q.xp || 0)), photo: !!q.photo,
+    code: String(q.code || '').toUpperCase().replace(/[^A-Z0-9]/g, ''), link: String(q.link || ''), video: q.video || null
+  };
+}
+function normalize(d) {
+  d = d && typeof d === 'object' ? d : {};
+  const party = (Array.isArray(d.party) && d.party.length ? d.party : [{ name: 'Savea' }]).slice(0, 6).map(p => ({ name: String((p && p.name) || ''), cls: String((p && p.cls) || ''), tag: String((p && p.tag) || ''), ability: String((p && p.ability) || '') }));
+  const chapters = CH_IDS.map(id => { const c = (d.chapters || []).find(x => x && x.id === id) || {}; return { id, name: String(c.name || id), time: String(c.time || '') }; });
+  const seen = new Set();
+  const quests = (d.quests || []).map(normQuest).filter(q => { if (seen.has(q.id)) return false; seen.add(q.id); return true; });
+  let levels = (d.levels || []).map(L => ({ title: String((L && L.title) || ''), xp: Math.max(0, Math.round(+(L && L.xp) || 0)), loot: normLoot(L && L.loot) }));
+  if (!levels.length) levels = [{ title: 'Fiancée', xp: 0, loot: normLoot() }];
+  levels[0].xp = 0;
+  const b = d.boss && typeof d.boss === 'object' ? d.boss : {};
+  const boss = {
+    name: String(b.name || 'The Groom'), hp: Math.max(100, Math.round(+b.hp || 1000)),
+    attacks: (b.attacks || []).map(a => ({ name: String((a && a.name) || ''), text: String((a && a.text) || ''), dmg: Math.max(0, Math.round(+(a && a.dmg) || 0)), repeat: !!(a && a.repeat) })),
+    counters: (b.counters || []).map(String).filter(s => s.trim()), loot: normLoot(b.loot)
+  };
+  return {
+    rev: d.rev || 'r0', bride: String(d.bride || 'Savea'), groom: String(d.groom || 'Aaron'), party, chapters, quests, levels, boss,
+    twists: (d.twists || []).map(String).filter(s => s.trim()), bingo: (d.bingo || []).map(String).filter(s => s.trim()), updated: d.updated || ''
+  };
+}
+let DATA = normalize(JSON.parse(document.getElementById('quest-data').textContent || '{}'));
+const qById = id => DATA.quests.find(q => q.id === id);
+const chName = id => (DATA.chapters.find(c => c.id === id) || {}).name || '';
+const tierLabel = q => q.ch === 'hidden' ? 'Hidden quest' : TIERS[q.tier];
+const brideName = () => (DATA.party[0] && DATA.party[0].name) || DATA.bride;
+const levelsSorted = () => DATA.levels.slice().sort((a, b) => a.xp - b.xp);
+
+/* ---------- shared state (live in db, or on this phone) ----------
+   Collections: done/<quest>, unlocked/<quest>, pushes/<id>, twists/<level>,
+   and run/state {resetAt}, run/boss, run/santa, run/bingo. One doc per thing,
+   so two phones (or the groom) writing at once never clobber each other. */
+const COLS = ['done', 'unlocked', 'pushes', 'twists', 'run'];
+const S = { done: {}, unlocked: {}, pushes: {}, twists: {}, run: {} };
+const got = { done: false, unlocked: false, pushes: false, twists: false, run: false };
+const R = k => S.run[k] || null;
+let mode = 'boot';
+let db = null, isOwner = false;
+const cap = { artifact: null, assets: null, downloads: null, readOnly: false, inViewer: false };
+const ui = {
+  view: 'board', tab: 'quests', sheet: null, card: null, popup: null, chest: false, lvQueue: [], pushQueue: [], victory: false,
+  armed: null, credits: false, liveNote: '', fresh: false, slow: false, photos: {}, pending: {}, busy: {}, award: 100,
+  msg: '', note: '', code: ''
+};
+const unsubs = [];
+let draft = null, dirty = false, copyText = null, pendingRender = false;
+
+function loaded() { return mode === 'local' || (mode === 'live' && COLS.every(k => got[k])); }
+function loadLocal() { const L = ls.get(LKEY) || {}; COLS.forEach(k => { S[k] = (L[k] && typeof L[k] === 'object') ? L[k] : {}; }); }
+function saveLocal() { const o = {}; COLS.forEach(k => { o[k] = S[k]; }); ls.set(LKEY, o); }
+function applyLocal(path, data) {
+  const [k, id] = path.split('/');
+  const next = Object.assign({}, S[k]);
+  if (data == null) delete next[id]; else next[id] = data;
+  S[k] = next;
+}
+const queues = {};
+function serial(path, fn) { const prev = queues[path] || Promise.resolve(); const p = prev.then(fn, fn); queues[path] = p.catch(() => {}); return p; }
+function goLocal(note) {
+  if (mode === 'local') return;
+  mode = 'local'; unsubs.splice(0).forEach(u => { try { u(); } catch (e) {} });
+  ui.liveNote = note; saveLocal(); onState(true);
+}
+async function put(path, data) {
+  applyLocal(path, data);
+  if (mode === 'live' && db) {
+    onState(true);
+    const ref = db.doc(path), op = () => data == null ? ref.delete() : ref.set(data);
+    try {
+      try { await serial(path, op); }
+      catch (e) { if (e && e.code === 'unavailable') { await new Promise(r => setTimeout(r, 600 + Math.random() * 900)); await serial(path, op); } else throw e; }
+    } catch (e) {
+      const code = e && e.code;
+      if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed'].includes(code)) goLocal('This phone can’t save to the live game, so progress stays on this phone. Text the groom your codes.');
+      else if (code === 'quota_exceeded') toast('The live game is full. Ask the groom to reset the run.');
+      else toast('That didn’t reach the groom. It’s saved here; try again in a moment.');
+    }
+    return;
+  }
+  saveLocal(); onState(true);
+}
+
+function subscribe() {
+  const timer = setTimeout(() => { ui.slow = true; if (!ui.fresh) { ui.liveNote = 'Can’t reach the live game yet. Hang on, or check the Wi-Fi.'; onState(); } }, 10000);
+  const fresh = snap => { if (snap && snap.metadata && !snap.metadata.fromCache && !ui.fresh) { ui.fresh = true; clearTimeout(timer); if (/reach the live/.test(ui.liveNote)) ui.liveNote = ''; } };
+  const err = e => {
+    clearTimeout(timer); ui.slow = true;
+    const code = e && e.code;
+    if (['revoked', 'not_granted', 'capability_disabled', 'capability_removed', 'invalid_argument'].includes(code)) goLocal('Lost the live connection, so progress stays on this phone now.');
+    else { ui.liveNote = 'The live connection dropped. Reload the page to reconnect.'; onState(); }
+  };
+  COLS.forEach(k => unsubs.push(db.collection(k).onSnapshot(snap => {
+    const o = {}; snap.docs.forEach(d => { if (d.exists) o[d.id] = d.data(); }); S[k] = o; got[k] = true; fresh(snap); onState();
+  }, err)));
+}
+
+/* ---------- photos kept on this phone ---------- */
+const idb = (() => {
+  let dbp = null;
+  const open = () => dbp || (dbp = new Promise((res, rej) => {
+    try { const r = indexedDB.open('bridequest', 1); r.onupgradeneeded = () => r.result.createObjectStore('photos'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }
+    catch (e) { rej(e); }
+  }));
+  const tx = (m, fn) => open().then(d => new Promise((res, rej) => { const t = d.transaction('photos', m); fn(t.objectStore('photos')); t.oncomplete = () => res(); t.onerror = () => rej(t.error); }));
+  return {
+    put: (k, v) => tx('readwrite', s => s.put(v, k)),
+    clear: () => tx('readwrite', s => s.clear()),
+    all: () => open().then(d => new Promise((res, rej) => { const out = {}; const c = d.transaction('photos').objectStore('photos').openCursor(); c.onsuccess = () => { const cur = c.result; if (cur) { out[cur.key] = cur.value; cur.continue(); } else res(out); }; c.onerror = () => rej(c.error); }))
+  };
+})();
+async function loadPhotos() { try { const all = await idb.all(); Object.keys(all).forEach(k => { if (all[k] instanceof Blob) ui.photos[k] = URL.createObjectURL(all[k]); }); } catch (e) {} }
+function photoSrc(id) { if (ui.photos[id]) return ui.photos[id]; const d = S.done[id]; return d && d.photo ? videoSrc(d.photo) : ''; }
+function downscale(file, max = 1600, q = 0.82) {
+  return new Promise(res => {
+    const url = URL.createObjectURL(file), img = new Image();
+    img.onload = () => {
+      const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth * s); c.height = Math.round(img.naturalHeight * s);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(b => res(b || file), 'image/jpeg', q);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); res(file); };
+    img.src = url;
+  });
+}
+async function onPhoto(input) {
+  const f = input.files && input.files[0], id = input.dataset.photo; if (!f || !id) return;
+  ui.busy[id] = 'Saving the photo…'; render(true);
+  const blob = await downscale(f);
+  try { await idb.put(id, blob); } catch (e) {}
+  if (ui.photos[id]) URL.revokeObjectURL(ui.photos[id]);
+  ui.photos[id] = URL.createObjectURL(blob);
+  let assetId = null;
+  if (cap.assets && mode === 'live') {
+    ui.busy[id] = 'Sending it to the groom…'; render(true);
+    try { assetId = (await cap.assets.upload(blob, { type: blob.type === 'image/png' ? 'image/png' : 'image/jpeg' })).id; }
+    catch (e) { toast('Saved on this phone. It didn’t reach the groom.'); }
+  }
+  delete ui.busy[id];
+  if (S.done[id]) { if (assetId) await put('done/' + id, Object.assign({}, S.done[id], { photo: assetId })); else render(true); }
+  else { ui.pending[id] = assetId; render(true); }
+}
+
+/* ---------- XP and levels ---------- */
+function xpTotal() {
+  let x = 0;
+  Object.keys(S.done).forEach(id => { const q = qById(id); if (q) x += q.xp; });
+  Object.keys(S.pushes).forEach(id => { const p = S.pushes[id]; if (p && p.kind === 'xp') x += Math.round(+p.amount || 0); });
+  return Math.max(0, x);
+}
+function levelInfo() {
+  const xp = xpTotal(), list = levelsSorted(); let i = 0;
+  list.forEach((L, k) => { if (xp >= L.xp) i = k; });
+  const cur = list[i], next = list[i + 1];
+  const pct = next ? Math.max(0, Math.min(100, Math.round((xp - cur.xp) / Math.max(1, next.xp - cur.xp) * 100))) : 100;
+  return { xp, n: i + 1, title: cur.title, next, pct, list };
+}
+const twistText = n => { const t = S.twists[n]; return t && typeof t.text === 'string' ? t.text : ''; };
+function currentTwist() { const lv = levelInfo().n; const keys = Object.keys(S.twists).map(Number).filter(n => n <= lv && twistText(n)).sort((a, b) => b - a); return keys.length ? twistText(keys[0]) : ''; }
+
+/* ---------- popups: level-ups and the groom's pushes (each phone shows each one once) ---------- */
+function checkReset() {
+  const st = R('state'), r = st && st.resetAt;
+  if (!r || ls.get(RKEY) === r) return;
+  ls.set(RKEY, r); ls.del(LVKEY); ls.del(PKEY); ui.lvQueue = []; ui.pushQueue = []; ui.victory = false;
+  if (ui.popup && ui.popup.kind !== 'push') ui.popup = null;
+  Object.keys(ui.photos).forEach(k => URL.revokeObjectURL(ui.photos[k])); ui.photos = {}; ui.pending = {};
+  idb.clear().catch(() => {});
+}
+function checkLevels() {
+  const lv = levelInfo().n, seen = ls.get(LVKEY);
+  if (seen == null) { ls.set(LVKEY, lv); return; }
+  if (lv <= seen) return;
+  const roll = [], used = new Set(Object.keys(S.twists).map(twistText));
+  for (let n = seen + 1; n <= lv; n++) {
+    ui.lvQueue.push(n);
+    if (!twistText(n) && DATA.twists.length) { const pool = DATA.twists.filter(t => !used.has(t)); const t = pick(pool.length ? pool : DATA.twists); used.add(t); roll.push([n, t]); }
+  }
+  ls.set(LVKEY, lv);
+  roll.forEach(([n, t]) => put('twists/' + n, { text: t, at: Date.now() }));
+}
+function checkPushes() {
+  const ids = Object.keys(S.pushes).sort((a, b) => (S.pushes[a].at || 0) - (S.pushes[b].at || 0));
+  const stored = ls.get(PKEY);
+  if (stored == null) { ls.set(PKEY, ids); return; }
+  const seen = new Set(stored); let changed = false;
+  ids.forEach(id => { if (!seen.has(id)) { seen.add(id); ui.pushQueue.push(id); changed = true; } });
+  if (changed) ls.set(PKEY, Array.from(seen));
+}
+function nextPopup() {
+  if (ui.popup) return;
+  if (ui.victory) { ui.victory = false; ui.popup = { kind: 'victory' }; return; }
+  if (ui.lvQueue.length) { ui.popup = { kind: 'level', n: ui.lvQueue.shift() }; ui.chest = false; return; }
+  while (ui.pushQueue.length) { const id = ui.pushQueue.shift(); if (S.pushes[id]) { ui.popup = { kind: 'push', id }; return; } }
+}
+function onState(force) {
+  /* popups only once this phone has the real picture (not a stale cached copy) */
+  if (mode !== 'boot' && loaded() && (mode === 'local' || ui.fresh || ui.slow) && ui.view === 'board') { checkReset(); checkLevels(); checkPushes(); nextPopup(); }
+  if (ui.view === 'setup' || ui.view === 'gate') return;
+  render(force);
+}
+
+/* ---------- toast ---------- */
+let toastEl = null, toastT = null;
+function toast(msg) {
+  if (!toastEl) { toastEl = document.createElement('div'); toastEl.className = 'toast'; toastEl.setAttribute('role', 'status'); toastEl.setAttribute('aria-live', 'polite'); document.body.appendChild(toastEl); }
+  toastEl.textContent = msg; toastEl.hidden = false;
+  clearTimeout(toastT); toastT = setTimeout(() => { toastEl.hidden = true; }, 3600);
+}
+
+/* ---------- quest actions ---------- */
+async function completeQuest(id, quiet) {
+  const q = qById(id); if (!q || S.done[id]) return;
+  const photo = ui.pending[id] || null; delete ui.pending[id];
+  if (ui.sheet === id) ui.sheet = null;
+  if (!quiet) toast('Quest complete! +' + fmt(q.xp) + ' XP');
+  await put('done/' + id, { at: Date.now(), photo });
+}
+function bingoLines(marked) {
+  const m = new Set(marked), L = [];
+  for (let r = 0; r < 4; r++) L.push([0, 1, 2, 3].map(c => r * 4 + c));
+  for (let c = 0; c < 4; c++) L.push([0, 1, 2, 3].map(r => r * 4 + c));
+  L.push([0, 5, 10, 15], [3, 6, 9, 12]);
+  return L.some(line => line.every(p => m.has(p)));
+}
+const bingoSquares = () => { const sq = DATA.bingo.slice(0, 16); while (sq.length < 16) sq.push('Free space'); return sq; };
+
+/* ---------- rendering ---------- */
+function render(force) {
+  const ae = document.activeElement;
+  if (!force && ae && app.contains(ae) && /^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) && !['file', 'checkbox', 'radio'].includes(ae.type)) { pendingRender = true; return; }
+  pendingRender = false;
+  let html;
+  const waiting = mode === 'boot' || (mode === 'live' && !loaded() && !ui.slow && (ui.view === 'board' || ui.view === 'hq'));
+  if (waiting) html = `<main class="wrap"><p class="boot">${mode === 'boot' ? 'Loading the quest…' : 'Joining the live game…'}</p></main>`;
+  else if (ui.view === 'hq') html = viewHQ();
+  else if (ui.view === 'gate') html = viewGate();
+  else if (ui.view === 'setup') html = viewSetup();
+  else html = viewBoard();
+  if (!waiting && (ui.view === 'board' || ui.view === 'hq')) {
+    if (ui.sheet) html += viewSheet();
+    if (ui.card) html += viewCard();
+    if (ui.popup) html += viewPopup();
+    if (ui.credits) html += viewCredits();
+  }
+  app.innerHTML = html;
+  after();
+}
+function after() {
+  $$('video', app).forEach(v => v.addEventListener('error', () => {
+    const n = document.createElement('p'); n.className = 'vid-missing';
+    n.textContent = 'This video won’t play on this device. If there’s a link, use that, or ask the groom to text it.';
+    v.replaceWith(n);
+  }, { once: true }));
+  const roll = $('.roll', app);
+  if (roll) { if (reduced()) roll.classList.add('static'); else roll.addEventListener('animationend', () => roll.classList.add('static'), { once: true }); }
+  const overlay = (ui.view === 'board' || ui.view === 'hq') && (ui.sheet || ui.card || ui.popup || ui.credits);
+  document.body.style.overflow = overlay ? 'hidden' : '';
+  /* move focus into a newly opened overlay so keyboards and screen readers land in it */
+  const key = overlay ? JSON.stringify([ui.sheet, ui.card && ui.card.kind, ui.popup, ui.credits]) : '';
+  if (key && key !== lastOverlay) { const ovs = $$('.ov', app), top = ovs[ovs.length - 1]; const f = top && top.querySelector('button,[href],input'); if (f && !top.contains(document.activeElement)) { try { f.focus({ preventScroll: true }); } catch (e) {} } }
+  lastOverlay = key;
+}
+let lastOverlay = '';
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape') return;
+  if (ui.credits) { ui.credits = false; render(true); }
+  else if (ui.card) { if (ui.card.kind === 'image') URL.revokeObjectURL(ui.card.url); ui.card = null; render(true); }
+  else if (ui.sheet && !ui.popup) { ui.sheet = null; render(true); }
+});
+/* a render that waited for typing to stop runs after the tap that ended it has landed */
+app.addEventListener('focusout', () => { setTimeout(() => { if (pendingRender) render(); }, 450); });
+
+const chestSvg = () => '<svg viewBox="0 0 32 24" width="96" height="72" aria-hidden="true" shape-rendering="crispEdges"><rect x="2" y="3" width="28" height="9" style="fill:var(--chest)"/><rect x="2" y="12" width="28" height="11" style="fill:var(--chest-lo)"/><rect x="2" y="11" width="28" height="2" style="fill:var(--gold)"/><rect x="2" y="3" width="2" height="20" style="fill:var(--gold)"/><rect x="28" y="3" width="2" height="20" style="fill:var(--gold)"/><rect x="14" y="9" width="4" height="7" style="fill:var(--gold)"/><rect x="15" y="12" width="2" height="2" style="fill:var(--chest-lo)"/></svg>';
+function lootBody(l) {
+  const v = videoSrc(l.video), link = safeUrl(l.link);
+  if (!l.text.trim() && !v && !link) return '<p class="loot-text muted">This chest is empty. The groom owes you one.</p>';
+  return `${v ? `<video class="vid" src="${v}" controls playsinline preload="metadata"></video>` : ''}${l.text.trim() ? `<p class="loot-text">${esc(l.text)}</p>` : ''}${link ? `<a class="btn gold block" href="${esc(link)}" target="_blank" rel="noopener">Open it</a>` : ''}`;
+}
+
+function statusWin(L, withParty) {
+  const b = DATA.party[0] || { name: DATA.bride, cls: 'The Bride', tag: '' };
+  const tw = currentTwist();
+  return `<section class="win status" aria-label="Party status">
+    <div class="hero">
+      <div class="hero-id"><p class="win-title">${esc(b.cls || 'The Bride')}${b.tag ? ' · ' + esc(b.tag) : ''}</p><button class="hero-name" data-act="party" data-i="0">${esc(b.name || DATA.bride)}</button><p class="hero-title">${esc(L.title)}</p></div>
+      <div class="lv"><span>Lv.</span><b>${L.n}</b></div>
+    </div>
+    <div class="xpbar" role="progressbar" aria-label="Experience toward the next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.pct}"><i style="width:${L.pct}%"></i></div>
+    <p class="xpline"><span>${fmt(L.xp)} XP</span><span>${L.next ? fmt(L.next.xp - L.xp) + ' to Lv. ' + (L.n + 1) : 'Max level'}</span></p>
+    ${withParty && DATA.party.length > 1 ? `<div class="party">${DATA.party.slice(1).map((p, k) => `<button class="pchip" data-act="party" data-i="${k + 1}"><b>${esc(p.name)}</b><span>${esc(p.cls)}</span></button>`).join('')}</div>` : ''}
+    ${tw ? `<p class="twist"><span>Twist</span>${esc(tw)}</p>` : ''}
+    ${mode === 'live' && ui.fresh ? '<p class="live">Live with the groom</p>' : ''}
+  </section>`;
+}
+
+function viewBoard() {
+  const L = levelInfo();
+  const tabs = { quests: 'Quests', loot: 'Loot', log: 'Log' };
+  return `<main class="wrap">
+    ${isOwner ? `<div class="ownerbar"><span>You’re seeing her board.</span><button class="btn small" data-act="to-hq">Back to Groom HQ</button></div>` : ''}
+    ${statusWin(L, true)}
+    ${ui.liveNote ? `<p class="note">${esc(ui.liveNote)}</p>` : ''}
+    <nav class="tabs" role="tablist" aria-label="Sections">${Object.keys(tabs).map(t => `<button class="tab" role="tab" aria-selected="${ui.tab === t}" data-act="tab" data-t="${t}">${tabs[t]}</button>`).join('')}</nav>
+    ${ui.tab === 'quests' ? tabQuests() : ui.tab === 'loot' ? tabLoot(L) : tabLog(L)}
+    <footer class="foot"><button class="link" data-act="gate">Groom setup</button></footer>
+  </main>`;
+}
+function qRow(q) {
+  const d = S.done[q.id], hidden = q.ch === 'hidden';
+  const tier = d ? 'done' : hidden ? 'hidden' : q.tier;
+  const glyph = d ? '✓' : hidden ? '?' : '◆';
+  const sub = d ? 'Done at ' + clock(d.at) + (photoSrc(q.id) ? ' · photo' : '') : tierLabel(q);
+  return `<button class="qrow${d ? ' done' : ''}" data-act="open" data-q="${q.id}"><span class="gem t-${tier}" aria-hidden="true">${glyph}</span><span class="qmain"><span class="qtitle">${esc(q.title || 'Untitled quest')}${hidden && !d ? '<span class="newtag">NEW</span>' : ''}</span><span class="qsub">${esc(sub)}</span></span><span class="qxp">${d ? '' : '+'}${fmt(q.xp)}</span></button>`;
+}
+function tabQuests() {
+  const vis = q => q.ch !== 'hidden' || S.unlocked[q.id];
+  const chs = DATA.chapters.filter(c => DATA.quests.some(q => q.ch === c.id && vis(q)));
+  return `<form class="win" id="codeform" autocomplete="off">
+      <label class="win-title" for="code-in">Got a code from the groom?</label>
+      <div class="code-row"><input id="code-in" type="text" autocapitalize="characters" autocomplete="off" spellcheck="false" maxlength="24" placeholder="CODE" value="${esc(ui.code)}"><button class="btn gold" type="submit">Unlock</button></div>
+    </form>
+    ${chs.map(c => { const qs = DATA.quests.filter(q => q.ch === c.id && vis(q)); const n = qs.filter(q => S.done[q.id]).length;
+      return `<section class="win" aria-label="${esc(c.name)}"><div class="chap"><h2>${esc(c.name)}</h2><span class="time">${esc(c.time)}${c.time ? ' · ' : ''}${n}/${qs.length}</span></div><div class="qlist">${qs.map(qRow).join('')}</div></section>`; }).join('')}`;
+}
+function tabLoot(L) {
+  const rows = L.list.slice(1).map((Lv, k) => {
+    const n = k + 2;
+    return L.n >= n
+      ? `<button class="qrow" data-act="loot" data-n="${n}"><span class="gem t-main" aria-hidden="true">◆</span><span class="qmain"><span class="qtitle">${esc(Lv.loot.title || 'Loot')}</span><span class="qsub">Lv. ${n} · ${esc(Lv.title)}</span></span><span class="qxp">Open</span></button>`
+      : `<div class="qrow locked"><span class="gem" aria-hidden="true">▪</span><span class="qmain"><span class="qtitle">???</span><span class="qsub">Unlocks at Lv. ${n} (${fmt(Lv.xp)} XP)</span></span><span class="qxp">Locked</span></div>`;
+  }).join('');
+  const boss = R('boss') && R('boss').defeated ? `<button class="qrow" data-act="loot" data-n="boss"><span class="gem t-legendary" aria-hidden="true">◆</span><span class="qmain"><span class="qtitle">${esc(DATA.boss.loot.title || 'Boss loot')}</span><span class="qsub">Dropped by ${esc(DATA.boss.name)}</span></span><span class="qxp">Open</span></button>` : '';
+  return `<section class="win"><p class="win-title">Loot chests</p><div class="qlist">${rows}${boss}</div></section>`;
+}
+function doneItems() { return Object.keys(S.done).map(id => ({ q: qById(id), d: S.done[id] })).filter(x => x.q).sort((a, b) => (a.d.at || 0) - (b.d.at || 0)); }
+function tabLog(L) {
+  const items = doneItems(), shots = items.filter(x => photoSrc(x.q.id));
+  return `<section class="win"><p class="win-title">Quest log</p>
+      <div class="stats"><div><b>${items.length}</b><span>Quests</span></div><div><b>${fmt(L.xp)}</b><span>XP</span></div><div><b>${L.n}</b><span>Level</span></div><div><b>${shots.length}</b><span>Photos</span></div></div>
+      ${items.length ? `<ol class="log">${items.map(x => `<li><span class="time">${clock(x.d.at)}</span><span>${esc(x.q.title)}</span><span class="qxp">+${fmt(x.q.xp)}</span></li>`).join('')}</ol>` : '<p class="muted">Nothing yet. Every finished quest lands here, with its photo.</p>'}
+      ${shots.length ? `<div class="shots">${shots.map(x => `<img src="${esc(photoSrc(x.q.id))}" alt="${esc(x.q.title)}" loading="lazy">`).join('')}</div>` : ''}
+    </section>
+    <div class="actions"><button class="btn gold" data-act="credits">Roll the credits</button><button class="btn" data-act="scrapbook"${shots.length ? '' : ' disabled'}>Save the scrapbook</button></div>
+    ${mode === 'local' ? `<button class="link${ui.armed === 'local-reset' ? ' danger' : ''}" data-act="local-reset">${ui.armed === 'local-reset' ? 'Tap again to wipe this phone’s progress' : 'Start over on this phone'}</button>` : ''}`;
+}
+
+function santaBlock() {
+  const P = DATA.party, sa = R('santa');
+  if (P.length < 2) return '';
+  if (!sa) return `<div class="santa"><p>Draw names. Then pass the phone around so each person secretly sees who they’re making an ornament for.</p><button class="btn gold" data-act="santa-draw">Draw names</button></div>`;
+  if (sa.step < P.length) {
+    const me = P[sa.step];
+    if (!sa.show) return `<div class="santa"><p class="win-title">Name draw · ${sa.step + 1} of ${P.length}</p><p class="big">Pass the phone to ${esc(me.name)}</p><p class="muted">Everyone else, look away.</p><button class="btn gold" data-act="santa-show">I’m ${esc(me.name)}. Show me.</button></div>`;
+    const to = P[sa.map[sa.step]] || {};
+    const nxt = P[sa.step + 1];
+    return `<div class="santa"><p class="win-title">Only ${esc(me.name)} should see this</p><p>You’re making an ornament for</p><p class="big">${esc(to.name || '')}</p><p class="muted">Keep it secret until the reveal.</p><button class="btn gold" data-act="santa-next">${nxt ? 'Hide it and pass to ' + esc(nxt.name) : 'Hide it'}</button></div>`;
+  }
+  return `<div class="santa"><p class="big">Everyone has a name.</p><p>Get crafting. The reveal happens before the Final Boss.</p><button class="link${ui.armed === 'santa-redraw' ? ' danger' : ''}" data-act="santa-redraw">${ui.armed === 'santa-redraw' ? 'Tap again to redraw everyone' : 'Redraw names'}</button></div>`;
+}
+function bingoBlock() {
+  const bg = R('bingo');
+  if (!bg) return `<button class="btn gold block" data-act="bingo-deal">Deal the bingo card</button>`;
+  const sq = bingoSquares(), on = new Set(bg.marked || []);
+  return `<div class="bingo" role="grid" aria-label="Bingo card">${bg.order.map((si, p) => si === 0
+    ? `<div class="cell free" role="gridcell">${esc(sq[0])}</div>`
+    : `<button class="cell${on.has(p) ? ' on' : ''}" role="gridcell" aria-pressed="${on.has(p)}" data-act="cell" data-p="${p}">${esc(sq[si])}</button>`).join('')}</div>`;
+}
+function bossBlock() {
+  const B = DATA.boss, s = R('boss');
+  if (!s) return `<div class="boss"><p class="boss-name">${esc(B.name)}</p><p class="muted">HP ${fmt(B.hp)}. He has a phone and he isn’t afraid to heal.</p><button class="btn holly big block" data-act="boss-start">Begin the battle</button></div>`;
+  const pct = Math.round(s.hp / Math.max(1, s.max) * 100);
+  const used = s.used || {};
+  return `<div class="boss">
+    <p class="boss-name">${esc(B.name)}</p>
+    <div class="hpbar" role="progressbar" aria-label="Boss HP" aria-valuemin="0" aria-valuemax="${s.max}" aria-valuenow="${s.hp}"><i style="width:${pct}%"></i></div>
+    <p class="xpline"><span>HP ${fmt(s.hp)} / ${fmt(s.max)}</span><span>${s.defeated ? 'Defeated' : ''}</span></p>
+    ${s.defeated ? '<button class="btn gold block" data-act="victory">Claim the loot</button>' : `<div class="attacks">${B.attacks.map((a, i) => `<button class="atk" data-act="attack" data-i="${i}"${used[i] ? ' disabled' : ''}><span class="atk-name">${esc(a.name)}</span><span class="atk-dmg">${used[i] ? 'Used' : fmt(a.dmg) + ' dmg'}</span><span class="atk-text">${esc(a.text)}</span></button>`).join('')}</div>`}
+    ${(s.log || []).length ? `<ol class="blog" reversed>${s.log.slice().reverse().slice(0, 6).map(l => `<li>${esc(l.t)}</li>`).join('')}</ol>` : ''}
+    ${s.defeated ? '' : `<button class="link${ui.armed === 'boss-reset' ? ' danger' : ''}" data-act="boss-reset">${ui.armed === 'boss-reset' ? 'Tap again to restart the battle' : 'Restart the battle'}</button>`}
+  </div>`;
+}
+function viewSheet() {
+  const q = qById(ui.sheet); if (!q) return '';
+  const d = S.done[q.id];
+  const special = q.type === 'santa' ? santaBlock() : q.type === 'bingo' ? bingoBlock() : q.type === 'boss' ? bossBlock() : '';
+  const v = videoSrc(q.video), link = safeUrl(q.link), ph = photoSrc(q.id);
+  const photo = `<div class="proof">${ph ? `<img src="${esc(ph)}" alt="Proof photo for ${esc(q.title)}">` : ''}${ui.busy[q.id] ? `<p class="muted">${esc(ui.busy[q.id])}</p>` : `<label class="btn ghost small file-btn">${ph ? 'Retake the photo' : q.photo ? 'Add a proof photo' : 'Add a photo (optional)'}<input type="file" accept="image/*" data-photo="${q.id}" aria-label="Photo for ${esc(q.title)}"></label>`}</div>`;
+  const act = d
+    ? `<p class="done-note">Completed at ${clock(d.at)} · +${fmt(q.xp)} XP</p><button class="link${ui.armed === 'undo-' + q.id ? ' danger' : ''}" data-act="undo" data-q="${q.id}">${ui.armed === 'undo-' + q.id ? 'Tap again to undo it' : 'Undo this quest'}</button>`
+    : `<button class="btn gold big block" data-act="complete" data-q="${q.id}">Quest complete · +${fmt(q.xp)} XP</button>`;
+  return `<div class="ov" role="dialog" aria-modal="true" aria-label="${esc(q.title)}"><section class="win sheet">
+    <div class="sheet-top"><p class="win-title">${esc(tierLabel(q))} · ${esc(chName(q.ch))}</p><button class="x" data-act="close" aria-label="Close">✕</button></div>
+    <h2 class="sheet-title">${esc(q.title)}</h2>
+    ${q.text ? `<p class="sheet-text">${esc(q.text)}</p>` : ''}
+    ${v ? `<video class="vid" src="${v}" controls playsinline preload="metadata"></video>` : ''}
+    ${link ? `<a class="btn block" href="${esc(link)}" target="_blank" rel="noopener">Open it</a>` : ''}
+    ${special}${photo}${act}
+  </section></div>`;
+}
+function viewCard() {
+  const c = ui.card;
+  if (c.kind === 'party') {
+    const p = DATA.party[c.i] || {};
+    return `<div class="ov" role="dialog" aria-modal="true" aria-label="Class card"><section class="win card">
+      <p class="win-title">Class card</p><p class="who">${esc(p.name)}</p><p class="cls">${esc(p.cls)}</p>${p.tag ? `<p class="muted">${esc(p.tag)}</p>` : ''}
+      <p class="ability">${esc(p.ability)}</p><button class="btn gold block" data-act="close">Close</button></section></div>`;
+  }
+  if (c.kind === 'loot') {
+    const isBoss = c.n === 'boss', L = isBoss ? DATA.boss.loot : (levelsSorted()[c.n - 1] || {}).loot;
+    if (!L) return '';
+    return `<div class="ov" role="dialog" aria-modal="true" aria-label="Loot"><section class="win pop">
+      <p class="win-title">${isBoss ? 'Boss loot' : 'Lv. ' + c.n + ' loot'}</p>${chestSvg()}<div class="loot"><h3>${esc(L.title || 'Loot')}</h3>${lootBody(L)}</div>
+      <button class="btn gold block" data-act="close">Close</button></section></div>`;
+  }
+  if (c.kind === 'image') {
+    return `<div class="ov" role="dialog" aria-modal="true" aria-label="Scrapbook"><section class="win pop"><p class="win-title">Your scrapbook</p><img src="${esc(c.url)}" alt="Bride Quest scrapbook" style="width:100%;border-radius:8px"><p>Press and hold the image to save it.</p><button class="btn gold block" data-act="close">Close</button></section></div>`;
+  }
+  return '';
+}
+function viewPopup() {
+  const p = ui.popup, wrap = inner => `<div class="ov pop-ov" role="dialog" aria-modal="true" aria-live="assertive"><section class="win pop">${inner}</section></div>`;
+  if (p.kind === 'level') {
+    const lv = levelsSorted()[p.n - 1]; if (!lv) return '';
+    const tw = twistText(p.n);
+    return wrap(`<p class="lvup-big">LEVEL UP!</p>
+      <p class="lvup-line">${esc(brideName())} reached <b>Lv. ${p.n}</b></p><p class="lvup-title">${esc(lv.title)}</p>
+      ${ui.chest ? `<div class="loot"><p class="win-title">Loot</p><h3>${esc(lv.loot.title || 'Loot')}</h3>${lootBody(lv.loot)}</div>` : `<button class="chest-btn" data-act="chest">${chestSvg()}<span>Open the chest</span></button>`}
+      ${tw ? `<div class="twistcard"><p class="win-title">New twist for the next craft</p><p>${esc(tw)}</p></div>` : ''}
+      <button class="btn gold block" data-act="popup-next">${ui.lvQueue.length ? 'Next level' : 'Continue'}</button>`);
+  }
+  if (p.kind === 'push') {
+    const pu = S.pushes[p.id] || {};
+    if (pu.kind === 'quest') {
+      const q = qById(pu.qid) || {};
+      return wrap(`<p class="bang">!</p><p class="pop-head">A hidden quest has appeared!</p><p class="lvup-title">${esc(q.title || '')}</p><p class="msg">${esc(q.text || '')}</p>
+        <button class="btn gold block" data-act="popup-open" data-q="${esc(q.id || '')}">Open the quest</button><button class="btn ghost block" data-act="popup-next">Later</button>`);
+    }
+    if (pu.kind === 'xp') return wrap(`<p class="bang">!</p><p class="pop-head">The groom awards <b>+${fmt(pu.amount || 0)} XP</b></p>${pu.note ? `<p class="msg" style="text-align:center">${esc(pu.note)}</p>` : ''}<button class="btn gold block" data-act="popup-next">Nice</button>`);
+    return wrap(`<p class="bang">!</p><p class="pop-head">A message from the groom</p><p class="msg">${esc(pu.text || '')}</p><button class="btn gold block" data-act="popup-next">Close</button>`);
+  }
+  if (p.kind === 'victory') {
+    const bq = DATA.quests.find(q => q.type === 'boss');
+    return wrap(`<p class="lvup-big">VICTORY!</p><p class="lvup-line">${esc(DATA.boss.name)} has been defeated.</p>
+      ${chestSvg()}<div class="loot"><p class="win-title">Boss loot</p><h3>${esc(DATA.boss.loot.title || 'Loot')}</h3>${lootBody(DATA.boss.loot)}</div>
+      ${bq ? `<p class="done-note">+${fmt(bq.xp)} XP</p>` : ''}<button class="btn gold block" data-act="popup-next">Continue</button>`);
+  }
+  return '';
+}
+function viewCredits() {
+  const L = levelInfo(), items = doneItems(), shots = items.filter(x => photoSrc(x.q.id));
+  return `<div class="ov credits-ov" role="dialog" aria-modal="true" aria-label="Credits"><div class="credits" data-act="credits-skip"><div class="roll">
+    <p class="cr-big">BRIDE QUEST</p><p class="cr-sub">A girls’ night in · ${esc(new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' }))}</p>
+    <p class="cr-h">Starring</p>${DATA.party.map(p => `<p class="cr-role"><b>${esc(p.name)}</b> as ${esc(p.cls)}</p>`).join('')}
+    <p class="cr-h">Final level</p><p class="cr-role"><b>Lv. ${L.n}</b> ${esc(L.title)}</p>
+    <p class="cr-h">Quests completed · ${items.length}</p>${items.map(x => `<p class="cr-line">${esc(x.q.title)}</p>`).join('')}
+    ${R('boss') && R('boss').defeated ? `<p class="cr-h">Boss defeated</p><p class="cr-line">${esc(DATA.boss.name)}</p>` : ''}
+    <p class="cr-h">Special thanks</p><p class="cr-line">Mod Podge</p><p class="cr-line">The napkin industry</p><p class="cr-line">Granny’s apple tree</p>
+    ${shots.length ? `<div class="shots">${shots.map(x => `<img src="${esc(photoSrc(x.q.id))}" alt="${esc(x.q.title)}">`).join('')}</div>` : ''}
+    <p class="cr-h">To be continued</p><p class="cr-big" style="font-size:clamp(28px,8vw,44px)">DECEMBER 1</p>
+  </div></div><button class="btn small cr-close" data-act="credits-close">Close</button></div>`;
+}
+
+/* ---------- groom HQ ---------- */
+function viewHQ() {
+  const L = levelInfo(), hidden = DATA.quests.filter(q => q.ch === 'hidden');
+  const feed = Object.keys(S.done).map(id => ({ q: qById(id), d: S.done[id] })).filter(x => x.q).sort((a, b) => (b.d.at || 0) - (a.d.at || 0)).slice(0, 25);
+  const s = R('boss');
+  return `<main class="wrap">
+    <header class="hq-head"><div><p class="win-title">For the groom only</p><h1 class="hq-title">GROOM HQ</h1></div>
+      <div class="actions"><button class="btn small" data-act="to-board">See her board</button><button class="btn small" data-act="setup">Edit the quest</button></div></header>
+    ${mode !== 'live' ? `<p class="note">${esc(ui.liveNote || 'The live game isn’t connected here, so HQ can’t see or send anything.')}</p>` : !ui.fresh ? '<p class="note">Connecting to the live game…</p>' : ''}
+    ${statusWin(L, false)}
+    <section class="win"><p class="win-title">Unleash a hidden quest</p>
+      ${hidden.length ? hidden.map(q => `<div class="hq-row"><div><b>${esc(q.title)}</b><p class="small muted">Code ${esc(q.code || 'none')} · +${fmt(q.xp)} XP</p></div>${S.unlocked[q.id] ? `<span class="tagok">${S.done[q.id] ? 'Done' : 'Sent'}</span>` : `<button class="btn small holly" data-act="send-quest" data-q="${q.id}">Send</button>`}</div>`).join('') : '<p class="muted">No hidden quests yet. Add some in Edit the quest.</p>'}
+    </section>
+    <section class="win"><p class="win-title">Award XP</p>
+      <div class="chips">${[50, 100, 150, 200, 300].map(a => `<button class="chip${ui.award === a ? ' on' : ''}" data-act="award-amt" data-a="${a}" aria-pressed="${ui.award === a}">+${a}</button>`).join('')}</div>
+      <div class="field"><label for="award-note">Why (they’ll see this)</label><input id="award-note" type="text" maxlength="90" value="${esc(ui.note)}" placeholder="Best in Show: Mom’s penguin"></div>
+      <button class="btn gold" data-act="award">Award +${ui.award} XP</button>
+    </section>
+    <section class="win"><p class="win-title">Send a message</p>
+      <div class="field"><label for="msg-in" class="sr-only">Message</label><textarea id="msg-in" rows="3" maxlength="400" placeholder="Pops up on her screen right away.">${esc(ui.msg)}</textarea></div>
+      <button class="btn" data-act="send-msg">Send it</button>
+    </section>
+    <section class="win"><p class="win-title">Final boss</p>
+      ${s ? `<div class="hpbar" role="progressbar" aria-label="Your HP" aria-valuemin="0" aria-valuemax="${s.max}" aria-valuenow="${s.hp}"><i style="width:${Math.round(s.hp / Math.max(1, s.max) * 100)}%"></i></div><p class="xpline"><span>Your HP ${fmt(s.hp)} / ${fmt(s.max)}</span><span>${s.defeated ? 'Defeated' : ''}</span></p>
+        ${(s.log || []).length ? `<ol class="blog" reversed>${s.log.slice().reverse().slice(0, 4).map(l => `<li>${esc(l.t)}</li>`).join('')}</ol>` : ''}
+        ${s.defeated ? '' : '<button class="btn holly" data-act="potion">Drink a potion (+100 HP)</button>'}` : '<p class="muted">The battle hasn’t started. When it does, your HP shows here and you can heal yourself.</p>'}
+    </section>
+    <section class="win"><p class="win-title">Live feed</p>
+      ${feed.length ? `<ul class="feed">${feed.map(x => { const ph = photoSrc(x.q.id); return `<li>${ph ? `<img src="${esc(ph)}" alt="${esc(x.q.title)}" loading="lazy">` : '<span class="nophoto">No photo</span>'}<div><b>${esc(x.q.title)}</b><p class="small muted">${clock(x.d.at)} · +${fmt(x.q.xp)} XP</p></div></li>`; }).join('')}</ul>` : '<p class="muted">Nothing finished yet.</p>'}
+    </section>
+    <section class="win"><p class="win-title">Testing</p>
+      <p class="muted small">Wipe every finished quest, hidden quest, message, and the boss fight so Friday starts fresh. Her phone forgets its photos too.</p>
+      <button class="btn${ui.armed === 'reset' ? ' holly' : ''}" data-act="reset">${ui.armed === 'reset' ? 'Tap again to wipe the run' : 'Reset the run'}</button>
+    </section>
+  </main>`;
+}
+
+/* ---------- scrapbook image ---------- */
+function loadImg(src) { return new Promise(res => { const i = new Image(); if (/^https?:/.test(src)) i.crossOrigin = 'anonymous'; i.onload = () => res(i); i.onerror = () => res(null); i.src = src; }); }
+function fitText(g, t, w) { if (g.measureText(t).width <= w) return t; while (t.length > 1 && g.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; }
+async function makeScrapbook() {
+  const items = doneItems().filter(x => photoSrc(x.q.id)); if (!items.length) return;
+  toast('Making the scrapbook…');
+  try { await document.fonts.ready; } catch (e) {}
+  const L = levelInfo(), W = 1080, cols = 3, cell = 320, gap = 20, pad = 40, cap_ = 52, head = 300, foot = 150;
+  const rows = Math.ceil(items.length / cols), H = head + rows * (cell + cap_ + gap) + foot;
+  const c = document.createElement('canvas'); c.width = W; c.height = H; const g = c.getContext('2d');
+  const px = cssVar('--f-pixel'), body = cssVar('--f-body');
+  g.fillStyle = cssVar('--night'); g.fillRect(0, 0, W, H);
+  g.textAlign = 'center'; g.fillStyle = cssVar('--gold'); g.font = '88px ' + px; g.fillText('BRIDE QUEST', W / 2, 130);
+  g.fillStyle = cssVar('--ink'); g.font = '700 36px ' + body; g.fillText(fitText(g, `${brideName()} reached Lv. ${L.n} · ${L.title}`, W - 2 * pad), W / 2, 196);
+  g.fillStyle = cssVar('--muted'); g.font = '28px ' + body; g.fillText(`${new Date().toLocaleDateString([], { month: 'long', day: 'numeric', year: 'numeric' })} · ${doneItems().length} quests · ${fmt(L.xp)} XP`, W / 2, 246);
+  for (let k = 0; k < items.length; k++) {
+    const x = pad + (k % cols) * (cell + gap), y = head + Math.floor(k / cols) * (cell + cap_ + gap);
+    g.fillStyle = cssVar('--win-edge'); g.fillRect(x - 4, y - 4, cell + 8, cell + 8);
+    const img = await loadImg(photoSrc(items[k].q.id));
+    if (img) { const s = Math.max(cell / img.naturalWidth, cell / img.naturalHeight), w = img.naturalWidth * s, h = img.naturalHeight * s; g.save(); g.beginPath(); g.rect(x, y, cell, cell); g.clip(); g.drawImage(img, x + (cell - w) / 2, y + (cell - h) / 2, w, h); g.restore(); }
+    else { g.fillStyle = cssVar('--win-bot'); g.fillRect(x, y, cell, cell); }
+    g.textAlign = 'left'; g.fillStyle = cssVar('--ink'); g.font = '700 24px ' + body; g.fillText(fitText(g, items[k].q.title, cell), x, y + cell + 36);
+  }
+  g.textAlign = 'center'; g.fillStyle = cssVar('--gold'); g.font = '40px ' + px; g.fillText('TO BE CONTINUED · DECEMBER 1', W / 2, H - 64);
+  const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.9));
+  if (!blob) { toast('The scrapbook didn’t render. Try again.'); return; }
+  if (cap.downloads) {
+    try { await cap.downloads.save({ filename: 'bride-quest-scrapbook.jpg', data: blob }); toast('Scrapbook saved.'); return; }
+    catch (e) { if (e && e.code === 'declined') return; }
+  }
+  ui.card = { kind: 'image', url: URL.createObjectURL(blob) }; render(true);
+}
+
+/* ---------- setup (the groom's editor) ---------- */
+function viewGate() {
+  return `<main class="wrap"><section class="win"><p class="win-title">Spoiler warning</p><h1 class="big-title">GROOM ONLY</h1>
+    <p>The next screen shows every quest, every loot chest, and every secret code. If you’re not the groom, tap Back.</p>
+    <div class="actions"><button class="btn gold" data-act="setup">I’m the groom. Show me.</button><button class="btn ghost" data-act="to-board">Back</button></div></section></main>`;
+}
+function openSetup() {
+  const d = ls.get(DKEY);
+  draft = (d && d.base === DATA.rev && d.data) ? normalize(d.data) : clone(DATA);
+  dirty = !!(d && d.base === DATA.rev); copyText = null; ui.armed = null;
+  ui.view = 'setup'; render(true); window.scrollTo(0, 0);
+}
+let draftT = null;
+function persistDraft() { dirty = true; clearTimeout(draftT); draftT = setTimeout(() => ls.set(DKEY, { base: DATA.rev, data: draft }), 400); const s = $('#setup-status', app); if (s) s.innerHTML = statusText(); }
+function statusText() {
+  const d = draft, parts = [];
+  const empty = d.levels.slice(1).concat([{ loot: d.boss.loot }]).filter(L => !L.loot.text.trim() && !L.loot.video && !safeUrl(L.loot.link)).length;
+  const nocode = d.quests.filter(q => q.ch === 'hidden' && !q.code).length;
+  if (empty) parts.push(`<b>${empty} empty loot chest${empty === 1 ? '' : 's'}</b>`);
+  if (nocode) parts.push(`<b>${nocode} hidden quest${nocode === 1 ? '' : 's'} without a code</b>`);
+  if (d.bingo.length !== 16) parts.push(`<b>bingo has ${d.bingo.length}/16 squares</b>`);
+  if (!parts.length) parts.push('Everything’s filled in');
+  parts.push(dirty ? 'unsaved changes' : 'saved');
+  return parts.join(' · ');
+}
+function setPath(obj, path, val) { const ks = path.split('.'); let o = obj; for (let i = 0; i < ks.length - 1; i++) o = o[ks[i]]; o[ks[ks.length - 1]] = val; }
+function getPath(obj, path) { return path.split('.').reduce((o, k) => o == null ? o : o[k], obj); }
+function videoField(path, label) {
+  const id = getPath(draft, path), src = videoSrc(id);
+  if (src) return `<div class="vrow"><video src="${src}" controls playsinline preload="metadata"></video><button class="btn small ghost" data-act="vremove" data-path="${path}">Remove video</button></div>`;
+  if (!cap.assets) return '';
+  return `<div class="vrow"><span class="btn small ghost file-btn">${esc(label)}<input type="file" accept="video/mp4,video/webm,video/quicktime" data-vpath="${path}" aria-label="${esc(label)}"></span><span>Under 20 MB. MP4 plays on every phone.</span></div>`;
+}
+function lootEditor(base, L, key) {
+  return `<div class="field"><label for="lt-${key}">Loot name</label><input type="text" id="lt-${key}" data-path="${base}.title" value="${esc(L.title)}" maxlength="60"></div>
+    <div class="field"><label for="lx-${key}">What’s in the chest</label><textarea id="lx-${key}" data-path="${base}.text" rows="3" placeholder="${esc(L.hint || 'A note, a clue to a hidden treat, or leave it to the video.')}">${esc(L.text)}</textarea></div>
+    <div class="field"><label for="ll-${key}">Video link</label><input type="url" id="ll-${key}" data-path="${base}.link" value="${esc(L.link)}" placeholder="https:// an unlisted YouTube or Google Photos link"></div>
+    ${videoField(base + '.video', 'Add a video')}`;
+}
+function viewSetup() {
+  const d = draft, canSave = !!cap.artifact && !cap.readOnly;
+  const qEd = (q, i) => {
+    const k = q.id, rm = ui.armed === 'rmq-' + k;
+    return `<div class="ed-item">
+      <div class="ed-grid"><div class="field"><label for="qt-${k}">Quest</label><input type="text" id="qt-${k}" data-path="quests.${i}.title" value="${esc(q.title)}" maxlength="80"></div>
+        <div class="field"><label for="qx-${k}">XP</label><input type="number" id="qx-${k}" data-path="quests.${i}.xp" data-num value="${q.xp}" min="0" step="50" inputmode="numeric"></div></div>
+      <div class="field"><label for="qd-${k}">What they do</label><textarea id="qd-${k}" data-path="quests.${i}.text" rows="4">${esc(q.text)}</textarea></div>
+      <div class="ed-grid three">
+        ${q.ch === 'hidden'
+          ? `<div class="field"><label for="qc-${k}">Secret code</label><input type="text" id="qc-${k}" data-path="quests.${i}.code" data-code value="${esc(q.code)}" maxlength="24" autocapitalize="characters" spellcheck="false"></div>`
+          : `<div class="field"><label for="qr-${k}">Rarity</label><select id="qr-${k}" data-path="quests.${i}.tier">${Object.keys(TIERS).map(t => `<option value="${t}"${q.tier === t ? ' selected' : ''}>${TIERS[t]}</option>`).join('')}</select></div>`}
+        <label class="check" for="qp-${k}"><input type="checkbox" id="qp-${k}" data-path="quests.${i}.photo"${q.photo ? ' checked' : ''}>Ask for a photo</label>
+      </div>
+      <div class="field"><label for="ql-${k}">Link (optional)</label><input type="url" id="ql-${k}" data-path="quests.${i}.link" value="${esc(q.link)}" placeholder="https://"></div>
+      ${videoField('quests.' + i + '.video', 'Add a video')}
+      ${q.type !== 'normal' ? `<p class="muted small">${TYPE_NOTE[q.type]}</p>` : ''}
+      <button class="link${rm ? ' danger' : ''}" data-act="rmq" data-q="${k}">${rm ? 'Tap again to delete it' : 'Delete this quest'}</button>
+    </div>`;
+  };
+  const chapters = d.chapters.map((c, ci) => {
+    const qs = d.quests.map((q, i) => ({ q, i })).filter(x => x.q.ch === c.id);
+    return `<section class="win" id="ed-ch-${c.id}" aria-label="${esc(c.name)}">
+      <div class="ed-grid three"><div class="field"><label for="cn-${c.id}">${c.id === 'hidden' ? 'Hidden quests section' : 'Chapter'}</label><input type="text" id="cn-${c.id}" data-path="chapters.${ci}.name" value="${esc(c.name)}" maxlength="40"></div>
+        <div class="field"><label for="ct-${c.id}">When</label><input type="text" id="ct-${c.id}" data-path="chapters.${ci}.time" value="${esc(c.time)}" maxlength="30"></div></div>
+      ${c.id === 'hidden' ? '<p class="muted small">These stay invisible until she types the code or you send them from Groom HQ.</p>' : ''}
+      ${qs.map(x => qEd(x.q, x.i)).join('')}
+      <button class="btn small ghost" data-act="addq" data-ch="${c.id}">Add a quest here</button>
+    </section>`;
+  }).join('');
+  const levels = d.levels.map((L, i) => `<div class="ed-item">
+      <div class="ed-grid"><div class="field"><label for="lvt-${i}">Lv. ${i + 1} title</label><input type="text" id="lvt-${i}" data-path="levels.${i}.title" value="${esc(L.title)}" maxlength="40"></div>
+        <div class="field"><label for="lvx-${i}">XP needed</label><input type="number" id="lvx-${i}" data-path="levels.${i}.xp" data-num value="${L.xp}" min="0" step="50" inputmode="numeric"${i === 0 ? ' disabled' : ''}></div></div>
+      ${i === 0 ? '<p class="muted small">Where she starts. No loot.</p>' : lootEditor('levels.' + i + '.loot', L.loot, 'lv' + i)}
+    </div>`).join('');
+  const atks = d.boss.attacks.map((a, i) => `<div class="ed-item">
+      <div class="ed-grid"><div class="field"><label for="an-${i}">Attack</label><input type="text" id="an-${i}" data-path="boss.attacks.${i}.name" value="${esc(a.name)}" maxlength="40"></div>
+        <div class="field"><label for="ad-${i}">Damage</label><input type="number" id="ad-${i}" data-path="boss.attacks.${i}.dmg" data-num value="${a.dmg}" min="0" step="50" inputmode="numeric"></div></div>
+      <div class="field"><label for="ax-${i}">What they do</label><input type="text" id="ax-${i}" data-path="boss.attacks.${i}.text" value="${esc(a.text)}" maxlength="140"></div>
+      <label class="check" for="ar-${i}"><input type="checkbox" id="ar-${i}" data-path="boss.attacks.${i}.repeat"${a.repeat ? ' checked' : ''}>Can be used more than once</label>
+      <button class="link${ui.armed === 'rma-' + i ? ' danger' : ''}" data-act="rma" data-i="${i}">${ui.armed === 'rma-' + i ? 'Tap again to delete it' : 'Delete this attack'}</button>
+    </div>`).join('');
+  return `<main class="wrap wide">
+    <div class="savebar"><p class="status" id="setup-status">${statusText()}</p>
+      <div class="actions"><button class="btn small ghost" data-act="${isOwner ? 'to-hq' : 'to-board'}">Close</button><button class="btn small gold" data-act="save"${canSave ? '' : ' disabled'}>Save to the game</button></div></div>
+    <header class="win"><p class="win-title">Groom setup</p><h1 class="big-title">THE QUEST</h1>
+      <p>Everything here is what her phone shows. Saving reloads anyone who has the page open, so finish edits before Friday at 4.</p>
+      <div class="chips">${[['ed-levels', 'Loot chests'], ['ed-boss', 'Final boss'], ['ed-ch-hidden', 'Hidden quests'], ['ed-twists', 'Twists'], ['ed-bingo', 'Bingo']].map(([id, l]) => `<button class="chip" data-act="jump" data-to="${id}">${l}</button>`).join('')}</div></header>
+    ${canSave ? '' : `<p class="note">${cap.readOnly ? 'This device can view the quest but can’t save it.' : 'Saving works when the groom opens this page from his key link. Your typing is kept on this device in the meantime.'}</p>`}
+    <section class="win" aria-label="The party"><p class="win-title">The party</p>
+      ${d.party.map((p, i) => `<div class="ed-item"><div class="ed-grid three">
+        <div class="field"><label for="pn-${i}">Name</label><input type="text" id="pn-${i}" data-path="party.${i}.name" value="${esc(p.name)}" maxlength="30"></div>
+        <div class="field"><label for="pc-${i}">Class</label><input type="text" id="pc-${i}" data-path="party.${i}.cls" value="${esc(p.cls)}" maxlength="30"></div>
+        <div class="field"><label for="pt-${i}">Subtitle</label><input type="text" id="pt-${i}" data-path="party.${i}.tag" value="${esc(p.tag)}" maxlength="40"></div></div>
+        <div class="field"><label for="pa-${i}">Ability</label><input type="text" id="pa-${i}" data-path="party.${i}.ability" value="${esc(p.ability)}" maxlength="140"></div></div>`).join('')}
+    </section>
+    ${chapters}
+    <section class="win" id="ed-levels" aria-label="Levels and loot"><p class="win-title">Levels and loot</p><p class="muted small">Each level-up opens one chest. For videos, upload a short clip or paste an unlisted YouTube or Google Photos link.</p>${levels}
+      <div class="actions"><button class="btn small ghost" data-act="addlv">Add a level</button>${d.levels.length > 2 ? `<button class="btn small ghost" data-act="rmlv">${ui.armed === 'rmlv' ? 'Tap again to remove the last level' : 'Remove the last level'}</button>` : ''}</div></section>
+    <section class="win" id="ed-boss" aria-label="Final boss"><p class="win-title">The final boss</p>
+      <div class="ed-grid"><div class="field"><label for="bn">Boss name</label><input type="text" id="bn" data-path="boss.name" value="${esc(d.boss.name)}" maxlength="50"></div>
+        <div class="field"><label for="bh">HP</label><input type="number" id="bh" data-path="boss.hp" data-num value="${d.boss.hp}" min="100" step="50" inputmode="numeric"></div></div>
+      ${atks}<button class="btn small ghost" data-act="adda">Add an attack</button>
+      <div class="field"><label for="bc">Your counterattacks (one per line, shown at random)</label><textarea id="bc" data-list="boss.counters" rows="5">${esc(d.boss.counters.join('\n'))}</textarea></div>
+      <p class="label">Loot he drops</p>${lootEditor('boss.loot', d.boss.loot, 'boss')}
+    </section>
+    <section class="win" id="ed-twists" aria-label="Twists"><div class="field"><label for="tw">Twists (one per line, rolled at each level-up)</label><textarea id="tw" data-list="twists" rows="8">${esc(d.twists.join('\n'))}</textarea></div></section>
+    <section class="win" id="ed-bingo" aria-label="Bingo"><div class="field"><label for="bg">Bingo squares (16 lines; the first is the free square)</label><textarea id="bg" data-list="bingo" rows="10">${esc(d.bingo.join('\n'))}</textarea></div></section>
+    <section class="win" aria-label="Backup"><p class="win-title">Backup</p><p class="muted small">If saving isn’t working, copy your setup and paste it to Claude.</p>
+      <button class="btn small ghost" data-act="copy">Copy my setup</button>
+      ${copyText != null ? `<textarea class="copybox" id="copybox" readonly aria-label="Your setup">${esc(copyText)}</textarea>` : ''}</section>
+  </main>`;
+}
+function buildHtml(d) {
+  const css = document.getElementById('css').textContent, js = document.getElementById('main').textContent;
+  const json = JSON.stringify(d).replace(/</g, '\\u003c');
+  return SKELETON_OPEN + PAGE_HEAD + '<style id="css">' + css + '</style>' + BODY_SHELL +
+    '<script id="quest-data" type="application/json">' + json + '<\/script><script id="main">' + js + '<\/script></body></html>';
+}
+async function doSave() {
+  if (!cap.artifact || cap.readOnly) return;
+  const d = clone(draft); d.rev = 'r' + rid(); d.updated = new Date().toISOString();
+  ss.set(RESCUE, { rev: d.rev, data: d });
+  const btn = $('[data-act="save"]', app); if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+  const attempt = async retry => {
+    try { await cap.artifact.publish(buildHtml(d)); toast('Saved. Reloading…'); }
+    catch (e) {
+      const code = e && e.code;
+      if (code === 'conflict') { toast('A newer version was saved first. Reloading; your edits are kept as a draft.'); return; }
+      ss.del(RESCUE);
+      if (code === 'upstream_error' && !retry) { await new Promise(r => setTimeout(r, 900 + Math.random() * 800)); return attempt(true); }
+      if (['not_writer', 'not_granted', 'consent_required', 'capability_disabled', 'capability_removed', 'not_declared'].includes(code)) { cap.readOnly = true; render(true); toast('This device can’t save the quest. Use Copy my setup instead.'); return; }
+      toast(code === 'too_large' ? 'The quest is too big to save. Remove a video and try again.' : code === 'rate_limited' ? 'Saving too often. Wait a minute, then save again.' : 'Saving failed. Your edits are still here; try again in a moment.');
+      if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = 'Save to the game'; }
+    }
+  };
+  await attempt(false);
+}
+async function uploadVideo(input) {
+  const f = input.files && input.files[0], path = input.dataset.vpath; if (!f || !cap.assets) return;
+  if (f.size > 20 * 1024 * 1024) { toast('That clip is over 20 MB. Record a shorter one, or at 720p.'); input.value = ''; return; }
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  const holder = input.closest('.vrow'); if (holder) holder.innerHTML = '<span>Uploading…</span>';
+  try { const r = await cap.assets.upload(f, { type: ext === 'webm' ? 'video/webm' : 'video/mp4' }); setPath(draft, path, r.id); persistDraft(); render(true); toast('Video added. Save to the game to keep it.'); }
+  catch (e) { const code = e && e.code; toast(code === 'too_large' ? 'That clip is too big. Keep it under 20 MB.' : code === 'unsupported_type' ? 'That file type won’t work. Use an MP4 or WebM video.' : 'Upload failed. Try again in a moment.'); render(true); }
+}
+/* rescue a save that lost a race */
+(() => {
+  const r = ss.get(RESCUE); if (!r) return; ss.del(RESCUE);
+  if (r.rev !== DATA.rev && r.data) { ls.set(DKEY, { base: DATA.rev, data: r.data }); setTimeout(() => toast('Your edits were kept as a draft. Open Groom setup to save them again.'), 800); }
+  else if (r.rev === DATA.rev) { ls.del(DKEY); setTimeout(() => toast('Saved. The quest is updated.'), 500); }
+})();
+
+/* ---------- confetti ---------- */
+function confetti() {
+  if (reduced()) return;
+  const cv = document.createElement('canvas'); cv.style.cssText = 'position:fixed;inset:0;pointer-events:none;z-index:90;width:100%;height:100%';
+  document.body.appendChild(cv);
+  const g = cv.getContext('2d'), dpr = Math.min(2, window.devicePixelRatio || 1); cv.width = innerWidth * dpr; cv.height = innerHeight * dpr;
+  const cols = [cssVar('--gold'), cssVar('--holly'), cssVar('--pine'), cssVar('--ink')];
+  const bits = Array.from({ length: 140 }, () => ({ x: Math.random() * cv.width, y: -Math.random() * cv.height * 0.6, vx: (Math.random() - 0.5) * 3 * dpr, vy: (2 + Math.random() * 4) * dpr, s: (5 + Math.random() * 6) * dpr, c: pick(cols) }));
+  const t0 = performance.now();
+  const step = now => { g.clearRect(0, 0, cv.width, cv.height); bits.forEach(b => { b.x += b.vx; b.y += b.vy; g.fillStyle = b.c; g.fillRect(b.x, b.y, b.s, b.s); }); if (now - t0 < 3800) requestAnimationFrame(step); else cv.remove(); };
+  requestAnimationFrame(step);
+}
+
+/* ---------- events ---------- */
+app.addEventListener('click', async e => {
+  const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
+  const act = t.dataset.act, i = t.dataset.i != null ? +t.dataset.i : null;
+  const wasArmed = ui.armed;
+  const twoTap = key => { if (wasArmed === key) { ui.armed = null; return true; } ui.armed = key; render(true); return false; };
+  if (!['undo', 'santa-redraw', 'boss-reset', 'reset', 'local-reset', 'rmq', 'rma', 'rmlv'].includes(act)) ui.armed = null;
+  switch (act) {
+    case 'tab': ui.tab = t.dataset.t; render(true); break;
+    case 'party': ui.card = { kind: 'party', i }; render(true); break;
+    case 'open': ui.sheet = t.dataset.q; render(true); break;
+    case 'close': ui.sheet = null; if (ui.card && ui.card.kind === 'image') URL.revokeObjectURL(ui.card.url); ui.card = null; render(true); break;
+    case 'complete': completeQuest(t.dataset.q); break;
+    case 'undo': if (twoTap('undo-' + t.dataset.q)) { await put('done/' + t.dataset.q, null); toast('Quest undone.'); } break;
+    case 'loot': ui.card = { kind: 'loot', n: t.dataset.n === 'boss' ? 'boss' : +t.dataset.n }; render(true); break;
+    case 'chest': ui.chest = true; render(true); break;
+    case 'popup-next': ui.popup = null; ui.chest = false; nextPopup(); render(true); break;
+    case 'popup-open': ui.popup = null; ui.sheet = t.dataset.q || null; nextPopup(); render(true); break;
+    case 'credits': ui.credits = true; render(true); break;
+    case 'credits-skip': { const r = $('.roll', app); if (r) r.classList.add('static'); break; }
+    case 'credits-close': ui.credits = false; render(true); break;
+    case 'scrapbook': makeScrapbook(); break;
+    case 'local-reset':
+      if (twoTap('local-reset')) { COLS.forEach(k => { S[k] = {}; }); saveLocal(); ls.del(LVKEY); ls.del(PKEY); ui.lvQueue = []; ui.pushQueue = []; ui.popup = null; ui.victory = false; Object.keys(ui.photos).forEach(k => URL.revokeObjectURL(ui.photos[k])); ui.photos = {}; ui.pending = {}; idb.clear().catch(() => {}); toast('This phone starts fresh.'); onState(true); }
+      break;
+    /* secret santa */
+    case 'santa-draw': {
+      const n = DATA.party.length, perm = shuffle(DATA.party.map((_, k) => k)), map = {};
+      perm.forEach((g, k) => { map[g] = perm[(k + 1) % n]; });
+      await put('run/santa', { map, step: 0, show: false }); break;
+    }
+    case 'santa-show': if (!R('santa')) break; await put('run/santa', Object.assign({}, R('santa'), { show: true })); break;
+    case 'santa-next': if (!R('santa')) break; await put('run/santa', Object.assign({}, R('santa'), { step: R('santa').step + 1, show: false })); break;
+    case 'santa-redraw': if (twoTap('santa-redraw')) await put('run/santa', null); break;
+    /* bingo */
+    case 'bingo-deal': { const order = shuffle(bingoSquares().map((_, k) => k)); await put('run/bingo', { order, marked: [order.indexOf(0)] }); break; }
+    case 'cell': {
+      const bg = R('bingo'); if (!bg) break;
+      const p = +t.dataset.p, m = new Set(bg.marked || []); if (m.has(p)) m.delete(p); else m.add(p);
+      const marked = Array.from(m); await put('run/bingo', { order: bg.order, marked });
+      const bq = DATA.quests.find(q => q.type === 'bingo');
+      if (bingoLines(marked) && bq && !S.done[bq.id]) { toast('BINGO!'); confetti(); await completeQuest(bq.id); }
+      break;
+    }
+    /* boss */
+    case 'boss-start': await put('run/boss', { hp: DATA.boss.hp, max: DATA.boss.hp, log: [{ t: DATA.boss.name + ' appears!' }], used: {}, defeated: false, at: Date.now() }); break;
+    case 'boss-reset': if (twoTap('boss-reset')) await put('run/boss', null); break;
+    case 'attack': {
+      const b = R('boss'), a = DATA.boss.attacks[i]; if (!b || b.defeated || !a || (b.used || {})[i]) break;
+      const hp = Math.max(0, b.hp - a.dmg), log = (b.log || []).slice(-7);
+      log.push({ t: `${a.name}! ${fmt(a.dmg)} damage.` });
+      if (hp === 0) log.push({ t: `${DATA.boss.name} has been defeated!` });
+      if (hp > 0 && DATA.boss.counters.length && Math.random() < 0.6) log.push({ t: pick(DATA.boss.counters) });
+      const used = Object.assign({}, b.used || {}); if (!a.repeat) used[i] = true;
+      await put('run/boss', Object.assign({}, b, { hp, log: log.slice(-8), used, defeated: hp === 0 }));
+      if (hp === 0) {
+        ui.sheet = null; ui.victory = true; confetti();
+        const bq = DATA.quests.find(q => q.type === 'boss');
+        if (bq && !S.done[bq.id]) await completeQuest(bq.id, true); else { nextPopup(); render(true); }
+      }
+      break;
+    }
+    case 'victory': ui.sheet = null; ui.popup = { kind: 'victory' }; render(true); break;
+    /* groom HQ */
+    case 'to-hq': ui.view = 'hq'; ui.sheet = null; ui.card = null; ui.popup = null; render(true); window.scrollTo(0, 0); break;
+    case 'to-board': ui.view = 'board'; render(true); onState(true); window.scrollTo(0, 0); break;
+    case 'send-quest': {
+      const q = qById(t.dataset.q); if (!q) break;
+      await put('unlocked/' + q.id, { at: Date.now(), via: 'groom' });
+      await put('pushes/' + rid(), { kind: 'quest', qid: q.id, at: Date.now() });
+      toast('Sent. It pops up on her screen.'); break;
+    }
+    case 'award-amt': ui.award = +t.dataset.a; render(true); break;
+    case 'award': {
+      const el = $('#award-note', app), note = ((el && el.value) || ui.note).trim().slice(0, 90);
+      ui.note = ''; if (el) el.value = '';
+      await put('pushes/' + rid(), { kind: 'xp', amount: ui.award, note, at: Date.now() });
+      toast('+' + ui.award + ' XP sent.'); render(true); break;
+    }
+    case 'send-msg': {
+      const el = $('#msg-in', app), text = ((el && el.value) || ui.msg).trim(); if (!text) { toast('Write something first.'); break; }
+      ui.msg = ''; if (el) el.value = '';
+      await put('pushes/' + rid(), { kind: 'msg', text: text.slice(0, 400), at: Date.now() });
+      toast('Sent. It pops up on her screen.'); render(true); break;
+    }
+    case 'potion': { const b = R('boss'); if (!b || b.defeated) break; const log = (b.log || []).slice(-7); log.push({ t: 'The groom drinks a potion. +100 HP.' }); await put('run/boss', Object.assign({}, b, { hp: Math.min(b.max, b.hp + 100), log })); toast('Glug. +100 HP.'); break; }
+    case 'reset':
+      if (twoTap('reset')) {
+        toast('Wiping the run…');
+        for (const k of ['done', 'unlocked', 'pushes', 'twists']) for (const id of Object.keys(S[k])) await put(k + '/' + id, null);
+        for (const id of ['boss', 'santa', 'bingo']) if (S.run[id]) await put('run/' + id, null);
+        await put('run/state', { resetAt: Date.now() });
+        toast('The run is wiped. Friday starts fresh.');
+      }
+      break;
+    /* setup */
+    case 'gate': if (isOwner) openSetup(); else { ui.view = 'gate'; render(true); window.scrollTo(0, 0); } break;
+    case 'setup': openSetup(); break;
+    case 'save': doSave(); break;
+    case 'jump': { const el = document.getElementById(t.dataset.to); if (el) { const top = el.getBoundingClientRect().top + window.scrollY - (($('.savebar', app) || {}).offsetHeight || 0) - 12; window.scrollTo({ top, behavior: reduced() ? 'auto' : 'smooth' }); } break; }
+    case 'vremove': setPath(draft, t.dataset.path, null); persistDraft(); render(true); break;
+    case 'addq': draft.quests.push(normQuest({ ch: t.dataset.ch, tier: t.dataset.ch === 'call' || t.dataset.ch === 'dungeon' || t.dataset.ch === 'finale' ? 'main' : 'common', xp: 100 })); persistDraft(); render(true); break;
+    case 'rmq': if (twoTap('rmq-' + t.dataset.q)) { draft.quests = draft.quests.filter(q => q.id !== t.dataset.q); persistDraft(); render(true); } break;
+    case 'addlv': { const last = draft.levels[draft.levels.length - 1]; draft.levels.push({ title: '', xp: (last ? last.xp : 0) + 500, loot: normLoot() }); persistDraft(); render(true); break; }
+    case 'rmlv': if (twoTap('rmlv')) { draft.levels.pop(); persistDraft(); render(true); } break;
+    case 'adda': draft.boss.attacks.push({ name: '', text: '', dmg: 100, repeat: false }); persistDraft(); render(true); break;
+    case 'rma': if (twoTap('rma-' + i)) { draft.boss.attacks.splice(i, 1); persistDraft(); render(true); } break;
+    case 'copy': {
+      const text = JSON.stringify(draft, null, 2);
+      const fallback = () => { copyText = text; render(true); const b = $('#copybox', app); if (b) { b.focus(); b.select(); } toast('Copy the text in the box below.'); };
+      try { navigator.clipboard.writeText(text).then(() => toast('Setup copied.'), fallback); } catch (err) { fallback(); }
+      break;
+    }
+  }
+});
+app.addEventListener('submit', async e => {
+  if (e.target.id !== 'codeform') return;
+  e.preventDefault();
+  const input = $('#code-in', app), v = (input && input.value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!v) return;
+  const q = DATA.quests.find(x => x.ch === 'hidden' && x.code && x.code === v);
+  if (!q) { toast('That code does nothing. Suspicious.'); return; }
+  input.value = ''; ui.code = ''; input.blur();
+  if (!S.unlocked[q.id]) await put('unlocked/' + q.id, { at: Date.now(), via: 'code' });
+  ui.sheet = q.id; toast('Hidden quest unlocked!'); render(true);
+});
+app.addEventListener('input', e => {
+  const t = e.target;
+  if (t.id === 'msg-in') { ui.msg = t.value; return; }
+  if (t.id === 'award-note') { ui.note = t.value; return; }
+  if (t.id === 'code-in') { ui.code = t.value; return; }
+  if (!draft || ui.view !== 'setup') return;
+  if (t.dataset.list) { setPath(draft, t.dataset.list, t.value.split('\n').map(s => s.trim()).filter(Boolean)); persistDraft(); return; }
+  if (!t.dataset.path) return;
+  let v = t.type === 'checkbox' ? t.checked : t.value;
+  if (t.dataset.num != null) v = Math.max(0, Math.round(+t.value || 0));
+  if (t.dataset.code != null) { v = String(v).toUpperCase().replace(/[^A-Z0-9]/g, ''); if (t.value !== v) t.value = v; }
+  setPath(draft, t.dataset.path, v); persistDraft();
+});
+app.addEventListener('change', e => {
+  const t = e.target;
+  if (t.dataset.photo) onPhoto(t);
+  else if (t.dataset.vpath) uploadVideo(t);
+});
+
+/* ---------- start ---------- */
+function waitClaude() {
+  return new Promise(res => {
+    if (window.claude && typeof window.claude.use === 'function') return res(window.claude);
+    let n = 0; const tm = setInterval(() => { if (window.claude && typeof window.claude.use === 'function') { clearInterval(tm); res(window.claude); } else if (++n > 25) { clearInterval(tm); res(null); } }, 100);
+  });
+}
+async function boot() {
+  render(true);
+  const C = await waitClaude();
+  if (!C) { mode = 'local'; loadLocal(); await loadPhotos(); onState(true); return; }
+  cap.inViewer = true;
+  const [dbNs, userNs, art, as, dl] = await Promise.all(['db', 'user', 'artifact', 'assets', 'downloads'].map(n => Promise.resolve(C.use(n)).catch(() => null)));
+  cap.artifact = art; cap.assets = as; cap.downloads = dl;
+  try { isOwner = userNs ? !!(await userNs.isOwner()) : false; } catch (e) { isOwner = false; }
+  if (isOwner) ui.view = 'hq';
+  await loadPhotos();
+  if (dbNs) { db = dbNs; mode = 'live'; subscribe(); render(true); }
+  else { mode = 'local'; loadLocal(); ui.liveNote = 'Playing on this phone only. The groom can’t see progress live, so text him the codes.'; onState(true); }
+}
+boot();
+})();
+</script>
+</body>
+</html>
