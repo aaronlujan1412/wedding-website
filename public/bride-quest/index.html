@@ -81,7 +81,7 @@ h1,h2,h3{margin:0;font-weight:400}
 .pchip b{font-family:var(--f-pixel);font-weight:400;font-size:17px}
 .pchip span{font-size:13px;color:var(--muted)}
 .twist{display:flex;gap:10px;align-items:baseline;border-top:1px solid var(--muted);padding-top:10px;font-size:15px}
-.twist span{font-family:var(--f-pixel);color:var(--holly);font-size:13px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+.twist span{font-family:var(--f-pixel);color:var(--holly);font-size:13px;letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}.timer-row{align-items:center;justify-content:space-between}.timer-row span{white-space:normal}.qtimer{font-family:var(--f-pixel);font-variant-numeric:tabular-nums;color:var(--gold);font-size:20px;letter-spacing:.05em;white-space:nowrap}.qtimer.up{color:var(--holly);animation:blink 1s steps(2) infinite}.pop-timer{text-align:center;margin:6px 0 2px}.pop-timer .qtimer{font-size:44px}
 .live{font-family:var(--f-pixel);font-size:13px;color:var(--pine);letter-spacing:.06em}
 .live::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--pine);margin-right:8px;vertical-align:1px;animation:blink 1.6s steps(2) infinite}
 @keyframes blink{50%{opacity:.25}}
@@ -350,7 +350,7 @@ let db = null, isOwner = false;
 const cap = { artifact: null, assets: null, downloads: null, readOnly: false, inViewer: false };
 const ui = {
   view: 'board', tab: 'quests', sheet: null, card: null, popup: null, chest: false, lvQueue: [], pushQueue: [], victory: false,
-  armed: null, credits: false, liveNote: '', fresh: false, slow: false, photos: {}, pending: {}, busy: {}, award: 100,
+  armed: null, credits: false, liveNote: '', fresh: false, slow: false, photos: {}, pending: {}, busy: {}, award: 100, qtimer: 0,
   msg: '', note: '', code: ''
 };
 const unsubs = [];
@@ -502,7 +502,7 @@ function nextPopup() {
   if (ui.popup) return;
   if (ui.victory) { ui.victory = false; ui.popup = { kind: 'victory' }; return; }
   if (ui.lvQueue.length) { ui.popup = { kind: 'level', n: ui.lvQueue.shift() }; ui.chest = false; return; }
-  while (ui.pushQueue.length) { const id = ui.pushQueue.shift(); if (S.pushes[id]) { ui.popup = { kind: 'push', id }; return; } }
+  while (ui.pushQueue.length) { const id = ui.pushQueue.shift(); if (S.pushes[id]) { ui.popup = { kind: 'push', id }; if (S.pushes[id].kind === 'quest' && !isOwner) alarm.ring(20000); return; } }
 }
 function onState(force) {
   /* popups only once this phone has the real picture (not a stale cached copy) */
@@ -600,6 +600,7 @@ function statusWin(L, withParty) {
     <div class="xpbar" role="progressbar" aria-label="Experience toward the next level" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${L.pct}"><i style="width:${L.pct}%"></i></div>
     <p class="xpline"><span>${fmt(L.xp)} XP</span><span>${L.next ? fmt(L.next.xp - L.xp) + ' to Lv. ' + (L.n + 1) : 'Max level'}</span></p>
     ${withParty && DATA.party.length > 1 ? `<div class="party">${DATA.party.slice(1).map((p, k) => `<button class="pchip" data-act="party" data-i="${k + 1}"><b>${esc(p.name)}</b><span>${esc(p.cls)}</span></button>`).join('')}</div>` : ''}
+    ${timerBanner()}
     ${tw ? `<p class="twist"><span>Twist</span>${esc(tw)}</p>` : ''}
     ${mode === 'live' && ui.fresh ? '<p class="live">Live with the groom</p>' : ''}
   </section>`;
@@ -744,7 +745,7 @@ function viewPopup() {
     const pu = S.pushes[p.id] || {};
     if (pu.kind === 'quest') {
       const q = qById(pu.qid) || {};
-      return wrap(`<p class="bang">!</p><p class="pop-head">A hidden quest has appeared!</p><p class="lvup-title">${esc(q.title || '')}</p><p class="msg">${esc(q.text || '')}</p>
+      return wrap(`<p class="bang">!</p><p class="pop-head">A hidden quest has appeared!</p><p class="lvup-title">${esc(q.title || '')}</p>${deadlineOf(pu) ? `<p class="pop-timer">${timerHtml(deadlineOf(pu))}</p>` : ''}<p class="msg">${esc(q.text || '')}</p>
         <button class="btn gold block" data-act="popup-open" data-q="${esc(q.id || '')}">Open the quest</button><button class="btn ghost block" data-act="popup-next">Later</button>`);
     }
     if (pu.kind === 'xp') return wrap(`<p class="bang">!</p><p class="pop-head">The groom awards <b>+${fmt(pu.amount || 0)} XP</b></p>${pu.note ? `<p class="msg" style="text-align:center">${esc(pu.note)}</p>` : ''}<button class="btn gold block" data-act="popup-next">Nice</button>`);
@@ -783,6 +784,7 @@ function viewHQ() {
     ${mode !== 'live' ? `<p class="note">${esc(ui.liveNote || 'The live game isn’t connected here, so HQ can’t see or send anything.')}</p>` : !ui.fresh ? '<p class="note">Connecting to the live game…</p>' : ''}
     ${statusWin(L, false)}
     <section class="win"><p class="win-title">Unleash a hidden quest</p>
+      <p class="small muted">Timer on the next one you send</p><div class="chips" role="group" aria-label="Timer">${TIMER_CHOICES.map(m => `<button class="chip${ui.qtimer === m ? ' on' : ''}" data-act="qtimer" data-m="${m}" aria-pressed="${ui.qtimer === m}">${m ? m + ' min' : 'No timer'}</button>`).join('')}</div>
       ${hidden.length ? hidden.map(q => `<div class="hq-row"><div><b>${esc(q.title)}</b><p class="small muted">Code ${esc(q.code || 'none')} · +${fmt(q.xp)} XP</p></div>${S.unlocked[q.id] ? `<span class="tagok">${S.done[q.id] ? 'Done' : 'Sent'}</span>` : `<button class="btn small holly" data-act="send-quest" data-q="${q.id}">Send</button>`}</div>`).join('') : '<p class="muted">No hidden quests yet. Add some in Edit the quest.</p>'}
     </section>
     <section class="win"><p class="win-title">Award XP</p>
@@ -1007,6 +1009,88 @@ function confetti() {
   requestAnimationFrame(step);
 }
 
+/* ---------- alarm, synced timers, keep-awake (website edition) ----------
+   A hidden quest rings every phone until someone on it taps. The groom can put a clock on it
+   from HQ, and every phone counts down from the moment he hit Send (the push's `at`), so they
+   all show the same time. The screen stays on while the page is open, or a locked phone
+   couldn't ring at all. */
+const TIMER_CHOICES = [0, 1, 2, 3, 5];
+const alarm = (() => {
+  let ctx = null, loop = null, until = 0;
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}   /* iOS 17+: ring through the silent switch */
+  function unlock() {   /* browsers only allow sound after a tap, so every tap makes sure it's allowed */
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+      if (!ctx) ctx = new AC();
+      if (ctx.state !== 'running') ctx.resume();
+      const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);
+    } catch (e) {}
+  }
+  function beep(t, f, d) {
+    const o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = 'square'; o.frequency.value = f;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+    g.gain.setValueAtTime(0.4, t + d - 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + d + 0.02);
+  }
+  function burst() {
+    if (!ctx || ctx.state !== 'running') return;
+    const t = ctx.currentTime + 0.02;
+    for (let i = 0; i < 4; i++) beep(t + i * 0.2, i % 2 ? 660 : 990, 0.16);
+  }
+  function stop() { if (!loop) return; clearInterval(loop); loop = null; try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {} }
+  function ring(ms) {
+    stop(); until = Date.now() + ms; burst();
+    loop = setInterval(() => { if (Date.now() > until || document.hidden) stop(); else burst(); }, 1200);
+    try { if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]); } catch (e) {}
+  }
+  return { unlock, ring, stop };
+})();
+let wake = null, waking = false;
+async function keepAwake() {
+  if (wake || waking || document.hidden || !('wakeLock' in navigator)) return;
+  waking = true;
+  try { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); }
+  catch (e) {}
+  waking = false;
+}
+document.addEventListener('visibilitychange', () => { if (!document.hidden) keepAwake(); });
+['click', 'touchend'].forEach(ev => document.addEventListener(ev, () => { alarm.stop(); alarm.unlock(); keepAwake(); }, { capture: true, passive: true }));
+keepAwake();
+
+const deadlineOf = pu => (pu && pu.kind === 'quest' && pu.secs > 0 && pu.at) ? pu.at + pu.secs * 1000 : 0;
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+/* running, or ended within the last minute, and the quest not done yet */
+function activeTimers() {
+  const now = Date.now();
+  return Object.keys(S.pushes).map(id => ({ id, pu: S.pushes[id], end: deadlineOf(S.pushes[id]) }))
+    .filter(x => x.end && now < x.end + 60000 && !S.done[x.pu.qid])
+    .sort((a, b) => a.end - b.end);
+}
+function timerHtml(end) {
+  const left = end - Date.now();
+  return `<b class="qtimer${left > 0 ? '' : ' up'}" data-end="${end}">${left > 0 ? mmss(left) : 'Time’s up!'}</b>`;
+}
+function timerBanner() {
+  return activeTimers().map(x => { const q = qById(x.pu.qid) || {}; return `<p class="twist timer-row"><span>⏱ ${esc(q.title || 'Hidden quest')}</span>${timerHtml(x.end)}</p>`; }).join('');
+}
+const rung = new Set();
+let timerSig = '';
+setInterval(() => {
+  const now = Date.now();
+  document.querySelectorAll('.qtimer[data-end]').forEach(el => {
+    const left = +el.dataset.end - now;
+    el.textContent = left > 0 ? mmss(left) : 'Time’s up!';
+    el.classList.toggle('up', left <= 0);
+  });
+  Object.keys(S.pushes).forEach(id => {   /* ring once at zero; not for a clock that ran out while this phone was away */
+    const pu = S.pushes[id], end = deadlineOf(pu);
+    if (end && now >= end && now < end + 5000 && !rung.has(id) && !S.done[pu.qid] && !isOwner) { rung.add(id); alarm.ring(8000); toast('Time’s up!'); }
+  });
+  const sig = activeTimers().map(x => x.id).join();   /* a banner row appears or expires */
+  if (sig !== timerSig) { timerSig = sig; if (ui.view !== 'setup' && ui.view !== 'gate') render(); }
+}, 500);
+
 /* ---------- events ---------- */
 app.addEventListener('click', async e => {
   const t = e.target.closest('[data-act]'); if (!t || t.disabled) return;
@@ -1076,9 +1160,10 @@ app.addEventListener('click', async e => {
     case 'send-quest': {
       const q = qById(t.dataset.q); if (!q) break;
       await put('unlocked/' + q.id, { at: Date.now(), via: 'groom' });
-      await put('pushes/' + rid(), { kind: 'quest', qid: q.id, at: Date.now() });
-      toast('Sent. It pops up on her screen.'); break;
+      await put('pushes/' + rid(), Object.assign({ kind: 'quest', qid: q.id, at: Date.now() }, ui.qtimer ? { secs: ui.qtimer * 60 } : {}));
+      toast(ui.qtimer ? 'Sent, with a ' + ui.qtimer + '-minute timer.' : 'Sent. It pops up on her screen.'); break;
     }
+    case 'qtimer': ui.qtimer = +t.dataset.m; render(true); break;
     case 'award-amt': ui.award = +t.dataset.a; render(true); break;
     case 'award': {
       const el = $('#award-note', app), note = ((el && el.value) || ui.note).trim().slice(0, 90);
