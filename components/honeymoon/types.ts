@@ -14,7 +14,9 @@ export type StayProposal =
 /** A proposed route with the stays that make it up, in order. */
 export type ProposedRoute = RouteProposal & { stays: StayProposal[] };
 export type TripTransit = Database["public"]["Tables"]["trip_transit"]["Row"];
-export type TripBout = Database["public"]["Tables"]["trip_bouts"]["Row"];
+/** The Ring's fighters: the wedding playlist, one row per song. */
+export type Song = Database["public"]["Tables"]["wedding_songs"]["Row"];
+export type SongBout = Database["public"]["Tables"]["song_bouts"]["Row"];
 export type Notebook = Database["public"]["Tables"]["trip_notebooks"]["Row"];
 export type Note = Database["public"]["Tables"]["trip_notes"]["Row"];
 export type ChecklistItem =

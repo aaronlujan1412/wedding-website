@@ -33,6 +33,9 @@ export const BACKUP_TABLES = [
   // database dump doesn't reach. Restoring these into an environment whose
   // bucket was never populated gives you links to nothing.
   "trip_papers",
+  // The Ring's songs and its bout log. Songs first: every bout points at two.
+  "wedding_songs",
+  "song_bouts",
   // The party games' saved edits (and the live run, which is small). Videos and
   // photos are in the `party-game-assets` bucket, not here.
   "party_game_state",

@@ -14,16 +14,14 @@ import { useSearchParams } from "next/navigation";
 import { Undo2, Volume2, VolumeX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
-  agreeToItems,
-  finishItem,
-  releaseItem,
-  reviveItem,
+  finishSong,
+  releaseSong,
+  reviveSong,
   settleBout,
   undoLastBout,
-  wishItem,
+  wishSong,
 } from "@/app/actions/bouts";
 import { Banzuke } from "./Banzuke";
-import { ConfirmDialog, type ConfirmRequest } from "./ConfirmDialog";
 import { FLASH_MS, Pips, Ring, type Flash } from "./Ring";
 import { Festival, Fireball, ManekiNeko, Transformation } from "./RingFx";
 import { useLiveRefresh } from "./useLiveRefresh";
@@ -32,7 +30,6 @@ import { PLANNERS } from "./trip";
 import {
   FINISHERS,
   WISHES,
-  budget as budgetOf,
   cutLine,
   formatHours,
   heldPairs,
@@ -41,30 +38,30 @@ import {
   standings,
 } from "./bouts";
 import {
+  MUSIC_MINUTES,
+  SETLIST,
+  SONG_MINUTES,
+  setlistText,
+} from "./songs";
+import {
   mutedServerSnapshot,
   mutedSnapshot,
   play,
   subscribeMuted,
   toggleMuted,
 } from "./ringSound";
-import type {
-  BoutOutcome,
-  Planner,
-  Trip,
-  TripBout,
-  TripFlight,
-  TripItem,
-} from "./types";
+import type { BoutOutcome, Planner, Song, SongBout } from "./types";
 
 /**
  * The Ring tab.
  *
- * The board lets you drag one card at a time up into Decided, which is the
- * right tool for the card you already agree on and no help at all with the
- * other hundred. Agreeing was never the hard part — cutting is, and nobody
- * cuts their own idea on their own. So this asks one question at a time, out
- * loud, with both of them in front of it, and it is an arcade cabinet about
- * it, because the tasteful version of this screen is one nobody opens twice.
+ * It used to cut the honeymoon's pile of ideas; now it cuts the wedding
+ * playlist. 140 songs is about eight hours of music for a party with room for
+ * five, and agreeing on a song was never the hard part — cutting is, and
+ * nobody cuts a favourite on their own. So this asks one question at a time,
+ * out loud, with both of them in front of it, and it is an arcade cabinet
+ * about it, because the tasteful version of this screen is one nobody opens
+ * twice.
  *
  * Everything on screen is replayed from the bout log, sound effects included,
  * so a verdict can be taken back by deleting a row. The pairing is a pure
@@ -120,20 +117,16 @@ const NEON: Record<Planner, string> = {
   aaron: "var(--color-neon-aaron)",
 };
 
-type Optimistic = { items: TripItem[]; bouts: TripBout[] };
+type Optimistic = { songs: Song[]; bouts: SongBout[] };
 
 type Egg = "fireball" | "festival" | "neko" | null;
 
 export function RingView({
-  trip,
-  items,
+  songs,
   bouts,
-  flights,
 }: {
-  trip: Trip | null;
-  items: TripItem[];
-  bouts: TripBout[];
-  flights: TripFlight[];
+  songs: Song[];
+  bouts: SongBout[];
 }) {
   const searchParams = useSearchParams();
   const [screen, setScreenState] = useState<Screen>(() => {
@@ -147,7 +140,6 @@ export function RingView({
 
   const [flash, setFlash] = useState<Flash | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [promoted, setPromoted] = useState<number | null>(null);
   const [combo, setCombo] = useState(0);
   const [egg, setEgg] = useState<Egg>(null);
@@ -178,23 +170,23 @@ export function RingView({
   // whole tab depends on is gone. `useOptimistic` drops the guess by itself
   // once the revalidated page arrives.
   const [live, applyBout] = useOptimistic(
-    { items, bouts } as Optimistic,
-    (state: Optimistic, bout: TripBout): Optimistic => ({
+    { songs, bouts } as Optimistic,
+    (state: Optimistic, bout: SongBout): Optimistic => ({
       bouts: [...state.bouts, bout],
-      items:
+      songs:
         bout.outcome === "neither"
-          ? state.items.map((item) =>
-              item.id === bout.east_id || item.id === bout.west_id
-                ? { ...item, cut_at: bout.created_at }
-                : item,
+          ? state.songs.map((song) =>
+              song.id === bout.east_id || song.id === bout.west_id
+                ? { ...song, cut_at: bout.created_at }
+                : song,
             )
-          : state.items,
+          : state.songs,
     }),
   );
 
   const ranked = useMemo(
-    () => standings(live.items, live.bouts),
-    [live.items, live.bouts],
+    () => standings(live.songs, live.bouts),
+    [live.songs, live.bouts],
   );
   const standing = useMemo(() => ranked.filter((s) => !s.cut), [ranked]);
   const cut = useMemo(() => ranked.filter((s) => s.cut), [ranked]);
@@ -220,23 +212,14 @@ export function RingView({
     [ranked],
   );
 
-  const budget = useMemo(
-    () => budgetOf(trip, live.items, flights),
-    [trip, live.items, flights],
-  );
-  const fits = useMemo(
-    () => cutLine(standing, budget.free),
-    [standing, budget.free],
-  );
-  const inTrip = useMemo(
-    () => new Set(standing.slice(0, fits).map((s) => s.item.id)),
+  const fits = cutLine(standing);
+  const setlist = useMemo(
+    () => new Set(standing.slice(0, fits).map((s) => s.song.id)),
     [standing, fits],
   );
 
   // Never while a hit is playing or a write is in flight.
-  useLiveRefresh(
-    flash !== null || pending || confirm !== null || promoted !== null,
-  );
+  useLiveRefresh(flash !== null || pending || promoted !== null);
 
   useEffect(() => {
     return () => {
@@ -246,19 +229,18 @@ export function RingView({
 
   const settle = useCallback(
     (outcome: BoutOutcome) => {
-      if (!pairing || flash || !trip) return;
+      if (!pairing || flash) return;
 
       const index = live.bouts.length;
       const crit =
         outcome === "east" || outcome === "west"
-          ? isCritical(pairing.east.item.id, pairing.west.item.id, index)
+          ? isCritical(pairing.east.song.id, pairing.west.song.id, index)
           : false;
 
-      const bout: TripBout = {
+      const bout: SongBout = {
         id: crypto.randomUUID(),
-        trip_id: trip.id,
-        east_id: pairing.east.item.id,
-        west_id: pairing.west.item.id,
+        east_id: pairing.east.song.id,
+        west_id: pairing.west.song.id,
         outcome,
         created_at: new Date().toISOString(),
       };
@@ -302,15 +284,15 @@ export function RingView({
         if (result.error) setNotice(result.error);
       });
     },
-    [pairing, flash, trip, applyBout, live.bouts.length, combo, quiet],
+    [pairing, flash, applyBout, live.bouts.length, combo, quiet],
   );
 
   /**
-   * A wish or a finisher: one person, one card, one of three.
+   * A wish or a finisher: one person, one song, one of three.
    *
-   * Nothing goes in the bout log — neither is a bout, and the other card is
+   * Nothing goes in the bout log — neither is a bout, and the other song is
    * untouched — so the animation is driven by a flash of its own and the
-   * state lives on the card. There is no optimistic update: spending one of
+   * state lives on the song. There is no optimistic update: spending one of
    * three is rare and weighty enough to wait a beat for, and guessing wrong
    * about a budget the server enforces would be worse than the beat.
    */
@@ -331,8 +313,8 @@ export function RingView({
       startTransition(async () => {
         const result =
           move === "wish"
-            ? await wishItem(target.item.id, by)
-            : await finishItem(target.item.id, by);
+            ? await wishSong(target.song.id, by)
+            : await finishSong(target.song.id, by);
         if (result.error) {
           setNotice(result.error);
           return;
@@ -340,8 +322,8 @@ export function RingView({
         const label = PLANNERS[by].label;
         setNotice(
           move === "wish"
-            ? `${MOVES.wish.kana} — ${label} wished for "${target.item.title}". ${result.data} left.`
-            : `${MOVES.finish.kana} — ${label} finished "${target.item.title}". ${result.data} left.`,
+            ? `${MOVES.wish.kana} — ${label} wished for "${target.song.title}". ${result.data} left.`
+            : `${MOVES.finish.kana} — ${label} finished "${target.song.title}". ${result.data} left.`,
         );
       });
     },
@@ -425,40 +407,32 @@ export function RingView({
     return () => window.removeEventListener("keydown", onKey);
   }, [screen, settle, undo, quiet]);
 
-  /* ---- The promotion ------------------------------------------------ */
+  /* ---- The payoff -------------------------------------------------- */
 
-  function agree() {
+  /**
+   * Everything above the line, onto the clipboard, best first.
+   *
+   * The playlist itself gets built in a music app, so the useful thing this
+   * tab can hand over is the list in a shape a search box takes. It writes
+   * nothing — the ranking is already saved, and copying it twice is harmless —
+   * so there is no confirm in front of it.
+   */
+  async function copySetlist() {
     const chosen = standing.slice(0, fits);
     if (chosen.length === 0) return;
-    setConfirm({
-      title: `Promote ${chosen.length} to Decided?`,
-      body: (
-        <>
-          <p>
-            Everything above the line moves into Decided&apos;s pile, agreed but
-            not yet on a day. Picking days is the board&apos;s job.
-          </p>
-          <p>
-            Nothing is scheduled and nothing is deleted — a card you change your
-            mind about drags back out.
-          </p>
-        </>
-      ),
-      confirmLabel: `Promote ${chosen.length}`,
-      onConfirm: () =>
-        startTransition(async () => {
-          const result = await agreeToItems(chosen.map((s) => s.item.id));
-          if (result.error) {
-            setNotice(result.error);
-            return;
-          }
-          play("fanfare");
-          setPromoted(chosen.length);
-        }),
-    });
+    try {
+      await navigator.clipboard.writeText(
+        setlistText(chosen.map((s) => s.song)),
+      );
+    } catch {
+      setNotice("Couldn't copy — the browser blocked the clipboard.");
+      return;
+    }
+    play("fanfare");
+    setPromoted(chosen.length);
   }
 
-  const over = budget.wanted - budget.free;
+  const over = standing.length - SETLIST;
   const round = live.bouts.length + 1;
   const streak = comboTitle(combo);
 
@@ -496,16 +470,16 @@ export function RingView({
               <span className="text-white tabular-nums">{standing.length}</span>
             </span>
             <span className="text-white/45">
-              TIME{" "}
+              SETLIST{" "}
               <span
                 className="tabular-nums"
                 style={{
                   color: over > 0 ? "var(--color-ko)" : "var(--color-gold)",
                 }}
               >
-                {formatHours(budget.wanted)}H
+                {standing.length}
               </span>
-              <span className="text-white/30"> / {formatHours(budget.free)}H</span>
+              <span className="text-white/30"> / {SETLIST}</span>
             </span>
           </div>
 
@@ -640,18 +614,18 @@ export function RingView({
           ) : (
             <Banzuke
               ranked={ranked}
-              inTrip={inTrip}
+              setlist={setlist}
               cut={cut}
               busy={pending}
               onRevive={(id) =>
                 startTransition(async () => {
-                  const result = await reviveItem(id);
+                  const result = await reviveSong(id);
                   if (result.error) setNotice(result.error);
                 })
               }
               onRelease={(id) =>
                 startTransition(async () => {
-                  const result = await releaseItem(id);
+                  const result = await releaseSong(id);
                   setNotice(
                     result.error ?? "Wish taken back. It's in the ring again.",
                   );
@@ -682,8 +656,8 @@ export function RingView({
 
           <button
             type="button"
-            onClick={agree}
-            disabled={pending || fits === 0}
+            onClick={copySetlist}
+            disabled={fits === 0}
             className={cn(
               "font-dela flex min-h-11 items-center gap-3 border-2 px-5 text-sm tracking-wide",
               "border-[color:var(--color-gold)] bg-[color:var(--color-gold)] text-[color:var(--color-arena-deep)]",
@@ -691,14 +665,19 @@ export function RingView({
             )}
           >
             <span className="font-jp-gothic text-base">決定</span>
-            PROMOTE TOP {fits}
+            COPY THE TOP {fits}
           </button>
         </footer>
 
         <p className="font-dot mt-4 text-center text-[0.6rem] tracking-[0.25em] text-white/25">
           {over > 0
-            ? `${formatHours(over)}H MORE IDEAS THAN TRIP — KEEP CUTTING`
+            ? `${over} MORE SONGS THAN PARTY — KEEP CUTTING`
             : "IT ALL FITS. CARRY ON ANYWAY."}
+        </p>
+        {/* The line is an estimate, and says so where the number is made. */}
+        <p className="font-dot mt-1 text-center text-[0.55rem] tracking-[0.2em] text-white/20">
+          ROOM FOR {SETLIST}: {formatHours(MUSIC_MINUTES)}H OF COCOA HOUR, DINNER
+          AND DANCING AT ~{SONG_MINUTES} MIN A SONG
         </p>
       </div>
 
@@ -725,7 +704,6 @@ export function RingView({
         />
       ) : null}
 
-      <ConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
     </div>
   );
 }

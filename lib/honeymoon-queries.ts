@@ -321,40 +321,19 @@ export async function getNotesPage() {
 }
 
 /**
- * The Ring: every idea still arguable, and the whole bout log behind them.
+ * The Ring: the wedding playlist, and the whole bout log behind it.
  *
  * The log is read in full and oldest first, because the standings are replayed
  * from it — Elo depends on the order, so `created_at, id` is the ranking's
- * definition, not a nicety. Flights come along for the budget: the hours you
- * spend in the air are hours the trip does not have.
+ * definition, not a nicety. Neither table belongs to a trip.
  */
 export async function getRingPage() {
-  const trip = await getCurrentTrip();
-  const of = <T>(q: T) =>
-    trip
-      ? (q as { eq: (c: string, v: string) => T }).eq("trip_id", trip.id)
-      : q;
-
-  const [items, bouts, flights, rate] = await Promise.all([
-    of(supabase.from("trip_items").select().order("position")),
-    of(
-      supabase
-        .from("trip_bouts")
-        .select()
-        .order("created_at")
-        .order("id"),
-    ),
-    of(supabase.from("trip_flights").select().order("departs_at")),
-    getRate(),
+  const [songs, bouts] = await Promise.all([
+    supabase.from("wedding_songs").select().order("title"),
+    supabase.from("song_bouts").select().order("created_at").order("id"),
   ]);
 
-  return {
-    trip,
-    items: items.data ?? [],
-    bouts: bouts.data ?? [],
-    flights: flights.data ?? [],
-    rate,
-  };
+  return { songs: songs.data ?? [], bouts: bouts.data ?? [] };
 }
 
 /**

@@ -1256,6 +1256,45 @@ export type Database = {
         }
         Relationships: []
       }
+      song_bouts: {
+        Row: {
+          created_at: string
+          east_id: string
+          id: string
+          outcome: Database["public"]["Enums"]["trip_bout_outcome"]
+          west_id: string
+        }
+        Insert: {
+          created_at?: string
+          east_id: string
+          id?: string
+          outcome: Database["public"]["Enums"]["trip_bout_outcome"]
+          west_id: string
+        }
+        Update: {
+          created_at?: string
+          east_id?: string
+          id?: string
+          outcome?: Database["public"]["Enums"]["trip_bout_outcome"]
+          west_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "song_bouts_east_id_fkey"
+            columns: ["east_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_songs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "song_bouts_west_id_fkey"
+            columns: ["west_id"]
+            isOneToOne: false
+            referencedRelation: "wedding_songs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trip_bouts: {
         Row: {
           created_at: string
@@ -2286,6 +2325,36 @@ export type Database = {
         Update: {
           created_at?: string
           fingerprint?: string
+        }
+        Relationships: []
+      }
+      wedding_songs: {
+        Row: {
+          artist: string
+          created_at: string
+          cut_at: string | null
+          id: string
+          saved_by: Database["public"]["Enums"]["trip_planner"] | null
+          title: string
+          vetoed_by: Database["public"]["Enums"]["trip_planner"] | null
+        }
+        Insert: {
+          artist: string
+          created_at?: string
+          cut_at?: string | null
+          id?: string
+          saved_by?: Database["public"]["Enums"]["trip_planner"] | null
+          title: string
+          vetoed_by?: Database["public"]["Enums"]["trip_planner"] | null
+        }
+        Update: {
+          artist?: string
+          created_at?: string
+          cut_at?: string | null
+          id?: string
+          saved_by?: Database["public"]["Enums"]["trip_planner"] | null
+          title?: string
+          vetoed_by?: Database["public"]["Enums"]["trip_planner"] | null
         }
         Relationships: []
       }

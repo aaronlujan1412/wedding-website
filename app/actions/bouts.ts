@@ -4,9 +4,14 @@ import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { supabase } from "@/lib/supabase";
 import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
-import { currentTripId } from "@/lib/honeymoon-queries";
 import { FINISHERS, WISHES } from "@/components/honeymoon/bouts";
 import type { BoutOutcome, Planner } from "@/components/honeymoon/types";
+
+/**
+ * The Ring's writes. The fighters are the wedding playlist (`wedding_songs`)
+ * and the log is `song_bouts`; neither belongs to a trip, so nothing here
+ * resolves one.
+ */
 
 async function isHost() {
   const store = await cookies();
@@ -17,7 +22,6 @@ const DENIED = { data: null, error: "Not authorised." };
 
 function refresh() {
   revalidatePath("/honeymoon/ring");
-  revalidatePath("/honeymoon");
 }
 
 /**
@@ -25,7 +29,7 @@ function refresh() {
  *
  * The bout row is the history and `cut_at` is the state it left behind, so a
  * "cut both" writes both: the log says what happened in the ring, the column
- * says where the card stands now. Deriving the second from the first would
+ * says where the song stands now. Deriving the second from the first would
  * make bringing back one of the two a history edit.
  */
 export async function settleBout(
@@ -34,14 +38,11 @@ export async function settleBout(
   outcome: BoutOutcome,
 ) {
   if (!(await isHost())) return DENIED;
-  if (eastId === westId) return { data: null, error: "That's one card." };
-
-  const trip = await currentTripId();
-  if (!trip) return { data: null, error: "There's no trip yet." };
+  if (eastId === westId) return { data: null, error: "That's one song." };
 
   const { data, error } = await supabase
-    .from("trip_bouts")
-    .insert({ trip_id: trip, east_id: eastId, west_id: westId, outcome })
+    .from("song_bouts")
+    .insert({ east_id: eastId, west_id: westId, outcome })
     .select()
     .single();
 
@@ -49,7 +50,7 @@ export async function settleBout(
 
   if (outcome === "neither") {
     const { error: cut } = await supabase
-      .from("trip_items")
+      .from("wedding_songs")
       .update({ cut_at: new Date().toISOString() })
       .in("id", [eastId, westId]);
     if (cut) return { data: null, error: cut.message };
@@ -64,18 +65,14 @@ export async function settleBout(
  *
  * Every rating on the banzuke is replayed from the log, so deleting the row
  * is the whole undo — there is no score to unwind. The only thing that has to
- * be put back by hand is a cut, since that lives on the card.
+ * be put back by hand is a cut, since that lives on the song.
  */
 export async function undoLastBout() {
   if (!(await isHost())) return DENIED;
 
-  const trip = await currentTripId();
-  if (!trip) return { data: null, error: "There's no trip yet." };
-
   const { data: last } = await supabase
-    .from("trip_bouts")
+    .from("song_bouts")
     .select()
-    .eq("trip_id", trip)
     .order("created_at", { ascending: false })
     .order("id", { ascending: false })
     .limit(1)
@@ -83,14 +80,14 @@ export async function undoLastBout() {
 
   if (!last) return { data: null, error: "Nothing to take back." };
 
-  const { error } = await supabase.from("trip_bouts").delete().eq("id", last.id);
+  const { error } = await supabase.from("song_bouts").delete().eq("id", last.id);
   if (error) return { data: null, error: error.message };
 
   if (last.outcome === "neither") {
-    // Only the cut is reversed. A card that a finisher took out was never cut
+    // Only the cut is reversed. A song that a finisher took out was never cut
     // by this bout, and `vetoed_by` is not this command's to refund.
     await supabase
-      .from("trip_items")
+      .from("wedding_songs")
       .update({ cut_at: null })
       .in("id", [last.east_id, last.west_id])
       .is("vetoed_by", null);
@@ -103,15 +100,14 @@ export async function undoLastBout() {
 /**
  * Whether that person has a move of that kind left.
  *
- * Counted on the server rather than trusted from the button, for the same
- * reason the trip id is: the budget is the whole mechanic, and a mechanic
- * enforced only in the component is one request away from not existing.
+ * Counted on the server rather than trusted from the button: the budget is
+ * the whole mechanic, and a mechanic enforced only in the component is one
+ * request away from not existing.
  */
-async function spent(trip: string, planner: Planner, column: "saved_by" | "vetoed_by") {
+async function spent(planner: Planner, column: "saved_by" | "vetoed_by") {
   const { count } = await supabase
-    .from("trip_items")
+    .from("wedding_songs")
     .select("id", { count: "exact", head: true })
-    .eq("trip_id", trip)
     .eq(column, planner);
   return count ?? 0;
 }
@@ -119,24 +115,21 @@ async function spent(trip: string, planner: Planner, column: "saved_by" | "vetoe
 /**
  * 願い — a wish.
  *
- * The card leaves the tournament upward: out of the ring for good, and into
- * the trip with its hours counted first. Three each, and the refusal says how
- * many are left rather than just "no", because running out is a thing that
- * happens mid-argument.
+ * The song leaves the tournament upward: out of the ring for good, and onto
+ * the setlist ahead of everything that had to fight for it. Three each, and
+ * the refusal says how many are left rather than just "no", because running
+ * out is a thing that happens mid-argument.
  */
-export async function wishItem(id: string, planner: Planner) {
+export async function wishSong(id: string, planner: Planner) {
   if (!(await isHost())) return DENIED;
 
-  const trip = await currentTripId();
-  if (!trip) return { data: null, error: "There's no trip yet." };
-
-  const used = await spent(trip, planner, "saved_by");
+  const used = await spent(planner, "saved_by");
   if (used >= WISHES) {
     return { data: null, error: `No wishes left — all ${WISHES} are spent.` };
   }
 
   const { error } = await supabase
-    .from("trip_items")
+    .from("wedding_songs")
     .update({ saved_by: planner, cut_at: null, vetoed_by: null })
     .eq("id", id);
 
@@ -149,18 +142,15 @@ export async function wishItem(id: string, planner: Planner) {
 /**
  * 必殺 — a finisher.
  *
- * The card leaves downward, with no bout and nothing owed to the other side.
- * It lands in the same eliminated list as any cut card, because it is one;
+ * The song leaves downward, with no bout and nothing owed to the other side.
+ * It lands in the same eliminated list as any cut song, because it is one;
  * `vetoed_by` only records whose move it was, so a comeback refunds the right
  * person.
  */
-export async function finishItem(id: string, planner: Planner) {
+export async function finishSong(id: string, planner: Planner) {
   if (!(await isHost())) return DENIED;
 
-  const trip = await currentTripId();
-  if (!trip) return { data: null, error: "There's no trip yet." };
-
-  const used = await spent(trip, planner, "vetoed_by");
+  const used = await spent(planner, "vetoed_by");
   if (used >= FINISHERS) {
     return {
       data: null,
@@ -169,7 +159,7 @@ export async function finishItem(id: string, planner: Planner) {
   }
 
   const { error } = await supabase
-    .from("trip_items")
+    .from("wedding_songs")
     .update({
       vetoed_by: planner,
       cut_at: new Date().toISOString(),
@@ -184,11 +174,11 @@ export async function finishItem(id: string, planner: Planner) {
 }
 
 /** Back into the ring, and the wish back into its owner's hand. */
-export async function releaseItem(id: string) {
+export async function releaseSong(id: string) {
   if (!(await isHost())) return DENIED;
 
   const { error } = await supabase
-    .from("trip_items")
+    .from("wedding_songs")
     .update({ saved_by: null })
     .eq("id", id);
 
@@ -199,11 +189,11 @@ export async function releaseItem(id: string) {
 }
 
 /** Back into the ring. The bout that cut it stays on the record. */
-export async function reviveItem(id: string) {
+export async function reviveSong(id: string) {
   if (!(await isHost())) return DENIED;
 
   const { error } = await supabase
-    .from("trip_items")
+    .from("wedding_songs")
     .update({ cut_at: null, vetoed_by: null })
     .eq("id", id);
 
@@ -211,42 +201,4 @@ export async function reviveItem(id: string) {
 
   refresh();
   return { data: true, error: null };
-}
-
-/**
- * The payoff: everything above the line, into Decided.
- *
- * They land in Decided's pile with no day on them — agreed, not scheduled.
- * Picking the day is the Board's job and the reason the Compare view exists.
- * `added_by` is untouched, so the banzuke still knows whose idea it was.
- */
-export async function agreeToItems(ids: string[]) {
-  if (!(await isHost())) return DENIED;
-  if (ids.length === 0) return { data: 0, error: null };
-
-  const { data: top } = await supabase
-    .from("trip_items")
-    .select("position")
-    .eq("lane", "decided")
-    .is("on_date", null)
-    .order("position", { ascending: false })
-    .limit(1);
-
-  let position = (top?.[0]?.position ?? 0) + 1;
-  const now = new Date().toISOString();
-
-  // One at a time, because each needs its own position: a single .in() update
-  // would stack every card on one number and the pile's order would be
-  // whatever Postgres felt like.
-  for (const id of ids) {
-    const { error } = await supabase
-      .from("trip_items")
-      .update({ lane: "decided", on_date: null, position, updated_at: now })
-      .eq("id", id);
-    if (error) return { data: null, error: error.message };
-    position += 1;
-  }
-
-  refresh();
-  return { data: ids.length, error: null };
 }

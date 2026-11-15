@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   calloutFor,
@@ -10,12 +9,12 @@ import {
   healthOf,
   isCritical,
   sfxFor,
-  styleOf,
   type Sfx,
 } from "./arcade";
 import { FINISH_SFX, MOVES } from "./arcade";
 import { OUTCOMES, type Pairing, type Standing } from "./bouts";
-import { PLANNERS, formatDuration, itemLength } from "./trip";
+import { titleParts } from "./songs";
+import { PLANNERS } from "./trip";
 import type { BoutOutcome, Planner } from "./types";
 
 /**
@@ -26,9 +25,10 @@ import type { BoutOutcome, Planner } from "./types";
  * first cut of this tab was two pale rectangles on cream, which was tasteful
  * and which nobody would ever have opened twice.
  *
- * Her side keeps her blue and his keeps his violet — taken up to neon, but the
- * same two hues the board has always used — so for all the shouting it is
- * still unmistakably her ideas against his.
+ * The two corners keep the board's two hues, her blue and his violet, taken up
+ * to neon. A song has no owner, so here they only mean east and west; the one
+ * place a colour still means a person is a wish or a finisher, which is always
+ * spent by name.
  */
 
 /** Long enough for the sound effect to land and the loser to leave. */
@@ -38,7 +38,7 @@ export const FLASH_MS = 680;
  * What just happened, held on screen while it plays.
  *
  * A bout has a verdict and two fates. A move has neither: it is one person
- * spending one of three on one card, and the other card is untouched — which
+ * spending one of three on one song, and the other song is untouched — which
  * is why it is a separate shape rather than another outcome.
  */
 export type Flash =
@@ -58,6 +58,14 @@ const NEON = {
   aaron: "var(--color-neon-aaron)",
 } as const;
 
+export type Side = "east" | "west";
+
+/** East is the left of the ring and the left column of the banzuke. */
+export const SIDE_NEON: Record<Side, string> = {
+  east: NEON.savea,
+  west: NEON.aaron,
+};
+
 /* ------------------------------------------------------------------ *
  * Health
  * ------------------------------------------------------------------ */
@@ -67,7 +75,7 @@ const NEON = {
  *
  * Both layers are the same width driven by the same rating; the yellow one
  * just takes half a second longer to get there. That lag is the entire reason
- * anyone can tell how big a hit was — the neon is where the card is now, the
+ * anyone can tell how big a hit was — the neon is where the song is now, the
  * yellow is where it was a moment ago.
  */
 function Health({
@@ -76,11 +84,11 @@ function Health({
   quiet,
 }: {
   standing: Standing;
-  side: "savea" | "aaron";
+  side: Side;
   quiet: boolean;
 }) {
   const width = `${(healthOf(standing.rating) * 100).toFixed(1)}%`;
-  const east = side === "savea";
+  const east = side === "east";
 
   return (
     <div
@@ -101,7 +109,7 @@ function Health({
           east ? "skew-x-[12deg]" : "skew-x-[-12deg]",
         )}
         role="img"
-        aria-label={`${PLANNERS[side].label}'s idea is rated ${Math.round(standing.rating)}`}
+        aria-label={`The ${east ? "left" : "right"} song is rated ${Math.round(standing.rating)}`}
       >
         <span
           className={cn(
@@ -117,7 +125,7 @@ function Health({
             east ? "left-0" : "right-0",
             !quiet && "transition-[width] duration-150 ease-out",
           )}
-          style={{ width, backgroundColor: NEON[side] }}
+          style={{ width, backgroundColor: SIDE_NEON[side] }}
         />
       </div>
     </div>
@@ -136,14 +144,15 @@ function Fighter({
   onPick,
 }: {
   standing: Standing;
-  side: "savea" | "aaron";
+  side: Side;
   fate: Fate;
   quiet: boolean;
   onPick: () => void;
 }) {
-  const item = standing.item;
-  const east = side === "savea";
-  const neon = NEON[side];
+  const song = standing.song;
+  const { name, version } = titleParts(song.title);
+  const east = side === "east";
+  const neon = SIDE_NEON[side];
   const form = formOf(standing);
 
   return (
@@ -173,7 +182,7 @@ function Fighter({
         quiet && (fate === "lost" || fate === "cut") && "opacity-25 grayscale",
       )}
     >
-      {/* The blade, and the halo. One frame each, over the card they happen
+      {/* The blade, and the halo. One frame each, over the song they happen
           to. */}
       {fate === "cut" && !quiet ? (
         <span className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -204,43 +213,36 @@ function Fighter({
         </span>
       ) : null}
 
-      <span className="font-dot flex flex-wrap items-center gap-2 text-[0.65rem] tracking-widest text-white/55">
-        {item.must_do ? (
-          <span className="flex items-center gap-1 text-[color:var(--color-gold)]">
-            <Star className="size-3 fill-current" aria-hidden />
-            CHAMPION
-          </span>
-        ) : null}
-        <span>{styleOf(item)}</span>
-        {form ? <span style={{ color: neon }}>{form}</span> : null}
-      </span>
+      {form ? (
+        <span
+          className="font-dot text-[0.65rem] tracking-widest"
+          style={{ color: neon }}
+        >
+          {form}
+        </span>
+      ) : null}
 
       <span
         className="font-dela text-impact max-w-[18ch] text-2xl leading-[1.1] text-balance text-white sm:text-3xl lg:text-4xl"
         style={{ filter: `drop-shadow(0 0 22px ${neon})` }}
       >
-        {item.title}
+        {name}
       </span>
 
-      {item.title_ja ? (
-        <span
-          className="font-jp-gothic text-lg leading-tight lg:text-xl"
-          style={{ color: neon }}
-        >
-          {item.title_ja}
+      {/* "Taylor's Version", "feat. Rivers Cuomo": part of the title, but not
+          the part anyone shouts. */}
+      {version ? (
+        <span className="font-dot max-w-[34ch] text-[0.7rem] tracking-wide text-white/60">
+          {version.toUpperCase()}
         </span>
       ) : null}
 
-      <span className="font-dot text-[0.7rem] tracking-wide text-white/70">
-        {formatDuration(itemLength(item))}
-        {item.city ? ` — ${item.city.toUpperCase()}` : ""}
+      <span
+        className="font-dot max-w-[34ch] text-[0.8rem] tracking-widest"
+        style={{ color: neon }}
+      >
+        {song.artist.toUpperCase()}
       </span>
-
-      {item.notes ? (
-        <span className="line-clamp-2 max-w-[34ch] font-garamond text-sm text-white/55 italic">
-          {item.notes}
-        </span>
-      ) : null}
 
       <span
         className="font-dot mt-2 border-2 px-2 py-1 text-[0.7rem] tracking-widest"
@@ -305,7 +307,7 @@ function Special({
   onPick,
 }: {
   move: "wish" | "finish";
-  side: "savea" | "aaron";
+  side: Side;
   disabled: boolean;
   onPick: () => void;
 }) {
@@ -328,7 +330,7 @@ function Special({
       <span className="font-jp-gothic text-sm leading-none">{meta.kana}</span>
       <span className="hidden sm:inline">{meta.roman}</span>
       <span className="sr-only">
-        {meta.roman} the {side === "savea" ? "left" : "right"} idea
+        {meta.roman} the {side === "east" ? "left" : "right"} song
       </span>
     </button>
   );
@@ -370,7 +372,7 @@ function Impact({
   outcome: BoutOutcome;
   crit: boolean;
   quiet: boolean;
-  /** Focus lines are for a hit. A wish or a finisher lands on one card and
+  /** Focus lines are for a hit. A wish or a finisher lands on one song and
    *  nobody was struck, so they get the lettering only. */
   lines?: boolean;
 }) {
@@ -484,7 +486,7 @@ export function Ring({
   onSettle: (outcome: BoutOutcome) => void;
   onMove: (move: "wish" | "finish", on: "east" | "west", by: Planner) => void;
 }) {
-  // Which card a scarce move is about to be spent on, while the ring asks
+  // Which song a scarce move is about to be spent on, while the ring asks
   // whose move it is. Two people share one login, so the ring has to ask —
   // and it is the right moment to ask, because three each is few enough that
   // spending one should take a beat.
@@ -495,28 +497,26 @@ export function Ring({
 
   // While the hit plays, the pair that took it stays on screen. Swapping the
   // next question in under the sound effect makes the sound effect look like
-  // it happened to the wrong card.
+  // it happened to the wrong song.
   const shown = flash?.pairing ?? pairing;
   const result = flash?.kind === "bout" ? flash.outcome : null;
   const callout = calloutFor(shown);
   const loaded = isCritical(
-    pairing.east.item.id,
-    pairing.west.item.id,
+    pairing.east.song.id,
+    pairing.west.song.id,
     round - 1,
   );
   const busy = flash !== null;
 
-  const fate = (side: "savea" | "aaron"): Fate => {
+  const fate = (side: Side): Fate => {
     if (flash?.kind === "move") {
-      const target = flash.on === "east" ? "savea" : "aaron";
-      if (side !== target) return null;
+      if (side !== flash.on) return null;
       return flash.move === "wish" ? "wished" : "cut";
     }
     if (!result || result === "skip" || result === "deadlock") return null;
     if (result === "both") return "kept";
     if (result === "neither") return "lost";
-    const winner = result === "east" ? "savea" : "aaron";
-    return side === winner ? "won" : "lost";
+    return side === result ? "won" : "lost";
   };
 
   function ask(move: "wish" | "finish", on: "east" | "west") {
@@ -551,11 +551,11 @@ export function Ring({
 
       {/* Health, facing each other across the middle. */}
       <div className="flex items-center gap-3 border-x-2 border-[color:var(--color-arena-line)] bg-[color:var(--color-arena-deep)] px-4 py-2">
-        <Health standing={shown.east} side="savea" quiet={quiet} />
+        <Health standing={shown.east} side="east" quiet={quiet} />
         <span className="font-dot shrink-0 text-[0.6rem] tracking-widest text-white/35">
           HP
         </span>
-        <Health standing={shown.west} side="aaron" quiet={quiet} />
+        <Health standing={shown.west} side="west" quiet={quiet} />
       </div>
 
       {/* The ring itself. */}
@@ -575,15 +575,15 @@ export function Ring({
         <div className="relative grid lg:grid-cols-2">
           <Fighter
             standing={shown.east}
-            side="savea"
-            fate={fate("savea")}
+            side="east"
+            fate={fate("east")}
             quiet={quiet}
             onPick={() => onSettle("east")}
           />
           <Fighter
             standing={shown.west}
-            side="aaron"
-            fate={fate("aaron")}
+            side="west"
+            fate={fate("west")}
             quiet={quiet}
             onPick={() => onSettle("west")}
           />
@@ -604,7 +604,7 @@ export function Ring({
 
         {flash?.kind === "bout" ? (
           <Impact
-            sfx={sfxFor(flash.outcome, `${round}:${flash.pairing.east.item.id}`)}
+            sfx={sfxFor(flash.outcome, `${round}:${flash.pairing.east.song.id}`)}
             outcome={flash.outcome}
             crit={flash.crit}
             quiet={quiet}
@@ -638,7 +638,7 @@ export function Ring({
                 {MOVES[picking.move].roman} ON
               </p>
               <p className="font-dela mt-2 text-lg text-white">
-                {(picking.on === "east" ? shown.east : shown.west).item.title}
+                {(picking.on === "east" ? shown.east : shown.west).song.title}
               </p>
               <p className="font-dot mt-2 text-[0.6rem] tracking-widest text-white/40">
                 {MOVES[picking.move].blurb.toUpperCase()}
@@ -713,9 +713,9 @@ export function Ring({
       </p>
 
       {/* The specials, mirroring the arena: the left group acts on the left
-          card, the right group on the right, and 預かり sits in the middle
+          song, the right group on the right, and 預かり sits in the middle
           because it is the only one that acts on the bout rather than on a
-          card. */}
+          song. */}
       <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
         <div className="flex flex-1 items-center justify-center gap-2 lg:justify-end">
           <span aria-hidden className="font-dot text-[0.6rem] text-white/30">
@@ -724,13 +724,13 @@ export function Ring({
           </span>
           <Special
             move="wish"
-            side="savea"
+            side="east"
             disabled={busy}
             onPick={() => ask("wish", "east")}
           />
           <Special
             move="finish"
-            side="savea"
+            side="east"
             disabled={busy}
             onPick={() => ask("finish", "east")}
           />
@@ -764,13 +764,13 @@ export function Ring({
         <div className="flex flex-1 items-center justify-center gap-2 lg:justify-start">
           <Special
             move="finish"
-            side="aaron"
+            side="west"
             disabled={busy}
             onPick={() => ask("finish", "west")}
           />
           <Special
             move="wish"
-            side="aaron"
+            side="west"
             disabled={busy}
             onPick={() => ask("wish", "west")}
           />

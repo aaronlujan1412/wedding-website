@@ -1,9 +1,10 @@
 "use client";
 
-import { RotateCcw, Star } from "lucide-react";
+import { RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MOVES, rankFor } from "./arcade";
-import { standingsOf, wished, type Standing } from "./bouts";
+import { contenders, wished, type Standing } from "./bouts";
+import { SIDE_NEON, type Side } from "./Ring";
 import { PLANNERS } from "./trip";
 
 /**
@@ -12,17 +13,18 @@ import { PLANNERS } from "./trip";
  *
  * A real banzuke is a ranking sheet built entirely out of head-to-head bouts,
  * printed in two columns, east and west, with the rank in the middle and the
- * type size shrinking all the way down the sheet. That is exactly the shape of
- * this data, so it is drawn exactly that way — the size of a name IS its rank,
- * which means the standings can be read from across the room without reading
- * a single word.
+ * type size shrinking all the way down the sheet. Each rank holds two
+ * wrestlers, east the senior of the pair — so one ranking of songs deals out
+ * exactly that way: first east, first west, second east, and on down. The size
+ * of a name IS its rank, which means the standings can be read from across the
+ * room without reading a single word.
  *
  * The top four ranks are the real ones, and so is the line: above it is 幕内,
- * the salaried division, which here means the idea fits inside the hours the
- * trip actually has. Below it is 幕下, where you train and are not paid.
+ * the salaried division, which here means the song fits in the hours the party
+ * has. Below it is 幕下, where you train and are not paid.
  */
 
-const NEON = {
+const PLANNER_NEON = {
   savea: "var(--color-neon-savea)",
   aaron: "var(--color-neon-aaron)",
 } as const;
@@ -39,16 +41,15 @@ function rankSize(row: number): string {
 }
 
 /**
- * The cut is global — one trip, one pot of hours — but within one person's
- * cards the ones that fit are always a prefix of their own ranking, because
- * both orders are by rating. So each column gets its own line at its own
- * depth, which is truer than one rule straight across: where hers sits lower
- * than his, her ideas are taking more of the trip.
+ * Where a column's line goes. The songs that make the setlist are a prefix of
+ * the ranking, and dealing it east-west alternately keeps them a prefix of
+ * each column — so when the count is odd, east's line sits one row below
+ * west's, which is exactly where the last song in falls.
  */
-function fitting(column: Standing[], inTrip: Set<string>): number {
+function fitting(column: Standing[], setlist: Set<string>): number {
   let count = 0;
   for (const standing of column) {
-    if (!inTrip.has(standing.item.id)) break;
+    if (!setlist.has(standing.song.id)) break;
     count += 1;
   }
   return count;
@@ -57,22 +58,23 @@ function fitting(column: Standing[], inTrip: Set<string>): number {
 function Cell({
   standing,
   size,
-  inTrip,
+  onList,
   side,
   line,
   title,
 }: {
   standing: Standing | undefined;
   size: string;
-  inTrip: boolean;
-  side: "savea" | "aaron";
-  /** Set on the last card that fits: this cell carries the division line. */
+  onList: boolean;
+  side: Side;
+  /** Set on the last song in: this cell carries the division line. An empty
+   *  string draws the line with nothing written on it. */
   line: string | null;
   /** Spelled out for the four ranks that have a name. Everyone below is a
    *  numbered maegashira and the gutter's kana says so on its own. */
   title: string | null;
 }) {
-  const east = side === "savea";
+  const east = side === "east";
 
   return (
     <span
@@ -80,57 +82,64 @@ function Cell({
         "flex min-w-0 flex-col py-1",
         east ? "items-end" : "items-start",
         // Drawn on the cell rather than as a row of its own: the two columns
-        // cut at different depths, and a full-width rule between two grid rows
-        // would drag the other column's card down with it.
-        line && "border-b-2 border-[color:var(--color-gold)]/60 pb-2",
+        // can cut at different depths, and a full-width rule between two grid
+        // rows would drag the other column's song down with it.
+        line !== null && "border-b-2 border-[color:var(--color-gold)]/60 pb-2",
       )}
     >
       {standing ? (
-        <span
-          className={cn(
-            "flex min-w-0 max-w-full items-baseline gap-3",
-            east && "flex-row-reverse",
-          )}
-        >
+        <>
           <span
             className={cn(
-              "font-dela leading-tight text-pretty",
-              east ? "text-right" : "text-left",
-            )}
-            style={{
-              fontSize: size,
-              color: inTrip ? "#fff" : "rgba(255,255,255,0.32)",
-            }}
-          >
-            {standing.item.must_do ? (
-              <Star
-                className="mr-1 inline size-[0.5em] fill-current align-baseline text-[color:var(--color-gold)]"
-                aria-label="Must do"
-              />
-            ) : null}
-            {standing.item.title}
-          </span>
-          <span
-            className={cn(
-              "font-dot flex shrink-0 items-baseline gap-2",
+              "flex min-w-0 max-w-full items-baseline gap-3",
               east && "flex-row-reverse",
             )}
           >
-            {title ? (
-              <span className="text-[0.55rem] tracking-[0.2em] text-[color:var(--color-gold)]">
-                {title}
-              </span>
-            ) : null}
             <span
-              className="text-[0.7rem] tabular-nums"
-              style={{ color: inTrip ? NEON[side] : "rgba(255,255,255,0.3)" }}
+              className={cn(
+                "font-dela leading-tight text-pretty",
+                east ? "text-right" : "text-left",
+              )}
+              style={{
+                fontSize: size,
+                color: onList ? "#fff" : "rgba(255,255,255,0.32)",
+              }}
             >
-              {standing.fought === 0
-                ? "—"
-                : `${standing.wins}–${standing.losses}`}
+              {standing.song.title}
+            </span>
+            <span
+              className={cn(
+                "font-dot flex shrink-0 items-baseline gap-2",
+                east && "flex-row-reverse",
+              )}
+            >
+              {title ? (
+                <span className="text-[0.55rem] tracking-[0.2em] text-[color:var(--color-gold)]">
+                  {title}
+                </span>
+              ) : null}
+              <span
+                className="text-[0.7rem] tabular-nums"
+                style={{
+                  color: onList ? SIDE_NEON[side] : "rgba(255,255,255,0.3)",
+                }}
+              >
+                {standing.fought === 0
+                  ? "—"
+                  : `${standing.wins}–${standing.losses}`}
+              </span>
             </span>
           </span>
-        </span>
+          <span
+            className={cn(
+              "font-dot text-[0.6rem] tracking-wider",
+              onList ? "text-white/45" : "text-white/20",
+              east ? "text-right" : "text-left",
+            )}
+          >
+            {standing.song.artist.toUpperCase()}
+          </span>
+        </>
       ) : null}
 
       {line ? (
@@ -144,32 +153,33 @@ function Cell({
 
 export function Banzuke({
   ranked,
-  inTrip,
+  setlist,
   cut,
   onRevive,
   onRelease,
   busy,
 }: {
   ranked: Standing[];
-  /** Ids that fit inside the trip's remaining hours. */
-  inTrip: Set<string>;
+  /** Ids that fit inside the party's hours. */
+  setlist: Set<string>;
   cut: Standing[];
   onRevive: (id: string) => void;
   onRelease: (id: string) => void;
   busy: boolean;
 }) {
   const saved = wished(ranked);
-  const east = standingsOf(ranked, "savea");
-  const west = standingsOf(ranked, "aaron");
-  const rows = Math.max(east.length, west.length);
+  const sheet = contenders(ranked);
+  const east = sheet.filter((_, i) => i % 2 === 0);
+  const west = sheet.filter((_, i) => i % 2 === 1);
+  const rows = east.length;
 
-  const eastFits = fitting(east, inTrip);
-  const westFits = fitting(west, inTrip);
+  const eastFits = fitting(east, setlist);
+  const westFits = fitting(west, setlist);
 
   if (rows === 0 && saved.length === 0) {
     return (
       <p className="font-dot py-16 text-center text-sm tracking-widest text-white/50">
-        NO CHALLENGERS. ADD IDEAS ON THE BOARD.
+        NO SONGS LEFT IN THE RING.
       </p>
     );
   }
@@ -186,8 +196,8 @@ export function Banzuke({
       </p>
 
       {/* 不戦勝 — a real sumo result: a win awarded with no bout, because the
-          other side never showed up. A wished card is exactly that, so it sits
-          above the ranking rather than at the top of it. */}
+          other side never showed up. A wished song is exactly that, so it
+          sits above the ranking rather than at the top of it. */}
       {saved.length > 0 ? (
         <div className="mb-6 border-2 border-[color:var(--color-gold)]/50 px-3 py-3">
           <p>
@@ -201,25 +211,28 @@ export function Banzuke({
           <ul className="mt-2 flex flex-col gap-1.5">
             {saved.map((standing) => (
               <li
-                key={standing.item.id}
+                key={standing.song.id}
                 className="flex flex-wrap items-baseline gap-x-3 gap-y-1"
               >
                 <span className="font-jp-gothic text-sm text-[color:var(--color-gold)]">
                   {MOVES.wish.pip}
                 </span>
                 <span className="font-dela text-base text-white sm:text-lg">
-                  {standing.item.title}
+                  {standing.song.title}
+                </span>
+                <span className="font-dot text-[0.6rem] tracking-wider text-white/45">
+                  {standing.song.artist.toUpperCase()}
                 </span>
                 <span
                   className="font-dot text-[0.6rem] tracking-widest"
-                  style={{ color: NEON[standing.saved ?? "savea"] }}
+                  style={{ color: PLANNER_NEON[standing.saved ?? "savea"] }}
                 >
                   {PLANNERS[standing.saved ?? "savea"].label.toUpperCase()}
                   &apos;S WISH
                 </span>
                 <button
                   type="button"
-                  onClick={() => onRelease(standing.item.id)}
+                  onClick={() => onRelease(standing.song.id)}
                   disabled={busy}
                   className="font-dot ml-auto min-h-8 border-2 border-white/15 px-2 text-[0.6rem] tracking-widest text-white/45 transition-colors hover:border-[color:var(--color-gold)]/60 hover:text-white disabled:opacity-40"
                 >
@@ -234,18 +247,18 @@ export function Banzuke({
       <div className="grid grid-cols-[1fr_3rem_1fr] items-baseline gap-x-2 sm:gap-x-4">
         <h3
           className="font-dela justify-self-end text-sm tracking-wide sm:text-base"
-          style={{ color: NEON.savea }}
+          style={{ color: SIDE_NEON.east }}
         >
-          {PLANNERS.savea.label.toUpperCase()}
+          EAST
           <span className="font-jp-gothic ml-2 text-white/35">東</span>
         </h3>
         <span />
         <h3
           className="font-dela text-sm tracking-wide sm:text-base"
-          style={{ color: NEON.aaron }}
+          style={{ color: SIDE_NEON.west }}
         >
           <span className="font-jp-gothic mr-2 text-white/35">西</span>
-          {PLANNERS.aaron.label.toUpperCase()}
+          WEST
         </h3>
 
         <span className="col-span-full mt-2 mb-3 h-0.5 bg-[color:var(--color-arena-line)]" />
@@ -257,7 +270,7 @@ export function Banzuke({
           // The rank belongs to the row, and a row is only in the top division
           // if anything in it is.
           const top =
-            (!!e && inTrip.has(e.item.id)) || (!!w && inTrip.has(w.item.id));
+            (!!e && setlist.has(e.song.id)) || (!!w && setlist.has(w.song.id));
           const rank = rankFor(row, top);
           // Only the four named ranks are worth spelling out; "MAEGASHIRA 17"
           // beside every other line is the gutter's number again, in words.
@@ -268,12 +281,14 @@ export function Banzuke({
               <Cell
                 standing={e}
                 size={size}
-                side="savea"
-                inTrip={!!e && inTrip.has(e.item.id)}
+                side="east"
+                onList={!!e && setlist.has(e.song.id)}
                 title={title}
+                // The count is said once, under the column whose line is
+                // lower — east's, or level with west's.
                 line={
                   row + 1 === eastFits
-                    ? `幕内 — ${eastFits} OF ${PLANNERS.savea.label.toUpperCase()}'S FIT`
+                    ? `幕内 — ${setlist.size} MAKE THE SETLIST`
                     : null
                 }
               />
@@ -298,14 +313,10 @@ export function Banzuke({
               <Cell
                 standing={w}
                 size={size}
-                side="aaron"
-                inTrip={!!w && inTrip.has(w.item.id)}
+                side="west"
+                onList={!!w && setlist.has(w.song.id)}
                 title={title}
-                line={
-                  row + 1 === westFits
-                    ? `幕内 — ${westFits} OF ${PLANNERS.aaron.label.toUpperCase()}'S FIT`
-                    : null
-                }
+                line={row + 1 === westFits ? "" : null}
               />
             </div>
           );
@@ -323,16 +334,16 @@ export function Banzuke({
             </span>
           </p>
           <p className="mt-1 font-garamond text-sm text-white/45 italic">
-            Still in their pile on the board, out of the tournament. One press
-            brings one back.
+            Out of the tournament, not deleted. One press brings one back.
           </p>
           <ul className="mt-3 flex flex-wrap gap-2">
             {cut.map((standing) => (
-              <li key={standing.item.id}>
+              <li key={standing.song.id}>
                 <button
                   type="button"
-                  onClick={() => onRevive(standing.item.id)}
+                  onClick={() => onRevive(standing.song.id)}
                   disabled={busy}
+                  title={standing.song.artist}
                   className={cn(
                     "font-dot flex min-h-9 items-center gap-2 border-2 border-white/15 px-3 py-1.5",
                     "text-[0.65rem] tracking-wide text-white/45 transition-colors",
@@ -343,14 +354,14 @@ export function Banzuke({
                   {standing.vetoed ? (
                     <span
                       className="font-jp-gothic text-sm leading-none"
-                      style={{ color: NEON[standing.vetoed] }}
+                      style={{ color: PLANNER_NEON[standing.vetoed] }}
                       title={`${PLANNERS[standing.vetoed].label}'s finisher`}
                     >
                       {MOVES.finish.kana}
                     </span>
                   ) : null}
                   <span className="line-through">
-                    {standing.item.title.toUpperCase()}
+                    {standing.song.title.toUpperCase()}
                   </span>
                   <span className="text-[color:var(--color-gold)]">
                     COMEBACK

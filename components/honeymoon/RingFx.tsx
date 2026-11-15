@@ -21,10 +21,10 @@ import { hash } from "./arcade";
 export const TRANSFORM_MS = 2600;
 
 /**
- * Sending the winners to Decided is the one thing on this tab that changes the
- * actual holiday, so it gets the magical girl sequence: ribbons, sparkles, a
- * gold hit and a fanfare. Everything else here is a game; this is the bit
- * where the game turns into a plan.
+ * Taking the setlist away is the one thing on this tab that leaves it, so it
+ * gets the magical girl sequence: ribbons, sparkles, a gold hit and a fanfare.
+ * Everything else here is a game; this is the bit where the game turns into a
+ * playlist.
  */
 export function Transformation({
   count,
@@ -103,10 +103,10 @@ export function Transformation({
           決定
         </span>
         <span className="font-dela text-xl text-white sm:text-3xl">
-          {count} {count === 1 ? "IDEA" : "IDEAS"} PROMOTED
+          {count} {count === 1 ? "SONG" : "SONGS"} ON THE SETLIST
         </span>
         <span className="font-dot text-[0.7rem] tracking-[0.3em] text-white/70">
-          IN THE PLAN. NOT YET ON A DAY.
+          COPIED. PASTE IT INTO THE PLAYLIST.
         </span>
       </div>
     </div>
@@ -190,7 +190,7 @@ export function Fireball({ onDone }: { onDone: () => void }) {
  * 招き猫
  * ------------------------------------------------------------------ */
 
-/** Turns up in the corner, waves, leaves. Has no opinion about the trip. */
+/** Turns up in the corner, waves, leaves. Has no opinion about the music. */
 export function ManekiNeko({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onDone, 4200);

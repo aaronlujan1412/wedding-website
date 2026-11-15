@@ -57,6 +57,9 @@ const ORDER = [
   "trip_transit",
   "trip_checklist_items",
   "trip_papers",
+  // Songs before the bouts that point at them.
+  "wedding_songs",
+  "song_bouts",
 ];
 
 const KEY_OF = { trip_days: "on_date" };

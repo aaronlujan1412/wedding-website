@@ -11,9 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function RingPage() {
-  const { trip, items, bouts, flights } = await getRingPage();
+  const { songs, bouts } = await getRingPage();
 
-  return (
-    <RingView trip={trip} items={items} bouts={bouts} flights={flights} />
-  );
+  return <RingView songs={songs} bouts={bouts} />;
 }

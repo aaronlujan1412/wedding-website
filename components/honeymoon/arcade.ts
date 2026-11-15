@@ -1,19 +1,19 @@
 import type { Pairing, Standing } from "./bouts";
-import { PLANNERS, kindOf } from "./trip";
-import type { BoutOutcome, TripItem } from "./types";
+import { sameArtist, sameSong } from "./songs";
+import type { BoutOutcome } from "./types";
 
 /**
  * The Ring's voice.
  *
  * Everything the arcade shouts lives here, and every bit of it is a pure
- * function of the bout — the two card ids and how many bouts came before. Same
+ * function of the bout — the two song ids and how many bouts came before. Same
  * rule as the matchmaker: the twelve-second refresh re-renders this screen
  * while a question is still on it, and a `Math.random()` sound effect would
  * change its mind about what just happened halfway through the animation.
  *
  * The register is deliberate. The rest of the planner is a quiet paper
  * document because it gets read on a train; this is the screen where two
- * people argue about whether the owl cafe is happening, and it is allowed to
+ * people argue about whether Cotton Eye Joe is happening, and it is allowed to
  * be an arcade cabinet about it.
  */
 
@@ -88,16 +88,15 @@ export function sfxFor(outcome: BoutOutcome, seed: string): Sfx {
  * The three moves that aren't a verdict.
  *
  * Two of them are budgeted, and the budget is the design: a wish you can spend
- * on everything is the `must_do` flag, which this board already has and which
- * nobody has ever pressed. Three is few enough that spending one is an
- * argument in itself.
+ * on everything is a wish that means nothing. Three is few enough that
+ * spending one is an argument in itself.
  */
 export const MOVES = {
   wish: {
     kana: "願い",
     roman: "WISH",
     /** What it does, in the voice of the thing it does it to. */
-    blurb: "straight into the trip, never fights again",
+    blurb: "straight onto the setlist, never fights again",
     pip: "★",
   },
   finish: {
@@ -141,50 +140,28 @@ export type Callout = { title: string; kana: string | null };
  * What kind of fight this is, announced over the top of it.
  *
  * The matchmaker already pairs on the things that make a bout worth having —
- * same person's rival, same city, same kind — so this is mostly the matchmaker
- * saying out loud what it just did. Which is the useful version of a joke:
- * "CIVIL WAR: KYOTO" is funnier than "Both in Kyoto" and tells you the same
- * thing.
+ * two versions of one song, one artist twice, a close rating — so this is
+ * mostly the matchmaker saying out loud what it just did. Which is the useful
+ * version of a joke: "CIVIL WAR — TAYLOR SWIFT" is funnier than "Both Taylor
+ * Swift" and tells you the same thing.
  */
 export function calloutFor(pairing: Pairing): Callout {
-  const a = pairing.east.item;
-  const b = pairing.west.item;
+  const a = pairing.east.song;
+  const b = pairing.west.song;
 
-  if (a.must_do && b.must_do) {
-    return { title: "TITLE MATCH", kana: "全勝対決" };
+  if (sameSong(a, b)) {
+    return { title: "SAME SONG — PICK A VERSION", kana: "同曲対決" };
   }
-  if (a.must_do || b.must_do) {
-    return { title: "CHAMPION ENTERS", kana: "横綱登場" };
+  if (sameArtist(a, b)) {
+    return { title: `CIVIL WAR — ${a.artist.toUpperCase()}`, kana: "同門対決" };
   }
   if (pairing.east.fought === 0 && pairing.west.fought === 0) {
     return { title: "BOTH DEBUTS", kana: "新入幕" };
   }
-  if (a.kind === b.kind && a.kind === "food") {
-    return { title: "STOMACH BATTLE", kana: "食い倒れ" };
-  }
-  if (a.kind === b.kind && a.kind !== "unsorted") {
-    return { title: "MIRROR MATCH", kana: "同門対決" };
-  }
-  if (
-    a.city &&
-    b.city &&
-    a.city.trim().toLowerCase() === b.city.trim().toLowerCase()
-  ) {
-    return { title: `CIVIL WAR — ${a.city.toUpperCase()}`, kana: null };
-  }
   if (Math.abs(pairing.east.rating - pairing.west.rating) > 120) {
     return { title: "UPSET INCOMING?", kana: "番狂わせ" };
   }
-  if (a.added_by === b.added_by) {
-    return {
-      title: `${PLANNERS[a.added_by].label.toUpperCase()} VS HERSELF`.replace(
-        "AARON VS HERSELF",
-        "AARON VS HIMSELF",
-      ),
-      kana: "同部屋",
-    };
-  }
-  return { title: "SAVEA VS AARON", kana: "東西対抗" };
+  return { title: "EAST VS WEST", kana: "東西対抗" };
 }
 
 /**
@@ -200,7 +177,7 @@ export function gyojiLine(pairing: Pairing, index: number): string {
     "I have seen better. Proceed anyway.",
     "No pushing out of the ring. Actually, do.",
   ];
-  return pick(calls, `gyoji:${index}:${pairing.east.item.id}`);
+  return pick(calls, `gyoji:${index}:${pairing.east.song.id}`);
 }
 
 /* ------------------------------------------------------------------ *
@@ -223,7 +200,7 @@ const COMBO: { at: number; title: string }[] = [
   { at: 10, title: "GODLIKE" },
   { at: 14, title: "ARE YOU TWO OKAY" },
   { at: 20, title: "PLEASE GO OUTSIDE" },
-  { at: 30, title: "THIS IS YOUR HONEYMOON" },
+  { at: 30, title: "JUST PRESS SHUFFLE" },
 ];
 
 export function comboTitle(count: number): string | null {
@@ -261,7 +238,7 @@ export function rankFor(row: number, fits: boolean): Rank {
  * ------------------------------------------------------------------ */
 
 /** Ratings start at 1500 and drift about 200 either way, so the bar is that
- *  band stretched over its whole width. A leader reads full, a card that has
+ *  band stretched over its whole width. A leader reads full, a song that has
  *  lost all night reads nearly empty, and nothing ever pins at either end. */
 export function healthOf(rating: number): number {
   return Math.max(0.06, Math.min(1, (rating - 1280) / 440));
@@ -295,18 +272,13 @@ export function secretFor(buffer: string): Secret | null {
   return SECRETS.find((s) => buffer.endsWith(s.word)) ?? null;
 }
 
-/** One line of flavour for a card that has been in a lot of bouts, shown
- *  under its name in the arena. Cosmetic, and it earns its place by being the
- *  only reason to notice a card is on a run. */
+/** One line of flavour for a song that has been in a lot of bouts, shown
+ *  over its name in the arena. Cosmetic, and it earns its place by being the
+ *  only reason to notice a song is on a run. */
 export function formOf(standing: Standing): string | null {
   if (standing.fought === 0) return "DEBUT";
   if (standing.losses === 0 && standing.wins >= 4) return "UNDEFEATED";
   if (standing.wins === 0 && standing.losses >= 4) return "WINLESS";
   if (standing.wins >= 3 && standing.wins >= standing.losses * 3) return "ON A RUN";
   return null;
-}
-
-/** The fighter's "name" under the title — the card's type, shouted. */
-export function styleOf(item: TripItem): string {
-  return kindOf(item.kind).label.toUpperCase();
 }
