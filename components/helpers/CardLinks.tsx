@@ -1,12 +1,20 @@
 import Link from "next/link";
 import type { Role } from "@/components/schedule/roles";
 import { cn } from "@/lib/utils";
-import { cardAnchor, cardById, hasCard, helpersHref, type CardLink } from "./cards";
+import {
+  cardAnchor,
+  cardById,
+  hasCard,
+  helperViewOf,
+  helpersHref,
+  type CardLink,
+} from "./cards";
 
 /**
  * Links to helper cards, each a small tab with the card's icon. Only the
  * cards the role has: the family's copy of the ceremony doesn't point at a
- * shot list that isn't on their page.
+ * shot list that isn't on their page. A staff role's go to its own page,
+ * behind the code; everyone else's to the open one.
  */
 export function CardLinks({
   links,
@@ -39,7 +47,7 @@ export function CardLinks({
         return (
           <li key={cardAnchor(link)}>
             <Link
-              href={helpersHref(role, link)}
+              href={helpersHref(helperViewOf(role), link)}
               className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 font-raleway text-sm text-primary transition-colors hover:border-primary/40 hover:bg-secondary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring pointer-coarse:py-2.5"
             >
               <Icon aria-hidden="true" className="size-4 text-pop2" strokeWidth={1.75} />

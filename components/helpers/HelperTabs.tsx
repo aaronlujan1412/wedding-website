@@ -1,25 +1,25 @@
-"use client";
-
 import Link from "next/link";
-import { useSelectedLayoutSegment } from "next/navigation";
-import type { Role } from "@/components/schedule/roles";
 import { cn } from "@/lib/utils";
-import { cardsFor, helpersHref } from "./cards";
+import { cardsOn, helpersHref, type CardId, type HelperView } from "./cards";
 
 /*
- * A helper page's tabs, one per card. The open tab is the URL's last
- * segment, read back through the layout, so a tab can be texted, bookmarked
- * and come back to with the back button. A role with a single card has
- * nothing to switch between and draws no tabs.
+ * A helper page's tabs, one per card. Each tab is its own URL, so it can be
+ * texted, bookmarked and come back to with the back button. A page with a
+ * single card (the officiant's) has nothing to switch between and draws no
+ * tabs.
+ *
+ * Drawn by the page rather than the layout: a staff page shows no tabs at
+ * all until the code is in, and only the page knows whether it is.
  *
  * Both are rendered and CSS shows one, the same way the honeymoon planner
  * does it: no media-query hook, so no flash while it hydrates.
  */
 
-/** Across the top, under the heading, on anything wider than a phone. */
-export function HelperTabs({ role }: { role: Role }) {
-  const active = useSelectedLayoutSegment();
-  const cards = cardsFor(role);
+type TabsProps = { view: HelperView; active: CardId };
+
+/** Across the top, under the role buttons, on anything wider than a phone. */
+export function HelperTabs({ view, active }: TabsProps) {
+  const cards = cardsOn(view);
   if (cards.length < 2) return null;
 
   return (
@@ -31,7 +31,7 @@ export function HelperTabs({ role }: { role: Role }) {
           return (
             <li key={card.id}>
               <Link
-                href={helpersHref(role, { card: card.id })}
+                href={helpersHref(view, { card: card.id })}
                 aria-current={selected ? "page" : undefined}
                 className={cn(
                   "-mb-px flex items-center gap-2 border-b-2 px-4 py-3 font-garamond text-lg whitespace-nowrap transition-colors",
@@ -63,15 +63,14 @@ export function HelperTabs({ role }: { role: Role }) {
  * fixed: it rides the bottom edge while the tab scrolls, then settles above
  * the site footer instead of covering it.
  */
-export function HelperTabBar({ role }: { role: Role }) {
-  const active = useSelectedLayoutSegment();
-  const cards = cardsFor(role);
+export function HelperTabBar({ view, active }: TabsProps) {
+  const cards = cardsOn(view);
   if (cards.length < 2) return null;
 
   return (
     <nav
       aria-label="Helper pages"
-      className="sticky bottom-0 z-40 -mx-6 mt-16 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden print:hidden"
+      className="sticky bottom-0 z-40 -mx-6 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-sm md:hidden print:hidden"
     >
       <ul className="grid auto-cols-fr grid-flow-col">
         {cards.map((card) => {
@@ -80,7 +79,7 @@ export function HelperTabBar({ role }: { role: Role }) {
           return (
             <li key={card.id}>
               <Link
-                href={helpersHref(role, { card: card.id })}
+                href={helpersHref(view, { card: card.id })}
                 aria-current={selected ? "page" : undefined}
                 className={cn(
                   "relative flex h-14 flex-col items-center justify-center gap-1 font-raleway text-[0.6rem] tracking-[0.12em] uppercase transition-colors",

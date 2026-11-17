@@ -2,7 +2,12 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { cardsFor, describeCards, helpersHref } from "@/components/helpers/cards";
+import {
+  cardsFor,
+  describeCards,
+  helperViewOf,
+  helpersHref,
+} from "@/components/helpers/cards";
 import { cn } from "@/lib/utils";
 import { GuestStopRow } from "./GuestStopRow";
 import { RoleEntryRow } from "./RoleEntryRow";
@@ -169,21 +174,27 @@ function ViewSwitcher({ role }: { role: Role | null }) {
   );
 }
 
-/** Where a role's lists went: the line that sends a helper from the
-    schedule to their cards. A role with no cards has nowhere to send. */
+/**
+ * Where a role's lists went: the line that sends a helper from the schedule
+ * to their cards, opening on the first of them. A role with no cards has
+ * nowhere to send. A staff role's page is behind the code, so it says so
+ * before they get there.
+ */
 function HelperPageLink({ role }: { role: Role }) {
   const cards = cardsFor(role);
   if (cards.length === 0) return null;
+  const view = helperViewOf(role);
 
   return (
     <p className="mx-auto mt-6 max-w-xl font-garamond text-lg text-foreground/90 print:hidden">
       <Link
-        href={helpersHref(role)}
+        href={helpersHref(view, { card: cards[0].id })}
         className="rounded-sm text-primary underline decoration-primary/40 underline-offset-[0.25em] hover:decoration-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         Your helper page
       </Link>{" "}
-      has {describeCards(cards)}.
+      has {describeCards(cards)}
+      {view ? ", behind the helpers’ code." : "."}
     </p>
   );
 }

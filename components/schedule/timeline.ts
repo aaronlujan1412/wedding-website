@@ -113,11 +113,14 @@ export type VisibleLine = Omit<Exclude<Line, string>, "lines"> & {
   lines?: VisibleLine[];
 };
 
-/** A role's lines, in object form, with anything aimed at other roles gone. */
-export function visibleLines(lines: Line[] = [], role: Role): VisibleLine[] {
+/**
+ * A role's lines, in object form, with anything aimed at other roles gone.
+ * No role is everyone's copy: only the lines that aren't aimed at anyone.
+ */
+export function visibleLines(lines: Line[] = [], role: Role | null): VisibleLine[] {
   return lines
     .map((line) => (typeof line === "string" ? { text: line } : line))
-    .filter((line) => !line.roles || line.roles.includes(role))
+    .filter((line) => !line.roles || (role !== null && line.roles.includes(role)))
     .map(({ lines: children, ...line }) =>
       children ? { ...line, lines: visibleLines(children, role) } : line,
     );

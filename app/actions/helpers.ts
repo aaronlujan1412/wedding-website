@@ -16,15 +16,16 @@ import { passcodeMatches } from "@/lib/passcode";
 export type UnlockState = { error: string | null };
 
 /**
- * Checks the helpers' code and, if it's right, sets the cookie that shows
- * who's who. Setting a cookie in an action re-renders the page it came from,
- * so the album replaces the form in place, with no redirect.
+ * Checks the helpers' code and, if it's right, sets the cookie that opens
+ * the staff helper pages. Setting a cookie in an action re-renders the page
+ * it came from, so the page's tabs replace the form in place, with no
+ * redirect.
  *
  * Four digits is 10,000 guesses, so this goes through the same throttle as
  * the /me sign-in, which fails closed: a counter that can't count is no
  * gate in front of photos of people's kids.
  */
-export async function unlockFaces(
+export async function unlockHelpers(
   _previous: UnlockState,
   formData: FormData,
 ): Promise<UnlockState> {

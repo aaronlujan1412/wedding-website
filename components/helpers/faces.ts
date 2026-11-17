@@ -1,8 +1,5 @@
 import "server-only";
 
-import { cookies } from "next/headers";
-import { HOST_COOKIE, isValidSessionToken } from "@/lib/admin-session";
-import { HELPER_COOKIE, isValidHelperToken } from "@/lib/helper-session";
 import { supabase } from "@/lib/supabase";
 import { PEOPLE, type PersonId } from "./people";
 
@@ -25,18 +22,8 @@ export type Face = {
 
 export type FaceIndex = Record<PersonId, Face>;
 
-/** The helpers' code unlocks the faces, and so does being a host. */
-export async function canSeeFaces() {
-  const store = await cookies();
-  const [helper, host] = await Promise.all([
-    isValidHelperToken(store.get(HELPER_COOKIE)?.value),
-    isValidSessionToken(store.get(HOST_COOKIE)?.value),
-  ]);
-  return helper || host;
-}
-
 /** Everyone in who's who, with a signed URL for each photo there is. Check
-    `canSeeFaces` first: this hands out the photos. */
+    `hasHelperAccess` first: this hands out the photos. */
 export async function loadFaces(): Promise<FaceIndex> {
   const { data } = await supabase.storage
     .from(FACES_BUCKET)

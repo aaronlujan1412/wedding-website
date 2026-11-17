@@ -21,7 +21,8 @@ export function CeremonyScript({
 }: {
   start: string;
   segments: Segment[];
-  role: Role;
+  /** Null is everyone's copy: the open helper page's. */
+  role: Role | null;
   compact?: boolean;
 }) {
   const starts = segmentStarts(start, segments);

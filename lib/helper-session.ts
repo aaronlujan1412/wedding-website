@@ -1,8 +1,8 @@
 /**
  * Stateless helper session, issued for the helpers' four-digit code. It
- * proves "this browser was given the code", which is what unlocks who's who:
- * the photos of family and friends on the photographers' and coordinator's
- * helper pages.
+ * proves "this browser was given the code", which is what opens the staff
+ * helper pages — the photographers', the coordinator's and the officiant's,
+ * and with them who's who, the photos of family and friends.
  *
  * Mirrors `admin-session.ts`, and is signed with the same secret, so the
  * signed message carries a scope. Without one a helper's token would BE a
