@@ -566,6 +566,24 @@ export type Database = {
           },
         ]
       }
+      helper_ticks: {
+        Row: {
+          card: string
+          item: string
+          ticked_at: string
+        }
+        Insert: {
+          card: string
+          item: string
+          ticked_at?: string
+        }
+        Update: {
+          card?: string
+          item?: string
+          ticked_at?: string
+        }
+        Relationships: []
+      }
       login_attempts: {
         Row: {
           created_at: string

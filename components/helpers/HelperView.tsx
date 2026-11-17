@@ -14,6 +14,7 @@ import { HelperTabBar, HelperTabs } from "./HelperTabs";
 import { HelperViews } from "./HelperViews";
 import { cleanUpList, lodgeSetup, packingList } from "./lists";
 import { ShotList } from "./ShotList";
+import { TickProvider } from "./Ticks";
 
 /**
  * Every helper page around whatever's open: the heading and the role
@@ -52,21 +53,26 @@ export function HelperShell({ children }: { children: ReactNode }) {
   );
 }
 
-/** One tab of a helper page: the tabs, the card, and the phone's tab bar,
-    which has to come last to settle above the footer. */
+/**
+ * One tab of a helper page: the tabs, the card, and the phone's tab bar,
+ * which has to come last to settle above the footer. `ticks` is what's
+ * ticked on the card's checklists, for a card that has them (`hasTicks`).
+ */
 export function HelperPage({
   view,
   card,
   faces,
+  ticks,
 }: {
   view: HelperView;
   card: Card;
   faces: FaceIndex | null;
+  ticks: string[] | null;
 }) {
   return (
     <>
       <HelperTabs view={view} active={card.id} />
-      <HelperCard card={card} view={view} faces={faces} />
+      <HelperCard card={card} view={view} faces={faces} ticks={ticks} />
       <HelperTabBar view={view} active={card.id} />
     </>
   );
@@ -80,12 +86,15 @@ function HelperCard({
   card,
   view,
   faces,
+  ticks,
 }: {
   card: Card;
   view: HelperView;
   faces: FaceIndex | null;
+  ticks: string[] | null;
 }) {
   const Icon = card.icon;
+  const body = <CardBody card={card} role={view} faces={faces} />;
   return (
     // The main has no bottom padding on a phone, so the tab bar can sit
     // flush on the footer; the gap is the card's, for pages without a bar.
@@ -97,7 +106,13 @@ function HelperCard({
         <Icon aria-hidden="true" className="size-6 shrink-0 text-pop2" strokeWidth={1.5} />
         {card.title}
       </h2>
-      <CardBody card={card} role={view} faces={faces} />
+      {ticks ? (
+        <TickProvider card={card.id} initial={ticks}>
+          {body}
+        </TickProvider>
+      ) : (
+        body
+      )}
     </section>
   );
 }
@@ -114,7 +129,7 @@ function CardBody({
 }): ReactNode {
   switch (card.id) {
     case "packing":
-      return <Lines lines={visibleLines(packingList, role)} />;
+      return <Lines lines={visibleLines(packingList, role)} tick={card.id} />;
     case "lodge-setup":
       return <Lines lines={visibleLines(lodgeSetup, role)} />;
     case "food":
@@ -128,6 +143,8 @@ function CardBody({
         <CeremonyScript start={CEREMONY_START} segments={ceremony} role={role} />
       );
     case "clean-up":
-      return <Lines lines={visibleLines(cleanUpList, role)} kind="checklist" />;
+      return (
+        <Lines lines={visibleLines(cleanUpList, role)} kind="checklist" tick={card.id} />
+      );
   }
 }

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
+import { connection } from "next/server";
 import {
   STAFF_ROLES,
   cardsOn,
@@ -7,6 +8,7 @@ import {
   isStaff,
 } from "@/components/helpers/cards";
 import { HelperPage } from "@/components/helpers/HelperView";
+import { hasTicks, loadTicks } from "@/components/helpers/ticks";
 
 /*
  * The segment after `/helpers` is one of two things, because Next allows one
@@ -35,8 +37,14 @@ export async function generateMetadata({
   };
 }
 
-/** A tab of the open page, or the way into a staff role's: its first tab,
-    which asks for the code if it hasn't been given. */
+/**
+ * A tab of the open page, or the way into a staff role's: its first tab,
+ * which asks for the code if it hasn't been given.
+ *
+ * A tab with boxes to tick renders per request, with the ticks as they are
+ * now; built ahead, it would open on whatever was ticked at deploy time.
+ * The rest stay static.
+ */
 export default async function HelperSlugPage({
   params,
 }: {
@@ -51,5 +59,11 @@ export default async function HelperSlugPage({
   const card = cardsOn(null).find((c) => c.id === slug);
   if (!card) notFound();
 
-  return <HelperPage view={null} card={card} faces={null} />;
+  let ticks: string[] | null = null;
+  if (hasTicks(card.id)) {
+    await connection();
+    ticks = await loadTicks(card.id);
+  }
+
+  return <HelperPage view={null} card={card} faces={null} ticks={ticks} />;
 }

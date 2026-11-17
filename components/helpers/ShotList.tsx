@@ -52,6 +52,7 @@ export function ShotList({ role, faces }: { role: Role | null; faces: FaceIndex 
             lines={visibleLines(section.shots, role)}
             kind="checklist"
             faces={faces ?? undefined}
+            tick="shots"
           />
         </section>
       ))}

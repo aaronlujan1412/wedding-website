@@ -1,5 +1,8 @@
+import type { CardId } from "@/components/helpers/cards";
 import { FaceChips } from "@/components/helpers/FaceChips";
 import type { FaceIndex } from "@/components/helpers/faces";
+import { tickKey } from "@/components/helpers/tick-key";
+import { TickBox } from "@/components/helpers/Ticks";
 import { cn } from "@/lib/utils";
 import type { VisibleLine } from "./timeline";
 
@@ -26,6 +29,12 @@ const MARKER_EDGE: Record<ListKind, Record<Align, string>> = {
   checklist: { start: "pl-6 before:left-0", end: "pr-6 before:right-0" },
 };
 
+/** A real box instead of a drawn one: room for it, a little more on touch. */
+const TICK_EDGE: Record<Align, string> = {
+  start: "pl-7 pointer-coarse:pl-8",
+  end: "pr-7 pointer-coarse:pr-8",
+};
+
 /**
  * An entry's lines, nested as deep as the data goes. A line with `says` is
  * the words themselves, so it's set as a script — the speaker, then the line
@@ -37,6 +46,8 @@ export function Lines({
   align = "start",
   small = false,
   faces,
+  tick,
+  path = [],
   depth = 0,
 }: {
   lines: VisibleLine[];
@@ -47,6 +58,12 @@ export function Lines({
   /** Who's who, once the helpers' code is in: a line naming `people` shows
       their faces. Only the helper page has it, and only after the code. */
   faces?: FaceIndex;
+  /** The helper card whose shared ticks these are. With it, a checklist's
+      boxes can be ticked (`TickBox`, inside the card's `TickProvider`);
+      without it they're drawn boxes, for ticking on paper. */
+  tick?: CardId;
+  /** The texts of the lines above these, which a tick's key starts with. */
+  path?: readonly string[];
   depth?: number;
 }) {
   if (lines.length === 0) return null;
@@ -60,72 +77,84 @@ export function Lines({
         align === "end" && "text-right",
       )}
     >
-      {lines.map((line, i) => (
-        <li
-          key={i}
-          className={cn(
-            "relative",
-            // A checklist's parent is its heading, not a step: no marker, so
-            // the boxes line up under the text above instead of indenting.
-            line.says
-              ? "py-0.5"
-              : line.checklist
-                ? "pt-2"
-                : cn(MARKER_SHAPE[kind], MARKER_EDGE[kind][align]),
-            !line.says &&
-              !line.checklist &&
-              kind === "dash" &&
-              (depth === 0 ? "before:bg-pop2" : "before:bg-border"),
-          )}
-        >
-          {kind === "ordered" && !line.says && (
-            <span
-              aria-hidden="true"
-              className={cn(
-                "absolute top-[0.2em] font-raleway text-sm lining-nums tabular-nums text-pop2",
-                align === "end" ? "right-0" : "left-0",
-              )}
-            >
-              {i + 1}
-            </span>
-          )}
-
-          {line.says ? (
-            <p>
-              <span className="mr-2 font-raleway text-sm font-semibold text-pop2">
-                {line.says}
+      {lines.map((line, i) => {
+        const here = [...path, line.text];
+        const tickable = tick && kind === "checklist" && !line.says && !line.checklist;
+        return (
+          <li
+            key={i}
+            className={cn(
+              "relative",
+              // A checklist's parent is its heading, not a step: no marker, so
+              // the boxes line up under the text above instead of indenting.
+              line.says
+                ? "py-0.5"
+                : line.checklist
+                  ? "pt-2"
+                  : tickable
+                    ? TICK_EDGE[align]
+                    : cn(MARKER_SHAPE[kind], MARKER_EDGE[kind][align]),
+              !line.says &&
+                !line.checklist &&
+                kind === "dash" &&
+                (depth === 0 ? "before:bg-pop2" : "before:bg-border"),
+            )}
+          >
+            {kind === "ordered" && !line.says && (
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "absolute top-[0.2em] font-raleway text-sm lining-nums tabular-nums text-pop2",
+                  align === "end" ? "right-0" : "left-0",
+                )}
+              >
+                {i + 1}
               </span>
-              <q className="italic text-foreground">{line.text}</q>
-            </p>
-          ) : line.checklist ? (
-            <span className="font-raleway text-sm font-medium text-muted-foreground">
-              {line.text}
-            </span>
-          ) : (
-            line.text
-          )}
+            )}
 
-          {line.people && faces && (
-            <FaceChips people={line.people} faces={faces} />
-          )}
+            {line.says ? (
+              <p>
+                <span className="mr-2 font-raleway text-sm font-semibold text-pop2">
+                  {line.says}
+                </span>
+                <q className="italic text-foreground">{line.text}</q>
+              </p>
+            ) : line.checklist ? (
+              <span className="font-raleway text-sm font-medium text-muted-foreground">
+                {line.text}
+              </span>
+            ) : tickable ? (
+              <TickBox item={tickKey(here)} side={align === "end" ? "right" : "left"}>
+                {line.text}
+              </TickBox>
+            ) : (
+              line.text
+            )}
 
-          {line.note && (
-            <p className="mt-0.5 font-raleway text-sm text-muted-foreground">
-              {line.note}
-            </p>
-          )}
+            {line.people && faces && (
+              <FaceChips people={line.people} faces={faces} />
+            )}
 
-          {line.lines && (
-            <Lines
-              lines={line.lines}
-              kind={line.ordered ? "ordered" : line.checklist ? "checklist" : "dash"}
-              align={align}
-              faces={faces}
-              depth={depth + 1}
-            />
-          )}
-        </li>
-      ))}
+            {line.note && (
+              <p className="mt-0.5 font-raleway text-sm text-muted-foreground">
+                {line.note}
+              </p>
+            )}
+
+            {line.lines && (
+              <Lines
+                lines={line.lines}
+                kind={line.ordered ? "ordered" : line.checklist ? "checklist" : "dash"}
+                align={align}
+                faces={faces}
+                tick={tick}
+                path={here}
+                depth={depth + 1}
+              />
+            )}
+          </li>
+        );
+      })}
     </List>
   );
 }

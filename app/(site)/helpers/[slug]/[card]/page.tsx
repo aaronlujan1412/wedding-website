@@ -10,6 +10,7 @@ import {
 } from "@/components/helpers/cards";
 import { loadFaces } from "@/components/helpers/faces";
 import { HelperPage } from "@/components/helpers/HelperView";
+import { hasTicks, loadTicks } from "@/components/helpers/ticks";
 import { UnlockHelpers } from "@/components/helpers/UnlockHelpers";
 import { roleById } from "@/components/schedule/roles";
 
@@ -56,8 +57,10 @@ export default async function StaffCardPage({
     return <UnlockHelpers contents={describeCards(cards)} />;
   }
 
-  const faces =
-    card.id === "faces" || card.id === "shots" ? await loadFaces() : null;
+  const [faces, ticks] = await Promise.all([
+    card.id === "faces" || card.id === "shots" ? loadFaces() : null,
+    hasTicks(card.id) ? loadTicks(card.id) : null,
+  ]);
 
-  return <HelperPage view={slug} card={card} faces={faces} />;
+  return <HelperPage view={slug} card={card} faces={faces} ticks={ticks} />;
 }
