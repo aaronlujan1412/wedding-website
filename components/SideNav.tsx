@@ -58,7 +58,9 @@ export function SideNav() {
 
         <nav className="flex flex-col px-4">
           {mobileLinks.map((link) => {
-            const isActive = pathname === link.href;
+            // Its pages too: /helpers is only ever a redirect to a tab.
+            const isActive =
+              pathname === link.href || pathname.startsWith(`${link.href}/`);
             return (
               <SheetClose asChild key={link.href}>
                 <Link

@@ -15,4 +15,5 @@ export const NAV_ITEMS: NavItem[] = [
   { href: "/story", label: "Our Story", position: "right" },
   { href: "/photos", label: "Photos", position: "right" },
   { href: "/faq", label: "FAQ", position: "right" },
+  { href: "/helpers", label: "Helpers", position: "right" },
 ];

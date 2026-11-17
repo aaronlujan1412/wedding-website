@@ -30,8 +30,9 @@ export function Navbar() {
     <nav
       className={`fixed left-0 right-0 z-50 flex w-full items-center font-raleway text-primary-foreground transition-all duration-300 motion-reduce:transition-none ${compact ? "top-0 bg-primary py-2 shadow-md" : "top-5 bg-transparent py-4"}`}
     >
-      {/* Mobile bar */}
-      <div className="relative flex w-full items-center px-6 md:hidden">
+      {/* Phone and tablet bar. Eight links and the RSVP button need about
+          1000px across, so the menu stays behind the button below lg. */}
+      <div className="relative flex w-full items-center px-6 lg:hidden">
         <SideNav />
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
           <Logo className="max-w-10 max-h-10" />
@@ -39,11 +40,11 @@ export function Navbar() {
       </div>
 
       {/* Desktop bar */}
-      <div className="hidden w-full items-center md:flex">
+      <div className="hidden w-full items-center lg:flex">
         {compact ? (
           <div className="mx-auto flex w-full max-w-6xl items-center px-6">
             <Logo className="max-w-10 pt-2 pb-2" />
-            <div className="ml-auto flex items-center gap-6">
+            <div className="ml-auto flex items-center gap-2 xl:gap-6">
               {[...leftLinks, ...rightLinks].map((l) => (
                 <NavLink key={l.href} {...l} />
               ))}
@@ -72,7 +73,7 @@ export function Navbar() {
 
 function NavLink({ href, label }: { href: string; label: string }) {
   return (
-    <Link className="px-4 py-2" href={href}>
+    <Link className="px-4 py-2 whitespace-nowrap" href={href}>
       {label}
     </Link>
   );
